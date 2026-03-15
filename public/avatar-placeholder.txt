@@ -1,0 +1,2 @@
+Add your avatar.png file here.
+The profile picture will use /avatar.png as the source.
