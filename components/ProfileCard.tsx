@@ -1,4 +1,4 @@
-import Image from 'next/image'
+import AvatarImage from './AvatarImage'
 import SpotifyWidget from './SpotifyWidget'
 import DiscordWidget from './DiscordWidget'
 import SocialLinks from './SocialLinks'
@@ -10,31 +10,25 @@ interface ProfileCardProps {
 export default function ProfileCard({ toggles }: ProfileCardProps) {
   return (
     <div
-      className="w-[400px] rounded-2xl shadow-2xl overflow-hidden"
-      style={{ background: 'linear-gradient(135deg, #ff0000 0%, #8B0000 100%)' }}
+      className="w-[390px] rounded-3xl shadow-2xl overflow-hidden border border-white/10"
+      style={{ background: 'linear-gradient(180deg, #ff0000 0%, #8B0000 100%)' }}
     >
-      <div className="flex flex-col items-center px-8 pt-8 pb-6 gap-4">
+      <div className="flex flex-col items-center px-7 pt-9 pb-7 gap-4">
         {/* Avatar */}
-        <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-white/20 shadow-lg">
-          <Image
-            src="/avatar.png"
-            alt="COOLman avatar"
-            fill
-            className="object-cover"
-            unoptimized
-          />
+        <div className="relative w-[88px] h-[88px] rounded-full overflow-hidden ring-4 ring-white/30 shadow-xl flex-shrink-0">
+          <AvatarImage />
         </div>
 
         {/* Username */}
-        <div className="text-center">
-          <h1 className="text-3xl font-bold text-white tracking-wide">COOLman</h1>
-          <p className="text-white/80 text-sm mt-1">just a cool dude making content</p>
+        <div className="text-center -mt-1">
+          <h1 className="text-[28px] font-bold text-white tracking-tight leading-tight">COOLman</h1>
+          <p className="text-white/70 text-sm mt-1 leading-snug">just a cool dude making content</p>
         </div>
 
         {/* Location pill */}
-        <div className="flex items-center gap-1.5 bg-white/20 backdrop-blur-sm px-4 py-1.5 rounded-full">
-          <span className="text-sm">��</span>
-          <span className="text-white text-sm font-medium">lost in my thoughts</span>
+        <div className="flex items-center gap-1.5 bg-black/20 backdrop-blur-sm px-4 py-1.5 rounded-full border border-white/10">
+          <span className="text-sm leading-none">&#x1F4CD;</span>
+          <span className="text-white/90 text-xs font-medium">lost in my thoughts</span>
         </div>
 
         {/* Spotify Widget */}

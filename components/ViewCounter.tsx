@@ -23,9 +23,9 @@ export default function ViewCounter() {
   if (views === null) return null
 
   return (
-    <div className="absolute -bottom-8 left-0">
-      <span className="text-white/40 text-xs font-mono">
-        👁 {views.toLocaleString()} views
+    <div className="absolute -bottom-7 left-1">
+      <span className="text-white/30 text-[11px] font-mono tracking-wide">
+        👁 {views.toLocaleString()}
       </span>
     </div>
   )

@@ -49,7 +49,7 @@ export default async function Home() {
   const toggles = await getToggles()
 
   return (
-    <main className="min-h-screen bg-[#1a1a1a] flex items-center justify-center p-4">
+    <main className="min-h-screen bg-[#111111] flex items-center justify-center p-4">
       <EasterEgg />
       <div className="relative">
         <ProfileCard toggles={toggles} />

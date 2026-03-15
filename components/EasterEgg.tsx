@@ -46,6 +46,7 @@ export default function EasterEgg() {
       } else {
         clearInterval(interval)
         setTimeout(() => {
+          // Intentional full reload — easter egg simulates a system reboot
           window.location.reload()
         }, 1000)
       }
