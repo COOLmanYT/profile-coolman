@@ -34,9 +34,12 @@ async function getAccessToken() {
 export async function GET() {
   try {
     const accessToken = await getAccessToken()
-    if (!accessToken) {
-      return NextResponse.json({ isPlaying: false })
-    }
+      if (!accessToken) {
+      return NextResponse.json({
+        isPlaying: false,
+        debug: { stage: 'no_access_token' },
+    })
+  }
 
     const res = await fetch(SPOTIFY_NOW_PLAYING_URL, {
       headers: { Authorization: `Bearer ${accessToken}` },
