@@ -25,10 +25,8 @@ export default function SpotifyWidget() {
     const fetchTrack = async () => {
       try {
         const res = await fetch('/api/spotify')
-        if (res.ok) {
-          const data = await res.json()
-          setTrack(data)
-        }
+        const data = await res.json().catch(() => ({ isPlaying: false }))
+        setTrack(data)
       } catch {
         setTrack({ isPlaying: false })
       } finally {
