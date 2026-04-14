@@ -11,6 +11,12 @@ interface SpotifyTrack {
   songUrl?: string
 }
 
+const EQUALIZER_BARS = [
+  { heightClass: 'h-[10px]', delayClass: '[animation-delay:0.15s]' },
+  { heightClass: 'h-[14px]', delayClass: '[animation-delay:0.3s]' },
+  { heightClass: 'h-[18px]', delayClass: '[animation-delay:0.45s]' },
+]
+
 export default function SpotifyWidget() {
   const [track, setTrack] = useState<SpotifyTrack | null>(null)
   const [loading, setLoading] = useState(true)
@@ -62,11 +68,10 @@ export default function SpotifyWidget() {
             <p className="text-white/60 text-xs truncate mt-0.5">{track.artist}</p>
           </div>
           <div className="flex gap-0.5 items-end flex-shrink-0 h-5">
-            {[1, 2, 3].map((i) => (
+            {EQUALIZER_BARS.map((bar, idx) => (
               <div
-                key={i}
-                className="w-[3px] bg-[#1DB954] rounded-full animate-bounce"
-                style={{ height: `${6 + i * 4}px`, animationDelay: `${i * 0.15}s` }}
+                key={idx}
+                className={`w-[3px] bg-[#1DB954] rounded-full animate-bounce ${bar.heightClass} ${bar.delayClass}`}
               />
             ))}
           </div>

@@ -9,10 +9,7 @@ interface ProfileCardProps {
 
 export default function ProfileCard({ toggles }: ProfileCardProps) {
   return (
-    <div
-      className="w-[390px] rounded-3xl shadow-2xl overflow-hidden border border-white/10"
-      style={{ background: 'linear-gradient(180deg, #ff0000 0%, #8B0000 100%)' }}
-    >
+    <div className="w-[390px] rounded-3xl shadow-2xl overflow-hidden border border-white/10 bg-[linear-gradient(180deg,#ff0000_0%,#8B0000_100%)]">
       <div className="flex flex-col items-center px-7 pt-9 pb-7 gap-4">
         {/* Avatar */}
         <div className="relative w-[88px] h-[88px] rounded-full overflow-hidden ring-4 ring-white/30 shadow-xl flex-shrink-0">

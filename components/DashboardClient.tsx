@@ -65,6 +65,8 @@ export default function DashboardClient({ initialToggles, signOutOnly }: Dashboa
             <button
               onClick={() => handleToggle(key)}
               disabled={saving === key}
+              aria-label={`${label}: ${toggles[key] ? 'enabled' : 'disabled'}`}
+              title={`${label}: ${toggles[key] ? 'enabled' : 'disabled'}`}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
                 toggles[key] ? 'bg-red-600' : 'bg-white/20'
               } ${saving === key ? 'opacity-50 cursor-not-allowed' : ''}`}

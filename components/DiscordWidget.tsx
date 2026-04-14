@@ -40,6 +40,13 @@ const STATUS_COLORS: Record<string, string> = {
   offline: '#80848e',
 }
 
+const STATUS_DOT_CLASSES: Record<string, string> = {
+  online: 'bg-[#23a55a]',
+  idle: 'bg-[#f0b232]',
+  dnd: 'bg-[#f23f43]',
+  offline: 'bg-[#80848e]',
+}
+
 const STATUS_LABELS: Record<string, string> = {
   online: 'Online',
   idle: 'Idle',
@@ -118,8 +125,9 @@ export default function DiscordWidget({
           {showStatus && (
             <div className="flex items-center gap-2">
               <div
-                className="w-2.5 h-2.5 rounded-full flex-shrink-0 shadow-sm"
-                style={{ backgroundColor: STATUS_COLORS[presence.discord_status] || '#80848e' }}
+                className={`w-2.5 h-2.5 rounded-full flex-shrink-0 shadow-sm ${
+                  STATUS_DOT_CLASSES[presence.discord_status] || STATUS_DOT_CLASSES.offline
+                }`}
               />
               <span className="text-white/80 text-xs font-medium">
                 {STATUS_LABELS[presence.discord_status] || 'Offline'}

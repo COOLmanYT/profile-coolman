@@ -44,7 +44,14 @@ export async function GET() {
     })
 
     if (res.status === 204 || res.status > 400) {
-      return NextResponse.json({ isPlaying: false })
+      const text = await res.text().catch(() => '')
+      return NextResponse.json({
+        isPlaying: false,
+        debug: {
+          currentlyPlayingStatus: res.status,
+          currentlyPlayingBody: text.slice(0, 500),
+        },
+      })
     }
 
     const data = await res.json()
