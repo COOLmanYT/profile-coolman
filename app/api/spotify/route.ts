@@ -1,5 +1,10 @@
 import { NextResponse } from 'next/server'
 
+// Force this route to always be dynamic so Next.js / Vercel never statically
+// caches the response. Without this, the CDN can serve a stale snapshot to
+// every visitor instead of fetching live playback state.
+export const dynamic = 'force-dynamic'
+
 const SPOTIFY_TOKEN_URL = 'https://accounts.spotify.com/api/token'
 const SPOTIFY_NOW_PLAYING_URL = 'https://api.spotify.com/v1/me/player/currently-playing'
 const SPOTIFY_PLAYBACK_URL = 'https://api.spotify.com/v1/me/player'
@@ -47,6 +52,9 @@ async function getAccessToken(): Promise<TokenResult> {
   }
 
   const data = await res.json()
+  if (!data.access_token) {
+    return { error: 'no_access_token_in_response' }
+  }
   // Spotify may return a new refresh token (token rotation). We cannot persist it
   // server-side without storage, so the existing token remains in effect for this
   // request. If you see auth errors over time, re-generate and update
@@ -83,13 +91,16 @@ type LanyardActivity = {
 }
 
 export async function GET() {
+  // Prevent CDN / Vercel edge caches from serving stale playback state.
+  const noStore = { headers: { 'Cache-Control': 'no-store' } }
+
   try {
     const tokenResult = await getAccessToken()
     if (tokenResult.error) {
       return NextResponse.json({
         isPlaying: false,
         ...(DEBUG ? { debug: { stage: 'no_access_token', reason: tokenResult.error } } : {}),
-      })
+      }, noStore)
     }
 
     const { accessToken } = tokenResult
@@ -104,7 +115,7 @@ export async function GET() {
       const data = await nowPlayingRes.json()
       if (data.is_playing && data.item) {
         const track = mapTrackData(data)
-        if (track) return NextResponse.json(track)
+        if (track) return NextResponse.json(track, noStore)
       }
     }
 
@@ -120,7 +131,7 @@ export async function GET() {
       const data = await playbackRes.json()
       if (data.is_playing && data.item) {
         const track = mapTrackData(data)
-        if (track) return NextResponse.json(track)
+        if (track) return NextResponse.json(track, noStore)
       }
       return NextResponse.json({
         isPlaying: false,
@@ -134,7 +145,7 @@ export async function GET() {
               },
             }
           : {}),
-      })
+      }, noStore)
     }
 
     // Both Spotify endpoints returned non-200 (204, 4xx, etc.).
@@ -175,7 +186,7 @@ export async function GET() {
                 albumArt,
                 songUrl,
                 ...(DEBUG ? { debug: { fallback: 'discord_lanyard' } } : {}),
-              })
+              }, noStore)
             }
           }
         }
@@ -196,11 +207,11 @@ export async function GET() {
             },
           }
         : {}),
-    })
+    }, noStore)
   } catch (err) {
     return NextResponse.json({
       isPlaying: false,
       ...(DEBUG ? { debug: { error: String(err) } } : {}),
-    })
+    }, noStore)
   }
 }
