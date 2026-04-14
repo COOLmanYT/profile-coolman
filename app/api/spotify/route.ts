@@ -13,7 +13,9 @@ async function getAccessToken() {
     return null
   }
 
-  const basic = Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
+  const basic = typeof Buffer !== 'undefined'
+    ? Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
+    : (typeof btoa !== 'undefined' ? btoa(`${clientId}:${clientSecret}`) : '')
   const res = await fetch(SPOTIFY_TOKEN_URL, {
     method: 'POST',
     headers: {
@@ -49,7 +51,11 @@ export async function GET() {
       cache: 'no-store',
     })
 
-    if (res.status === 204 || res.status > 400) {
+    if (res.status === 204) {
+      return NextResponse.json({ isPlaying: false, debug: { currentlyPlayingStatus: 204 } })
+    }
+
+    if (res.status >= 400) {
       const text = await res.text().catch(() => '')
       return NextResponse.json({
         isPlaying: false,
@@ -60,10 +66,53 @@ export async function GET() {
       })
     }
 
-    const data = await res.json()
+    const data = await res.json().catch(() => null)
 
-    if (!data.is_playing || data.item === null) {
-      return NextResponse.json({ isPlaying: false })
+    if (!data || !data.is_playing || data.item === null) {
+      // Try Discord (Lanyard) fallback if available
+      const DISCORD_USER_ID = process.env.DISCORD_USER_ID
+      if (DISCORD_USER_ID && DISCORD_USER_ID !== 'placeholder') {
+        try {
+          const discordRes = await fetch(`https://api.lanyard.rest/v1/users/${DISCORD_USER_ID}`, { cache: 'no-store' })
+          if (discordRes.ok) {
+            const discordJson = await discordRes.json().catch(() => null)
+            if (discordJson && discordJson.success && discordJson.data) {
+              const activities = discordJson.data.activities ?? []
+              const spotifyActivity = activities.find((a: any) => a.type === 2 && typeof a.name === 'string' && a.name.toLowerCase().includes('spotify'))
+              if (spotifyActivity) {
+                const title = spotifyActivity.details ?? spotifyActivity.name
+                const artist = spotifyActivity.state ?? undefined
+                let albumArt: string | undefined = undefined
+                const largeImage = spotifyActivity.assets?.large_image
+                if (largeImage && typeof largeImage === 'string') {
+                  if (largeImage.startsWith('spotify:')) {
+                    const parts = largeImage.split(':')
+                    if (parts[1]) albumArt = `https://i.scdn.co/image/${parts[1]}`
+                  } else {
+                    albumArt = largeImage
+                  }
+                }
+                const songUrl = title || artist
+                  ? `https://open.spotify.com/search/${encodeURIComponent(`${title ?? ''} ${artist ?? ''}`.trim())}`
+                  : undefined
+
+                return NextResponse.json({
+                  isPlaying: true,
+                  title,
+                  artist,
+                  albumArt,
+                  songUrl,
+                  debug: { fallback: 'discord_lanyard' },
+                })
+              }
+            }
+          }
+        } catch (e) {
+          console.error('discord fallback error', e)
+        }
+      }
+
+      return NextResponse.json({ isPlaying: false, debug: { spotifyResponse: data } })
     }
 
     return NextResponse.json({
@@ -73,7 +122,8 @@ export async function GET() {
       albumArt: data.item.album?.images?.[0]?.url,
       songUrl: data.item.external_urls?.spotify,
     })
-  } catch {
-    return NextResponse.json({ isPlaying: false })
+  } catch (err) {
+    console.error(err)
+    return NextResponse.json({ isPlaying: false, debug: { error: String(err) } })
   }
 }
