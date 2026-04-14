@@ -33,13 +33,6 @@ interface DiscordWidgetProps {
   showOther?: boolean
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  online: '#23a55a',
-  idle: '#f0b232',
-  dnd: '#f23f43',
-  offline: '#80848e',
-}
-
 const STATUS_DOT_CLASSES: Record<string, string> = {
   online: 'bg-[#23a55a]',
   idle: 'bg-[#f0b232]',
