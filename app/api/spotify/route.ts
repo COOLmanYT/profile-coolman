@@ -70,7 +70,7 @@ function mapTrackData(data: {
   return {
     isPlaying: true,
     title: item.name,
-    artist: item.artists?.map((a) => a.name).join(', '),
+    artist: (item.artists ?? []).map((a) => a.name).join(', '),
     albumArt: item.album?.images?.[0]?.url,
     songUrl: item.external_urls?.spotify,
   }
