@@ -26,7 +26,10 @@ async function getAccessToken() {
     }),
     cache: 'no-store',
   })
-  if (!res.ok) return null
+  if (!res.ok) {
+  const text = await res.text().catch(() => '')
+  throw new Error(`token_refresh_failed status=${res.status} body=${text.slice(0, 200)}`)
+}
   const data = await res.json()
   return data.access_token as string
 }
