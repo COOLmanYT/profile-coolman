@@ -21,7 +21,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${geist.className} bg-[#111111] min-h-screen`}>
+      <body className={`${geist.className} bg-black min-h-screen`}>
         <Providers>{children}</Providers>
         <Analytics />
       </body>

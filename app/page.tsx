@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import EasterEgg from '@/components/EasterEgg'
 import ViewCounter from '@/components/ViewCounter'
 import ProfileCard from '@/components/ProfileCard'
+import AnimatedBackground from '@/components/AnimatedBackground'
 
 async function getToggles() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -49,12 +50,15 @@ export default async function Home() {
   const toggles = await getToggles()
 
   return (
-    <main className="min-h-screen bg-[#111111] flex items-center justify-center p-4">
-      <EasterEgg />
-      <div className="relative">
-        <ProfileCard toggles={toggles} />
-        <ViewCounter />
-      </div>
-    </main>
+    <>
+      <AnimatedBackground />
+      <main className="relative min-h-screen flex items-center justify-center p-4" style={{ zIndex: 10 }}>
+        <EasterEgg />
+        <div className="relative">
+          <ProfileCard toggles={toggles} />
+          <ViewCounter />
+        </div>
+      </main>
+    </>
   )
 }

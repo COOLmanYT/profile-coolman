@@ -11,3 +11,53 @@
     animation: fade-in 0.4s ease forwards;
   }
 }
+
+/* ─── Animated Background System ─────────────────────────────────────────── */
+
+/*
+  White wave: flows left → right (translateX 0 → −50 %) with a gentle
+  downward bob.  Duration 14 s.  The SVG is 200 % wide so the −50 % shift
+  returns to the exact same visual state → seamless loop.
+*/
+@keyframes wave-roll-top {
+  0%   { transform: translateX(   0%) translateY(  0px); }
+  25%  { transform: translateX(-12.5%) translateY( 6px); }
+  50%  { transform: translateX( -25%) translateY(10px); }
+  75%  { transform: translateX(-37.5%) translateY( 6px); }
+  100% { transform: translateX( -50%) translateY(  0px); }
+}
+
+/*
+  Black wave: flows right → left (translateX −50 % → 0) with a gentle
+  upward bob.  Duration 18 s (different from white) → independent motion.
+*/
+@keyframes wave-roll-bottom {
+  0%   { transform: translateX( -50%) translateY(  0px); }
+  25%  { transform: translateX(-37.5%) translateY(-6px); }
+  50%  { transform: translateX( -25%) translateY(-10px); }
+  75%  { transform: translateX(-12.5%) translateY(-6px); }
+  100% { transform: translateX(   0%) translateY(  0px); }
+}
+
+/* Animated red gradient placeholder for the banner zone */
+@keyframes banner-gradient-flow {
+  0%   { background-position: 0%   50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0%   50%; }
+}
+
+.wave-top {
+  animation: wave-roll-top 14s linear infinite;
+  will-change: transform;
+}
+
+.wave-bottom {
+  animation: wave-roll-bottom 18s linear infinite;
+  will-change: transform;
+}
+
+.banner-gradient-animated {
+  background: linear-gradient(-45deg, #8b0000, #ff2200, #cc0000, #550000, #b30000);
+  background-size: 300% 300%;
+  animation: banner-gradient-flow 8s ease infinite;
+}
