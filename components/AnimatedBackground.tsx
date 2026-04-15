@@ -16,8 +16,8 @@ async function resolveLocalBanner(): Promise<string | null> {
 }
 
 export default function AnimatedBackground() {
-  // undefined = still resolving | null = no banner found | string = URL to show
-  const [bannerUrl, setBannerUrl] = useState<string | null | undefined>(undefined)
+  // null = no banner / animated gradient | string = URL to display
+  const [bannerUrl, setBannerUrl] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -70,7 +70,7 @@ export default function AnimatedBackground() {
       <div className="absolute inset-0 bg-black" />
 
       {/* ── BANNER / GRADIENT LAYER ── fills the full viewport behind the wave zones */}
-      {/* min-height / min-width ensure the source renders at ≥ 400 px tall / 1600 px wide */}
+      {/* min-height / min-width ensure the source renders at ≥400px tall / 1600px wide */}
       <div
         className="absolute inset-0"
         style={{ minHeight: '400px', minWidth: '1600px' }}
@@ -88,10 +88,10 @@ export default function AnimatedBackground() {
               display: 'block',
             }}
           />
-        ) : bannerUrl === null ? (
+        ) : (
           /* animated red gradient fallback */
           <div className="w-full h-full banner-gradient-animated" />
-        ) : null /* still resolving — black base shows through */}
+        )}
       </div>
 
       {/*
