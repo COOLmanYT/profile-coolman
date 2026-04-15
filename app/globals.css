@@ -15,28 +15,23 @@
 /* ─── Animated Background System ─────────────────────────────────────────── */
 
 /*
-  White wave: flows left → right (translateX 0 → −50 %) with a gentle
-  downward bob.  Duration 14 s.  The SVG is 200 % wide so the −50 % shift
-  returns to the exact same visual state → seamless loop.
+  White wave: flows left → right (translateX 0 → −50 %).
+  The SVG is 200 % wide so the −50 % shift returns to the exact same
+  visual state → seamless loop.  No translateY — vertical bob would
+  clip the wave against the overflow-hidden zone boundary.
 */
 @keyframes wave-roll-top {
-  0%   { transform: translateX(   0%) translateY(  0px); }
-  25%  { transform: translateX(-12.5%) translateY( 6px); }
-  50%  { transform: translateX( -25%) translateY(10px); }
-  75%  { transform: translateX(-37.5%) translateY( 6px); }
-  100% { transform: translateX( -50%) translateY(  0px); }
+  0%   { transform: translateX(   0%); }
+  100% { transform: translateX( -50%); }
 }
 
 /*
-  Black wave: flows right → left (translateX −50 % → 0) with a gentle
-  upward bob.  Duration 18 s (different from white) → independent motion.
+  Black wave: flows right → left (translateX −50 % → 0).
+  Duration 18 s (different from white) → independent motion.
 */
 @keyframes wave-roll-bottom {
-  0%   { transform: translateX( -50%) translateY(  0px); }
-  25%  { transform: translateX(-37.5%) translateY(-6px); }
-  50%  { transform: translateX( -25%) translateY(-10px); }
-  75%  { transform: translateX(-12.5%) translateY(-6px); }
-  100% { transform: translateX(   0%) translateY(  0px); }
+  0%   { transform: translateX( -50%); }
+  100% { transform: translateX(   0%); }
 }
 
 /* Animated red gradient placeholder for the banner zone */

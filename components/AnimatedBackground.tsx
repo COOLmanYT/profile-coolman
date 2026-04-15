@@ -69,7 +69,7 @@ export default function AnimatedBackground() {
       {/* ── BLACK BASE — always visible underneath everything ── */}
       <div className="absolute inset-0 bg-black" />
 
-      {/* ── BANNER / GRADIENT LAYER ── fills the full viewport behind the wave zones */}
+      {/* ── BANNER / GRADIENT LAYER ── fills the full viewport ── */}
       {/* min-height / min-width ensure the source renders at ≥400px tall / 1600px wide */}
       <div
         className="absolute inset-0"
@@ -96,89 +96,69 @@ export default function AnimatedBackground() {
 
       {/*
         ── WHITE TOP ZONE ──
-        A solid-white fill + animated wave SVG, all inside a container whose
-        bottom half is masked out with a CSS gradient.  This means the zone
-        fades from fully opaque-white at the very top to fully transparent at
-        its bottom edge — no hard seam, no visible band.
+        The SVG path fills white from y=0 (zone top) down to the wave curve,
+        leaving the area below the wave transparent so the banner shows through
+        cleanly.  No CSS mask needed — the wave IS the boundary.
+        Zone height 45vh; wave occupies the bottom ~25 % of the zone.
       */}
       <div
-        className="absolute top-0 left-0 right-0"
-        style={{
-          height: '58vh',
-          WebkitMaskImage:
-            'linear-gradient(to bottom, white 40%, transparent 100%)',
-          maskImage:
-            'linear-gradient(to bottom, white 40%, transparent 100%)',
-        }}
+        className="absolute top-0 left-0 right-0 overflow-hidden"
+        style={{ height: '45vh' }}
       >
-        {/* solid white fill behind the wave */}
-        <div className="absolute inset-0 bg-white" />
-
-        {/* animated wave that creates the organic lower edge */}
-        <div
-          className="absolute left-0 right-0 overflow-hidden"
-          style={{ bottom: 0, height: '35%' }}
+        <svg
+          className="absolute top-0 left-0 h-full wave-top"
+          style={{ width: '200%' }}
+          viewBox="0 0 2880 100"
+          preserveAspectRatio="none"
+          xmlns="http://www.w3.org/2000/svg"
         >
-          <svg
-            className="absolute top-0 h-full wave-top"
-            style={{ width: '200%' }}
-            viewBox="0 0 2880 100"
-            preserveAspectRatio="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M0,0 L2880,0 L2880,55
-                 C2640,85 2400,25 2160,55
-                 C1920,85 1680,25 1440,55
-                 C1200,85  960,25  720,55
-                 C 480,85  240,25    0,55 Z"
-              fill="white"
-            />
-          </svg>
-        </div>
+          {/*
+            Fills white from y=0 down to the wave curve (centre ≈ y=77,
+            crests y=64, troughs y=90).  Area below troughs is transparent
+            → banner shows through without any colour mixing.
+          */}
+          <path
+            d="M0,0 L2880,0 L2880,77
+               C2640,64 2400,90 2160,77
+               C1920,64 1680,90 1440,77
+               C1200,64  960,90  720,77
+               C 480,64  240,90    0,77 Z"
+            fill="white"
+          />
+        </svg>
       </div>
 
       {/*
         ── BLACK BOTTOM ZONE ──
-        Mirror of the white zone anchored to the bottom.  The CSS mask fades
-        from fully opaque-black at the very bottom to transparent at the top
-        edge — same seamless gradient-boundary technique.
+        Mirror of the white zone anchored to the bottom.
+        SVG fills black from y=100 (zone bottom) up to the wave curve,
+        leaving the area above the wave transparent.
       */}
       <div
-        className="absolute bottom-0 left-0 right-0"
-        style={{
-          height: '58vh',
-          WebkitMaskImage:
-            'linear-gradient(to top, white 40%, transparent 100%)',
-          maskImage:
-            'linear-gradient(to top, white 40%, transparent 100%)',
-        }}
+        className="absolute bottom-0 left-0 right-0 overflow-hidden"
+        style={{ height: '45vh' }}
       >
-        {/* solid black fill behind the wave */}
-        <div className="absolute inset-0 bg-black" />
-
-        {/* animated wave that creates the organic upper edge */}
-        <div
-          className="absolute left-0 right-0 overflow-hidden"
-          style={{ top: 0, height: '35%' }}
+        <svg
+          className="absolute top-0 left-0 h-full wave-bottom"
+          style={{ width: '200%' }}
+          viewBox="0 0 2880 100"
+          preserveAspectRatio="none"
+          xmlns="http://www.w3.org/2000/svg"
         >
-          <svg
-            className="absolute bottom-0 h-full wave-bottom"
-            style={{ width: '200%' }}
-            viewBox="0 0 2880 100"
-            preserveAspectRatio="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M0,100 L2880,100 L2880,45
-                 C2640,15 2400,75 2160,45
-                 C1920,15 1680,75 1440,45
-                 C1200,15  960,75  720,45
-                 C 480,15  240,75    0,45 Z"
-              fill="black"
-            />
-          </svg>
-        </div>
+          {/*
+            Fills black from y=100 up to the wave curve (centre ≈ y=23,
+            crests y=10, troughs y=36).  Area above crests is transparent
+            → banner shows through without any colour mixing.
+          */}
+          <path
+            d="M0,100 L2880,100 L2880,23
+               C2640,36 2400,10 2160,23
+               C1920,36 1680,10 1440,23
+               C1200,36  960,10  720,23
+               C 480,36  240,10    0,23 Z"
+            fill="black"
+          />
+        </svg>
       </div>
     </div>
   )
