@@ -95,10 +95,11 @@ export default function AnimatedBackground() {
       </div>
 
       {/*
-        ── WHITE TOP ZONE ──
-        SVG spans full zone height; organic wave path fills white from y=0 down
-        to the wave curve.  A linearGradient fades the fill to transparent at
-        the wave boundary so the edge blends softly into the banner behind it.
+        ── DARK TOP ZONE ──
+        Black overlay from the top edge down to the organic wave curve.
+        Fades to transparent at the wave boundary via linearGradient so the
+        transition is dark → dark-red → banner (no colour-mixing artefact —
+        black × opacity blended over red produces dark red, not pink).
         Asymmetric bezier segments (widths 360-700 px, peaks y=57-63, troughs
         y=90-96) give the wave a natural, non-uniform look.
         Seamless tile: first CP (2720,60) mirrors last CP (160,90).
@@ -115,10 +116,10 @@ export default function AnimatedBackground() {
           xmlns="http://www.w3.org/2000/svg"
         >
           <defs>
-            <linearGradient id="wt-grad" x1="0" y1="0" x2="0" y2="100" gradientUnits="userSpaceOnUse">
-              <stop offset="0%"   stopColor="white" stopOpacity="1" />
-              <stop offset="65%"  stopColor="white" stopOpacity="1" />
-              <stop offset="100%" stopColor="white" stopOpacity="0" />
+            <linearGradient id="dk-top-grad" x1="0" y1="0" x2="0" y2="100" gradientUnits="userSpaceOnUse">
+              <stop offset="0%"   stopColor="black" stopOpacity="1" />
+              <stop offset="65%"  stopColor="black" stopOpacity="1" />
+              <stop offset="100%" stopColor="black" stopOpacity="0" />
             </linearGradient>
           </defs>
           <path
@@ -128,14 +129,15 @@ export default function AnimatedBackground() {
                C1400,59 1100,93  900,75
                C 710,60  520,91  360,75
                C 240,62  160,90    0,75 Z"
-            fill="url(#wt-grad)"
+            fill="url(#dk-top-grad)"
           />
         </svg>
       </div>
 
       {/*
-        ── BLACK BOTTOM ZONE ──
-        Vertical mirror of the white zone.  Gradient runs bottom-to-top so the
+        ── DARK BOTTOM ZONE ──
+        Vertical mirror of the dark top zone anchored to the bottom.
+        Gradient runs bottom-to-top so the
         wave crests reaching into the banner area dissolve softly.
         Seamless tile: first CP (2720,40) mirrors last CP (160,10).
       */}

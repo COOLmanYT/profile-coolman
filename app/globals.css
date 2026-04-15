@@ -15,7 +15,7 @@
 /* ─── Animated Background System ─────────────────────────────────────────── */
 
 /*
-  White wave: flows left → right (translateX 0 → −50 %).
+  Dark (black) top wave: flows left → right (translateX 0 → −50 %).
   The SVG is 200 % wide so the −50 % shift returns to the exact same
   visual state → seamless loop.  No translateY — vertical bob would
   clip the wave against the overflow-hidden zone boundary.
@@ -26,8 +26,8 @@
 }
 
 /*
-  Black wave: flows right → left (translateX −50 % → 0).
-  Duration 18 s (different from white) → independent motion.
+  Dark (black) bottom wave: flows right → left (translateX −50 % → 0).
+  Duration 18 s (different from top wave) → independent motion.
 */
 @keyframes wave-roll-bottom {
   0%   { transform: translateX( -50%); }
