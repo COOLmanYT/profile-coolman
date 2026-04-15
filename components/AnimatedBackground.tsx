@@ -60,23 +60,43 @@ export default function AnimatedBackground() {
     }
   }, [])
 
+  // Zone heights adapt to banner presence:
+  //   With banner:    shorter zones so the wave edges stay near the banner strip,
+  //                   leaving the centre clear for the image.
+  //   Without banner: taller zones so the white and black waves meet in the
+  //                   centre, "dancing" against the red gradient behind them.
+  const zoneHeight = bannerUrl ? '40vh' : '55vh'
+
   return (
     <div
       className="fixed inset-0 overflow-hidden pointer-events-none"
       style={{ zIndex: 0 }}
       aria-hidden="true"
     >
-      {/* ── BLACK BASE — always visible underneath everything ── */}
-      <div className="absolute inset-0 bg-black" />
+      {/*
+        ── RED GRADIENT BASE ──
+        Always present beneath everything.  Visible in the centre gap between
+        the white top wave and the black bottom wave (the "dancing" zone).
+      */}
+      <div className="absolute inset-0 banner-gradient-animated" />
 
-      {/* ── BANNER / GRADIENT LAYER ── fills the full viewport ── */}
-      {/* min-height / min-width ensure the source renders at ≥400px tall / 1600px wide */}
-      <div
-        className="absolute inset-0"
-        style={{ minHeight: '400px', minWidth: '1600px' }}
-      >
-        {bannerUrl ? (
-          /* eslint-disable-next-line @next/next/no-img-element */
+      {/*
+        ── BANNER STRIP ──
+        Horizontal strip centred in the viewport.  Rendered above the gradient
+        base but below the wave overlays, so wave edges organically frame it.
+        min-width 1600 px / min-height 400 px per spec.
+      */}
+      {bannerUrl && (
+        <div
+          className="absolute left-0 right-0"
+          style={{
+            top: '50%',
+            transform: 'translateY(-50%)',
+            height: 'max(400px, 25vh)',
+            minWidth: '1600px',
+          }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={bannerUrl}
             alt=""
@@ -88,25 +108,22 @@ export default function AnimatedBackground() {
               display: 'block',
             }}
           />
-        ) : (
-          /* animated red gradient fallback */
-          <div className="w-full h-full banner-gradient-animated" />
-        )}
-      </div>
+        </div>
+      )}
 
       {/*
-        ── DARK TOP ZONE ──
-        Black overlay from the top edge down to the organic wave curve.
-        Fades to transparent at the wave boundary via linearGradient so the
-        transition is dark → dark-red → banner (no colour-mixing artefact —
-        black × opacity blended over red produces dark red, not pink).
+        ── WHITE TOP ZONE ──
+        Solid white fills from the top edge down to the organic wave curve.
+        No gradient fade — the wave PATH is the crisp boundary.  Using a
+        transparent fade over the red base would composite to pink
+        (0.5 × white + 0.5 × red = pink); solid white avoids this entirely.
         Asymmetric bezier segments (widths 360-700 px, peaks y=57-63, troughs
         y=90-96) give the wave a natural, non-uniform look.
         Seamless tile: first CP (2720,60) mirrors last CP (160,90).
       */}
       <div
         className="absolute top-0 left-0 right-0 overflow-hidden"
-        style={{ height: '45vh' }}
+        style={{ height: zoneHeight }}
       >
         <svg
           className="absolute top-0 left-0 h-full wave-top"
@@ -115,13 +132,6 @@ export default function AnimatedBackground() {
           preserveAspectRatio="none"
           xmlns="http://www.w3.org/2000/svg"
         >
-          <defs>
-            <linearGradient id="dk-top-grad" x1="0" y1="0" x2="0" y2="100" gradientUnits="userSpaceOnUse">
-              <stop offset="0%"   stopColor="black" stopOpacity="1" />
-              <stop offset="65%"  stopColor="black" stopOpacity="1" />
-              <stop offset="100%" stopColor="black" stopOpacity="0" />
-            </linearGradient>
-          </defs>
           <path
             d="M0,0 L2880,0 L2880,75
                C2720,60 2480,94 2280,75
@@ -129,21 +139,20 @@ export default function AnimatedBackground() {
                C1400,59 1100,93  900,75
                C 710,60  520,91  360,75
                C 240,62  160,90    0,75 Z"
-            fill="url(#dk-top-grad)"
+            fill="white"
           />
         </svg>
       </div>
 
       {/*
-        ── DARK BOTTOM ZONE ──
-        Vertical mirror of the dark top zone anchored to the bottom.
-        Gradient runs bottom-to-top so the
-        wave crests reaching into the banner area dissolve softly.
+        ── BLACK BOTTOM ZONE ──
+        Solid black fills from the bottom edge up to the organic wave curve.
+        Vertical mirror of the white top zone.
         Seamless tile: first CP (2720,40) mirrors last CP (160,10).
       */}
       <div
         className="absolute bottom-0 left-0 right-0 overflow-hidden"
-        style={{ height: '45vh' }}
+        style={{ height: zoneHeight }}
       >
         <svg
           className="absolute top-0 left-0 h-full wave-bottom"
@@ -152,13 +161,6 @@ export default function AnimatedBackground() {
           preserveAspectRatio="none"
           xmlns="http://www.w3.org/2000/svg"
         >
-          <defs>
-            <linearGradient id="wb-grad" x1="0" y1="100" x2="0" y2="0" gradientUnits="userSpaceOnUse">
-              <stop offset="0%"   stopColor="black" stopOpacity="1" />
-              <stop offset="65%"  stopColor="black" stopOpacity="1" />
-              <stop offset="100%" stopColor="black" stopOpacity="0" />
-            </linearGradient>
-          </defs>
           <path
             d="M0,100 L2880,100 L2880,25
                C2720,40 2480, 6 2280,25
@@ -166,7 +168,7 @@ export default function AnimatedBackground() {
                C1400,41 1100, 7  900,25
                C 710,40  520, 9  360,25
                C 240,38  160,10    0,25 Z"
-            fill="url(#wb-grad)"
+            fill="black"
           />
         </svg>
       </div>
