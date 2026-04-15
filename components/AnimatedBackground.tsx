@@ -96,10 +96,12 @@ export default function AnimatedBackground() {
 
       {/*
         ── WHITE TOP ZONE ──
-        The SVG path fills white from y=0 (zone top) down to the wave curve,
-        leaving the area below the wave transparent so the banner shows through
-        cleanly.  No CSS mask needed — the wave IS the boundary.
-        Zone height 45vh; wave occupies the bottom ~25 % of the zone.
+        SVG spans full zone height; organic wave path fills white from y=0 down
+        to the wave curve.  A linearGradient fades the fill to transparent at
+        the wave boundary so the edge blends softly into the banner behind it.
+        Asymmetric bezier segments (widths 360-700 px, peaks y=57-63, troughs
+        y=90-96) give the wave a natural, non-uniform look.
+        Seamless tile: first CP (2720,60) mirrors last CP (160,90).
       */}
       <div
         className="absolute top-0 left-0 right-0 overflow-hidden"
@@ -112,27 +114,30 @@ export default function AnimatedBackground() {
           preserveAspectRatio="none"
           xmlns="http://www.w3.org/2000/svg"
         >
-          {/*
-            Fills white from y=0 down to the wave curve (centre ≈ y=77,
-            crests y=64, troughs y=90).  Area below troughs is transparent
-            → banner shows through without any colour mixing.
-          */}
+          <defs>
+            <linearGradient id="wt-grad" x1="0" y1="0" x2="0" y2="100" gradientUnits="userSpaceOnUse">
+              <stop offset="0%"   stopColor="white" stopOpacity="1" />
+              <stop offset="65%"  stopColor="white" stopOpacity="1" />
+              <stop offset="100%" stopColor="white" stopOpacity="0" />
+            </linearGradient>
+          </defs>
           <path
-            d="M0,0 L2880,0 L2880,77
-               C2640,64 2400,90 2160,77
-               C1920,64 1680,90 1440,77
-               C1200,64  960,90  720,77
-               C 480,64  240,90    0,77 Z"
-            fill="white"
+            d="M0,0 L2880,0 L2880,75
+               C2720,60 2480,94 2280,75
+               C2080,57 1820,96 1600,75
+               C1400,59 1100,93  900,75
+               C 710,60  520,91  360,75
+               C 240,62  160,90    0,75 Z"
+            fill="url(#wt-grad)"
           />
         </svg>
       </div>
 
       {/*
         ── BLACK BOTTOM ZONE ──
-        Mirror of the white zone anchored to the bottom.
-        SVG fills black from y=100 (zone bottom) up to the wave curve,
-        leaving the area above the wave transparent.
+        Vertical mirror of the white zone.  Gradient runs bottom-to-top so the
+        wave crests reaching into the banner area dissolve softly.
+        Seamless tile: first CP (2720,40) mirrors last CP (160,10).
       */}
       <div
         className="absolute bottom-0 left-0 right-0 overflow-hidden"
@@ -145,18 +150,21 @@ export default function AnimatedBackground() {
           preserveAspectRatio="none"
           xmlns="http://www.w3.org/2000/svg"
         >
-          {/*
-            Fills black from y=100 up to the wave curve (centre ≈ y=23,
-            crests y=10, troughs y=36).  Area above crests is transparent
-            → banner shows through without any colour mixing.
-          */}
+          <defs>
+            <linearGradient id="wb-grad" x1="0" y1="100" x2="0" y2="0" gradientUnits="userSpaceOnUse">
+              <stop offset="0%"   stopColor="black" stopOpacity="1" />
+              <stop offset="65%"  stopColor="black" stopOpacity="1" />
+              <stop offset="100%" stopColor="black" stopOpacity="0" />
+            </linearGradient>
+          </defs>
           <path
-            d="M0,100 L2880,100 L2880,23
-               C2640,36 2400,10 2160,23
-               C1920,36 1680,10 1440,23
-               C1200,36  960,10  720,23
-               C 480,36  240,10    0,23 Z"
-            fill="black"
+            d="M0,100 L2880,100 L2880,25
+               C2720,40 2480, 6 2280,25
+               C2080,43 1820, 4 1600,25
+               C1400,41 1100, 7  900,25
+               C 710,40  520, 9  360,25
+               C 240,38  160,10    0,25 Z"
+            fill="url(#wb-grad)"
           />
         </svg>
       </div>
