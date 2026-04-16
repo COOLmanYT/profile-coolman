@@ -23,6 +23,7 @@ const EQUALIZER_BARS = [
   { heightClass: 'h-[14px]', delayClass: '[animation-delay:0.3s]' },
   { heightClass: 'h-[18px]', delayClass: '[animation-delay:0.45s]' },
 ]
+const PAUSED_EQUALIZER_BARS = EQUALIZER_BARS.map((bar) => ({ ...bar, delayClass: '' }))
 
 interface SpotifyWidgetProps {
   showEmbed?: boolean
@@ -133,7 +134,7 @@ export default function SpotifyWidget({ showEmbed = true }: SpotifyWidgetProps) 
           </div>
             <div className="flex flex-col items-end gap-1 flex-shrink-0">
               <div className="flex gap-0.5 items-end h-5">
-                {(track.isPlaying ? EQUALIZER_BARS : EQUALIZER_BARS.map((bar) => ({ ...bar, delayClass: '' }))).map((bar, idx) => (
+                {(track.isPlaying ? EQUALIZER_BARS : PAUSED_EQUALIZER_BARS).map((bar, idx) => (
                   <div
                     key={idx}
                     className={`w-[3px] bg-[#1DB954] rounded-full ${track.isPlaying ? 'animate-bounce' : 'opacity-40'} ${bar.heightClass} ${bar.delayClass}`}
@@ -155,8 +156,8 @@ export default function SpotifyWidget({ showEmbed = true }: SpotifyWidgetProps) 
                 />
               </div>
               <div className="text-[10px] text-white/60 flex items-center justify-between tabular-nums">
-                <span>{formatDuration(progressMs)}</span>
-                <span>{formatDuration(durationMs)}</span>
+                <span aria-label="Current playback position">{formatDuration(progressMs)}</span>
+                <span aria-label="Total song duration">{formatDuration(durationMs)}</span>
               </div>
             </div>
           )}

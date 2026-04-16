@@ -97,7 +97,7 @@ const BADGE_MAP: Array<{ bit: number; label: string }> = [
 ]
 
 function getBadges(flags?: number) {
-  if (!flags || !Number.isFinite(flags)) return []
+  if (flags === undefined || flags === null) return []
   return BADGE_MAP.filter((badge) => (flags & badge.bit) === badge.bit).map((badge) => badge.label)
 }
 
@@ -155,10 +155,7 @@ export default function DiscordWidget({
   const avatarUrl = getDiscordAvatarUrl(presence?.discord_user)
   const avatarDecorationUrl = getAvatarDecorationUrl(presence?.discord_user)
   const badges = getBadges(presence?.discord_user?.public_flags)
-  const displayName =
-    presence?.discord_user?.username === 'coolman_yt'
-      ? 'coolman_yt'
-      : (presence?.discord_user?.username ?? 'coolman_yt')
+  const displayName = presence?.discord_user?.username ?? 'coolman_yt'
 
   return (
     <div className="w-full bg-black/25 rounded-2xl p-3 border border-white/10">

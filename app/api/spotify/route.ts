@@ -213,7 +213,7 @@ export async function GET() {
                   isPaused: false,
                   title,
                   artist,
-                  artists: artist ? artist.split(',').map((name) => name.trim()).filter(Boolean) : [],
+                  artists: artist ? [artist] : [],
                   albumArt,
                   songUrl,
                   durationMs: 0,
