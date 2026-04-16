@@ -1,11 +1,11 @@
 # COOLman Profile Site
 
-A Next.js 14 profile site with Spotify now-playing, Discord presence, and a dashboard for toggling widgets.
+A Next.js profile site with advanced Spotify mini-player, rich Discord presence, and a dashboard for toggling widgets.
 
 ## Features
 
-- 🎵 Spotify now-playing widget (polls every 30s)
-- 🎮 Discord presence via [Lanyard API](https://github.com/Phineas/lanyard)
+- 🎵 Spotify mini-player (album art, artists, duration/progress, paused state, responsive embed)
+- 🎮 Discord presence via [Lanyard API](https://github.com/Phineas/lanyard) with profile/avatar/status details
 - 👁 View counter via Supabase
 - 🔒 Dashboard with Discord OAuth (NextAuth.js) — only allowed user can access
 - 🎛 Toggle controls for Spotify and Discord widget categories
@@ -52,6 +52,15 @@ create table toggles (
   updated_at timestamptz default now()
 );
 ```
+
+Recommended toggle IDs include:
+- `spotify`
+- `spotify_embed`
+- `discord_music`
+- `discord_video`
+- `discord_games`
+- `discord_status`
+- `discord_other`
 
 ## Avatar
 

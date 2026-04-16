@@ -18,7 +18,7 @@ export default function ProfileCard({ toggles }: ProfileCardProps) {
 
         {/* Username */}
         <div className="text-center -mt-1">
-          <h1 className="text-[28px] font-bold text-white tracking-tight leading-tight">COOLman</h1>
+          <h1 className="text-[28px] font-bold text-white tracking-tight leading-tight title-soft-glow">COOLman</h1>
           <p className="text-white/70 text-sm mt-1 leading-snug">just a cool dude making content</p>
         </div>
 

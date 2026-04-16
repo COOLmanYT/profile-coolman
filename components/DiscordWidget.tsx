@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
 
 interface DiscordActivity {
   name: string
@@ -19,8 +20,16 @@ interface DiscordPresence {
   activities: DiscordActivity[]
   discord_user?: {
     username: string
-    discriminator: string
+    global_name?: string
+    discriminator?: string
     avatar?: string
+    avatar_decoration_data?: {
+      asset?: string
+    }
+    clan?: {
+      tag?: string
+    }
+    public_flags?: number
     id: string
   }
 }
@@ -33,18 +42,63 @@ interface DiscordWidgetProps {
   showOther?: boolean
 }
 
-const STATUS_DOT_CLASSES: Record<string, string> = {
-  online: 'bg-[#23a55a]',
-  idle: 'bg-[#f0b232]',
-  dnd: 'bg-[#f23f43]',
-  offline: 'bg-[#80848e]',
-}
-
 const STATUS_LABELS: Record<string, string> = {
   online: 'Online',
   idle: 'Idle',
   dnd: 'Do Not Disturb',
   offline: 'Offline',
+}
+
+function StatusIcon({ status }: { status: DiscordPresence['discord_status'] }) {
+  if (status === 'online') {
+    return <span aria-hidden className="w-2.5 h-2.5 rounded-full bg-[#23a55a] status-online-glow" />
+  }
+  if (status === 'idle') {
+    return (
+      <svg aria-hidden viewBox="0 0 16 16" className="w-3 h-3 text-[#f0b232]" fill="currentColor">
+        <path d="M8 1a7 7 0 1 0 7 7A7.01 7.01 0 0 0 8 1Zm0 1.5a5.5 5.5 0 0 1 0 11Zm0 1.5v4h3v1.5H6.5V4Z" />
+      </svg>
+    )
+  }
+  if (status === 'dnd') {
+    return (
+      <svg aria-hidden viewBox="0 0 16 16" className="w-3 h-3 text-[#f23f43]" fill="currentColor">
+        <path d="M8 1a7 7 0 1 0 7 7A7.01 7.01 0 0 0 8 1Zm3.5 7.75h-7v-1.5h7Z" />
+      </svg>
+    )
+  }
+  return (
+    <svg aria-hidden viewBox="0 0 16 16" className="w-3 h-3 text-[#80848e]" fill="currentColor">
+      <path d="M8 1a7 7 0 1 0 7 7A7.01 7.01 0 0 0 8 1Zm0 1.5a5.5 5.5 0 1 1-5.5 5.5A5.51 5.51 0 0 1 8 2.5Z" />
+    </svg>
+  )
+}
+
+function getDiscordAvatarUrl(user?: DiscordPresence['discord_user']) {
+  if (!user?.id || !user?.avatar) return undefined
+  const ext = user.avatar.startsWith('a_') ? 'gif' : 'png'
+  return `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.${ext}?size=128`
+}
+
+function getAvatarDecorationUrl(user?: DiscordPresence['discord_user']) {
+  const asset = user?.avatar_decoration_data?.asset
+  if (!asset) return undefined
+  return `https://cdn.discordapp.com/avatar-decoration-presets/${asset}.png?size=128&passthrough=true`
+}
+
+const BADGE_MAP: Array<{ bit: number; label: string }> = [
+  { bit: 1 << 0, label: 'Staff' },
+  { bit: 1 << 1, label: 'Partner' },
+  { bit: 1 << 6, label: 'Hypesquad Bravery' },
+  { bit: 1 << 7, label: 'Hypesquad Brilliance' },
+  { bit: 1 << 8, label: 'Hypesquad Balance' },
+  { bit: 1 << 9, label: 'Early Supporter' },
+  { bit: 1 << 17, label: 'Active Developer' },
+]
+
+function getBadges(flags?: number) {
+  if (!flags || !Number.isFinite(flags)) return []
+  return BADGE_MAP.filter((badge) => (flags & badge.bit) === badge.bit).map((badge) => badge.label)
 }
 
 // Activity type 0=Playing, 1=Streaming, 2=Listening, 3=Watching, 4=Custom, 5=Competing
@@ -69,7 +123,7 @@ export default function DiscordWidget({
   useEffect(() => {
     const fetchPresence = async () => {
       try {
-        const res = await fetch('/api/discord')
+        const res = await fetch('/api/discord', { cache: 'no-store' })
         if (res.ok) {
           const data = await res.json()
           setPresence(data)
@@ -81,7 +135,7 @@ export default function DiscordWidget({
       }
     }
     fetchPresence()
-    const interval = setInterval(fetchPresence, 30000)
+    const interval = setInterval(fetchPresence, 15000)
     return () => clearInterval(interval)
   }, [])
 
@@ -98,6 +152,13 @@ export default function DiscordWidget({
   ) ?? []
 
   const customStatus = presence?.activities?.find((a) => a.type === 4)
+  const avatarUrl = getDiscordAvatarUrl(presence?.discord_user)
+  const avatarDecorationUrl = getAvatarDecorationUrl(presence?.discord_user)
+  const badges = getBadges(presence?.discord_user?.public_flags)
+  const displayName =
+    presence?.discord_user?.username === 'coolman_yt'
+      ? 'coolman_yt'
+      : (presence?.discord_user?.username ?? 'coolman_yt')
 
   return (
     <div className="w-full bg-black/25 rounded-2xl p-3 border border-white/10">
@@ -114,14 +175,45 @@ export default function DiscordWidget({
         <p className="text-white/40 text-xs">Presence unavailable</p>
       ) : (
         <div className="space-y-2">
+          <div className="flex items-center gap-2.5">
+            <div className="relative w-9 h-9 rounded-full overflow-hidden border border-white/15 bg-white/10 flex-shrink-0">
+              {avatarUrl ? (
+                <Image src={avatarUrl} alt="Discord avatar" fill className="object-cover" unoptimized />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-[10px] text-white/60">DC</div>
+              )}
+              {avatarDecorationUrl && (
+                <Image src={avatarDecorationUrl} alt="" fill className="object-cover pointer-events-none" unoptimized />
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-white text-sm font-semibold leading-tight truncate">{displayName}</p>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <StatusIcon status={presence.discord_status} />
+                <span className="text-white/75 text-[11px]">{STATUS_LABELS[presence.discord_status] || 'Offline'}</span>
+                {presence.discord_user?.clan?.tag && (
+                  <span className="text-[10px] text-white/60 border border-white/15 rounded px-1 py-[1px]">
+                    {presence.discord_user.clan.tag}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {badges.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {badges.slice(0, 4).map((badge) => (
+                <span key={badge} className="text-[10px] text-white/60 border border-white/15 rounded px-1.5 py-0.5">
+                  {badge}
+                </span>
+              ))}
+            </div>
+          )}
+
           {/* Status row */}
           {showStatus && (
             <div className="flex items-center gap-2">
-              <div
-                className={`w-2.5 h-2.5 rounded-full flex-shrink-0 shadow-sm ${
-                  STATUS_DOT_CLASSES[presence.discord_status] || STATUS_DOT_CLASSES.offline
-                }`}
-              />
+              <StatusIcon status={presence.discord_status} />
               <span className="text-white/80 text-xs font-medium">
                 {STATUS_LABELS[presence.discord_status] || 'Offline'}
               </span>

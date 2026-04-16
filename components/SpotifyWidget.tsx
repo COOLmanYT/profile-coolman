@@ -103,14 +103,20 @@ export default function SpotifyWidget({ showEmbed = true }: SpotifyWidgetProps) 
         </div>
       ) : hasPlayback ? (
         <div className="space-y-2.5">
-          <a href={track.songUrl || '#'} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 hover:opacity-85 transition-opacity">
+          <div className="flex items-center gap-2.5">
           {track.albumArt && (
             <div className="relative w-10 h-10 rounded-lg flex-shrink-0 overflow-hidden shadow-md">
               <Image src={track.albumArt} alt="Album art" fill className="object-cover" unoptimized />
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <p className="text-white text-sm font-semibold leading-tight whitespace-normal">{track.title}</p>
+            {track.songUrl ? (
+              <a href={track.songUrl} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                <p className="text-white text-sm font-semibold leading-tight whitespace-normal">{track.title}</p>
+              </a>
+            ) : (
+              <p className="text-white text-sm font-semibold leading-tight whitespace-normal">{track.title}</p>
+            )}
             <p className="text-white/60 text-xs whitespace-normal mt-0.5">{artistsLabel}</p>
             {track.contextType === 'playlist' && track.contextUrl && (
               <p className="mt-1">
@@ -138,7 +144,7 @@ export default function SpotifyWidget({ showEmbed = true }: SpotifyWidgetProps) 
                 <span className="text-[10px] text-white/45">Paused</span>
               )}
             </div>
-          </a>
+          </div>
 
           {durationMs > 0 && (
             <div className="space-y-1">
