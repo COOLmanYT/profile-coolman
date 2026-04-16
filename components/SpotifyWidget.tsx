@@ -57,7 +57,7 @@ export default function SpotifyWidget({ showEmbed = true }: SpotifyWidgetProps) 
   useEffect(() => {
     const fetchTrack = async () => {
       try {
-        const res = await fetch('/api/spotify', { cache: 'no-store' })
+        const res = await fetch('/api/spotify')
         const data = await res.json().catch(() => ({ isPlaying: false }))
         setTrack((prev) => {
           const next = data as SpotifyTrack
@@ -86,7 +86,7 @@ export default function SpotifyWidget({ showEmbed = true }: SpotifyWidgetProps) 
   useEffect(() => {
     if (!track?.isPlaying || !track.durationMs) return
     const tick = setInterval(() => {
-      setDisplayProgressMs((prev) => Math.min(prev + PROGRESS_TICK_MS, track.durationMs ?? prev))
+      setDisplayProgressMs((prev) => Math.min(prev + PROGRESS_TICK_MS, track.durationMs))
     }, PROGRESS_TICK_MS)
     return () => clearInterval(tick)
   }, [track?.isPlaying, track?.durationMs])

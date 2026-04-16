@@ -97,6 +97,7 @@ const BADGE_MAP: Array<{ bit: number; label: string }> = [
   { bit: 1 << 9, label: 'Early Supporter' },
   { bit: 1 << 17, label: 'Active Developer' },
 ]
+const MAX_DISPLAYED_BADGES = 4
 
 function getBadges(flags?: number) {
   if (flags === undefined || flags === null) return []
@@ -126,7 +127,7 @@ export default function DiscordWidget({
   useEffect(() => {
     const fetchPresence = async () => {
       try {
-        const res = await fetch('/api/discord', { cache: 'no-store' })
+        const res = await fetch('/api/discord')
         if (res.ok) {
           const data = await res.json()
           setPresence(data)
@@ -202,7 +203,7 @@ export default function DiscordWidget({
 
           {badges.length > 0 && (
             <div className="flex flex-wrap gap-1">
-              {badges.slice(0, 4).map((badge) => (
+              {badges.slice(0, MAX_DISPLAYED_BADGES).map((badge) => (
                 <span key={badge} className="text-[10px] text-white/60 border border-white/15 rounded px-1.5 py-0.5">
                   {badge}
                 </span>
