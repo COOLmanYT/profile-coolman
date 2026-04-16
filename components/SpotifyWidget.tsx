@@ -5,10 +5,17 @@ import Image from 'next/image'
 
 interface SpotifyTrack {
   isPlaying: boolean
+  isPaused?: boolean
   title?: string
   artist?: string
+  artists?: string[]
   albumArt?: string
   songUrl?: string
+  durationMs?: number
+  progressMs?: number
+  embedUrl?: string
+  contextType?: string
+  contextUrl?: string
 }
 
 const EQUALIZER_BARS = [
@@ -17,26 +24,66 @@ const EQUALIZER_BARS = [
   { heightClass: 'h-[18px]', delayClass: '[animation-delay:0.45s]' },
 ]
 
-export default function SpotifyWidget() {
+interface SpotifyWidgetProps {
+  showEmbed?: boolean
+}
+
+export default function SpotifyWidget({ showEmbed = true }: SpotifyWidgetProps) {
   const [track, setTrack] = useState<SpotifyTrack | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [displayProgressMs, setDisplayProgressMs] = useState(0)
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false)
+
+  const formatDuration = (ms: number) => {
+    if (!Number.isFinite(ms) || ms <= 0) return '0:00'
+    const total = Math.floor(ms / 1000)
+    const minutes = Math.floor(total / 60)
+    const seconds = total % 60
+    return `${minutes}:${String(seconds).padStart(2, '0')}`
+  }
 
   useEffect(() => {
     const fetchTrack = async () => {
       try {
-        const res = await fetch('/api/spotify')
+        const res = await fetch('/api/spotify', { cache: 'no-store' })
         const data = await res.json().catch(() => ({ isPlaying: false }))
-        setTrack(data)
+        setTrack((prev) => {
+          const next = data as SpotifyTrack
+          if (prev?.songUrl === next.songUrl && prev?.progressMs === next.progressMs && prev?.isPlaying === next.isPlaying) {
+            return prev
+          }
+          return next
+        })
+        setDisplayProgressMs(Math.max(0, data.progressMs ?? 0))
       } catch {
         setTrack({ isPlaying: false })
       } finally {
-        setLoading(false)
+        setHasLoadedOnce(true)
       }
     }
     fetchTrack()
-    const interval = setInterval(fetchTrack, 30000)
+    const interval = setInterval(fetchTrack, 12000)
     return () => clearInterval(interval)
   }, [])
+
+  useEffect(() => {
+    if (!track?.durationMs) return
+    setDisplayProgressMs(Math.max(0, track.progressMs ?? 0))
+  }, [track?.songUrl, track?.progressMs, track?.durationMs])
+
+  useEffect(() => {
+    if (!track?.isPlaying || !track.durationMs) return
+    const tick = setInterval(() => {
+      setDisplayProgressMs((prev) => Math.min(prev + 1000, track.durationMs ?? prev))
+    }, 1000)
+    return () => clearInterval(tick)
+  }, [track?.isPlaying, track?.durationMs])
+
+  const artistsLabel = track?.artists?.length ? track.artists.join(', ') : (track?.artist ?? '')
+  const durationMs = Math.max(0, track?.durationMs ?? 0)
+  const progressMs = Math.min(Math.max(0, displayProgressMs), durationMs || displayProgressMs)
+  const progressPercent = durationMs > 0 ? Math.min(100, (progressMs / durationMs) * 100) : 0
+  const hasPlayback = !!track?.title
+  const canShowEmbed = showEmbed && !!track?.embedUrl && hasPlayback
 
   return (
     <div className="w-full bg-black/25 rounded-2xl p-3 border border-white/10">
@@ -46,7 +93,7 @@ export default function SpotifyWidget() {
         </svg>
         <span className="text-[#1DB954] text-[10px] font-bold tracking-widest uppercase">Listening on Spotify</span>
       </div>
-      {loading ? (
+      {!hasLoadedOnce ? (
         <div className="flex items-center gap-2.5">
           <div className="w-10 h-10 bg-white/10 rounded-lg animate-pulse flex-shrink-0" />
           <div className="flex-1">
@@ -54,28 +101,76 @@ export default function SpotifyWidget() {
             <div className="h-2.5 bg-white/10 rounded animate-pulse w-1/2" />
           </div>
         </div>
-      ) : track?.isPlaying ? (
-        <a href={track.songUrl || '#'} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
+      ) : hasPlayback ? (
+        <div className="space-y-2.5">
+          <a href={track.songUrl || '#'} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 hover:opacity-85 transition-opacity">
           {track.albumArt && (
             <div className="relative w-10 h-10 rounded-lg flex-shrink-0 overflow-hidden shadow-md">
               <Image src={track.albumArt} alt="Album art" fill className="object-cover" unoptimized />
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <p className="text-white text-sm font-semibold truncate leading-tight">{track.title}</p>
-            <p className="text-white/60 text-xs truncate mt-0.5">{track.artist}</p>
+            <p className="text-white text-sm font-semibold leading-tight whitespace-normal">{track.title}</p>
+            <p className="text-white/60 text-xs whitespace-normal mt-0.5">{artistsLabel}</p>
+            {track.contextType === 'playlist' && track.contextUrl && (
+              <p className="mt-1">
+                <a
+                  href={track.contextUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#1DB954] text-[10px] font-medium hover:underline"
+                >
+                  Open playlist
+                </a>
+              </p>
+            )}
           </div>
-          <div className="flex gap-0.5 items-end flex-shrink-0 h-5">
-            {EQUALIZER_BARS.map((bar, idx) => (
-              <div
-                key={idx}
-                className={`w-[3px] bg-[#1DB954] rounded-full animate-bounce ${bar.heightClass} ${bar.delayClass}`}
+            <div className="flex flex-col items-end gap-1 flex-shrink-0">
+              <div className="flex gap-0.5 items-end h-5">
+                {(track.isPlaying ? EQUALIZER_BARS : EQUALIZER_BARS.map((bar) => ({ ...bar, delayClass: '' }))).map((bar, idx) => (
+                  <div
+                    key={idx}
+                    className={`w-[3px] bg-[#1DB954] rounded-full ${track.isPlaying ? 'animate-bounce' : 'opacity-40'} ${bar.heightClass} ${bar.delayClass}`}
+                  />
+                ))}
+              </div>
+              {!track.isPlaying && (
+                <span className="text-[10px] text-white/45">Paused</span>
+              )}
+            </div>
+          </a>
+
+          {durationMs > 0 && (
+            <div className="space-y-1">
+              <div className="relative h-1.5 rounded-full bg-white/15 overflow-hidden">
+                <div
+                  className="h-full bg-[#1DB954] rounded-full transition-[width] duration-700 ease-linear"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+              <div className="text-[10px] text-white/60 flex items-center justify-between tabular-nums">
+                <span>{formatDuration(progressMs)}</span>
+                <span>{formatDuration(durationMs)}</span>
+              </div>
+            </div>
+          )}
+
+          {canShowEmbed && (
+            <div className="w-full rounded-xl overflow-hidden border border-white/10 bg-black/20 h-[80px]">
+              <iframe
+                title="Spotify Embed Player"
+                src={track.embedUrl}
+                width="100%"
+                height="80"
+                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                loading="lazy"
+                className="block w-full h-[80px]"
               />
-            ))}
-          </div>
-        </a>
+            </div>
+          )}
+        </div>
       ) : (
-        <p className="text-white/40 text-xs">Not currently playing</p>
+        <p className="text-white/40 text-xs">Not listening right now</p>
       )}
     </div>
   )

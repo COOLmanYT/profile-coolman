@@ -17,6 +17,26 @@ type TokenResult =
   | { accessToken: string; error?: never }
   | { accessToken?: never; error: string }
 
+type SpotifyPlaybackResponse = {
+  is_playing?: boolean
+  progress_ms?: number
+  item?: {
+    id?: string
+    name: string
+    duration_ms?: number
+    artists?: Array<{ name: string }>
+    album?: { images?: Array<{ url: string }> }
+    external_urls?: { spotify?: string }
+  } | null
+  context?: {
+    type?: string
+    uri?: string
+    external_urls?: {
+      spotify?: string
+    }
+  } | null
+}
+
 async function getAccessToken(): Promise<TokenResult> {
   const clientId = process.env.SPOTIFY_CLIENT_ID
   const clientSecret = process.env.SPOTIFY_CLIENT_SECRET
@@ -62,23 +82,32 @@ async function getAccessToken(): Promise<TokenResult> {
   return { accessToken: data.access_token as string }
 }
 
-function mapTrackData(data: {
-  is_playing: boolean
-  item: {
-    name: string
-    artists?: Array<{ name: string }>
-    album?: { images?: Array<{ url: string }> }
-    external_urls?: { spotify?: string }
-  } | null
-}) {
+function mapTrackData(data: SpotifyPlaybackResponse) {
   const item = data.item
   if (!item) return null
+  const artists = (item.artists ?? []).map((a) => a.name)
+  const contextUri = data.context?.uri
+  const playlistId =
+    data.context?.type === 'playlist' && typeof contextUri === 'string'
+      ? contextUri.replace('spotify:playlist:', '')
+      : undefined
+
   return {
-    isPlaying: true,
+    isPlaying: !!data.is_playing,
+    isPaused: !data.is_playing,
     title: item.name,
-    artist: (item.artists ?? []).map((a) => a.name).join(', '),
+    artist: artists.join(', '),
+    artists,
     albumArt: item.album?.images?.[0]?.url,
     songUrl: item.external_urls?.spotify,
+    durationMs: item.duration_ms ?? 0,
+    progressMs: data.progress_ms ?? 0,
+    embedUrl: item.id ? `https://open.spotify.com/embed/track/${item.id}` : undefined,
+    contextType: data.context?.type,
+    contextUri,
+    contextUrl:
+      data.context?.external_urls?.spotify ??
+      (playlistId ? `https://open.spotify.com/playlist/${playlistId}` : undefined),
   }
 }
 
@@ -112,8 +141,8 @@ export async function GET() {
     })
 
     if (nowPlayingRes.status === 200) {
-      const data = await nowPlayingRes.json()
-      if (data.is_playing && data.item) {
+      const data = (await nowPlayingRes.json()) as SpotifyPlaybackResponse
+      if (data.item) {
         const track = mapTrackData(data)
         if (track) return NextResponse.json(track, noStore)
       }
@@ -128,8 +157,8 @@ export async function GET() {
     })
 
     if (playbackRes.status === 200) {
-      const data = await playbackRes.json()
-      if (data.is_playing && data.item) {
+      const data = (await playbackRes.json()) as SpotifyPlaybackResponse
+      if (data.item) {
         const track = mapTrackData(data)
         if (track) return NextResponse.json(track, noStore)
       }
@@ -179,15 +208,23 @@ export async function GET() {
                   ? `https://open.spotify.com/search/${encodeURIComponent(`${title ?? ''} ${artist ?? ''}`.trim())}`
                   : undefined
 
-              return NextResponse.json({
-                isPlaying: true,
-                title,
-                artist,
-                albumArt,
-                songUrl,
-                ...(DEBUG ? { debug: { fallback: 'discord_lanyard' } } : {}),
-              }, noStore)
-            }
+                return NextResponse.json({
+                  isPlaying: true,
+                  isPaused: false,
+                  title,
+                  artist,
+                  artists: artist ? artist.split(',').map((name) => name.trim()).filter(Boolean) : [],
+                  albumArt,
+                  songUrl,
+                  durationMs: 0,
+                  progressMs: 0,
+                  embedUrl: undefined,
+                  contextType: 'fallback',
+                  contextUri: undefined,
+                  contextUrl: undefined,
+                  ...(DEBUG ? { debug: { fallback: 'discord_lanyard' } } : {}),
+                }, noStore)
+              }
           }
         }
       } catch {

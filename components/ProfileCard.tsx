@@ -30,7 +30,7 @@ export default function ProfileCard({ toggles }: ProfileCardProps) {
 
         {/* Spotify Widget */}
         {toggles.spotify && (
-          <SpotifyWidget />
+          <SpotifyWidget showEmbed={toggles.spotify_embed ?? true} />
         )}
 
         {/* Discord Widget */}
