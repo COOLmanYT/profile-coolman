@@ -85,8 +85,9 @@ export default function SpotifyWidget({ showEmbed = true }: SpotifyWidgetProps) 
 
   useEffect(() => {
     if (!track?.isPlaying || !track.durationMs) return
+    const durationMs = track.durationMs
     const tick = setInterval(() => {
-      setDisplayProgressMs((prev) => Math.min(prev + PROGRESS_TICK_MS, track.durationMs))
+      setDisplayProgressMs((prev) => Math.min(prev + PROGRESS_TICK_MS, durationMs))
     }, PROGRESS_TICK_MS)
     return () => clearInterval(tick)
   }, [track?.isPlaying, track?.durationMs])
