@@ -119,6 +119,7 @@ export default function DiscordWidget({
   showStatus = true,
   showOther = true,
 }: DiscordWidgetProps) {
+  const DISCORD_POLL_MS = 20000
   const [presence, setPresence] = useState<DiscordPresence | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -137,7 +138,7 @@ export default function DiscordWidget({
       }
     }
     fetchPresence()
-    const interval = setInterval(fetchPresence, 15000)
+    const interval = setInterval(fetchPresence, DISCORD_POLL_MS)
     return () => clearInterval(interval)
   }, [])
 
@@ -179,7 +180,7 @@ export default function DiscordWidget({
               {avatarUrl ? (
                 <Image src={avatarUrl} alt="Discord avatar" fill className="object-cover" unoptimized />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-[10px] text-white/60">DC</div>
+                <div aria-label="Discord avatar placeholder" className="w-full h-full flex items-center justify-center text-[10px] text-white/60">DC</div>
               )}
               {avatarDecorationUrl && (
                 <Image src={avatarDecorationUrl} alt="" fill className="object-cover pointer-events-none" unoptimized />

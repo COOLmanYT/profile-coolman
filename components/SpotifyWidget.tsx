@@ -29,6 +29,7 @@ const PAUSED_EQUALIZER_BARS = [
   { heightClass: 'h-[18px]', delayClass: '' },
 ]
 const PROGRESS_TICK_MS = 1000
+const SPOTIFY_POLL_MS = 15000
 
 function isSameTrackState(prev: SpotifyTrack | null, next: SpotifyTrack) {
   return prev?.songUrl === next.songUrl
@@ -73,7 +74,7 @@ export default function SpotifyWidget({ showEmbed = true }: SpotifyWidgetProps) 
       }
     }
     fetchTrack()
-    const interval = setInterval(fetchTrack, 12000)
+    const interval = setInterval(fetchTrack, SPOTIFY_POLL_MS)
     return () => clearInterval(interval)
   }, [])
 
@@ -138,7 +139,7 @@ export default function SpotifyWidget({ showEmbed = true }: SpotifyWidgetProps) 
                   rel="noopener noreferrer"
                   className="text-[#1DB954] text-[10px] font-medium hover:underline"
                 >
-                  Open playlist
+                  Open Playlist
                 </a>
               </p>
             )}
