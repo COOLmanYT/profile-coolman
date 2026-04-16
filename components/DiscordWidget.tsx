@@ -86,6 +86,8 @@ function getAvatarDecorationUrl(user?: DiscordPresence['discord_user']) {
   return `https://cdn.discordapp.com/avatar-decoration-presets/${asset}.png?size=128&passthrough=true`
 }
 
+// Based on Discord user public_flags bit values:
+// https://discord.com/developers/docs/resources/user#user-object-user-flags
 const BADGE_MAP: Array<{ bit: number; label: string }> = [
   { bit: 1 << 0, label: 'Staff' },
   { bit: 1 << 1, label: 'Partner' },

@@ -23,7 +23,18 @@ const EQUALIZER_BARS = [
   { heightClass: 'h-[14px]', delayClass: '[animation-delay:0.3s]' },
   { heightClass: 'h-[18px]', delayClass: '[animation-delay:0.45s]' },
 ]
-const PAUSED_EQUALIZER_BARS = EQUALIZER_BARS.map((bar) => ({ ...bar, delayClass: '' }))
+const PAUSED_EQUALIZER_BARS = [
+  { heightClass: 'h-[10px]', delayClass: '' },
+  { heightClass: 'h-[14px]', delayClass: '' },
+  { heightClass: 'h-[18px]', delayClass: '' },
+]
+const PROGRESS_TICK_MS = 1000
+
+function isSameTrackState(prev: SpotifyTrack | null, next: SpotifyTrack) {
+  return prev?.songUrl === next.songUrl
+    && prev?.progressMs === next.progressMs
+    && prev?.isPlaying === next.isPlaying
+}
 
 interface SpotifyWidgetProps {
   showEmbed?: boolean
@@ -49,7 +60,7 @@ export default function SpotifyWidget({ showEmbed = true }: SpotifyWidgetProps) 
         const data = await res.json().catch(() => ({ isPlaying: false }))
         setTrack((prev) => {
           const next = data as SpotifyTrack
-          if (prev?.songUrl === next.songUrl && prev?.progressMs === next.progressMs && prev?.isPlaying === next.isPlaying) {
+          if (isSameTrackState(prev, next)) {
             return prev
           }
           return next
@@ -74,8 +85,8 @@ export default function SpotifyWidget({ showEmbed = true }: SpotifyWidgetProps) 
   useEffect(() => {
     if (!track?.isPlaying || !track.durationMs) return
     const tick = setInterval(() => {
-      setDisplayProgressMs((prev) => Math.min(prev + 1000, track.durationMs ?? prev))
-    }, 1000)
+      setDisplayProgressMs((prev) => Math.min(prev + PROGRESS_TICK_MS, track.durationMs ?? prev))
+    }, PROGRESS_TICK_MS)
     return () => clearInterval(tick)
   }, [track?.isPlaying, track?.durationMs])
 

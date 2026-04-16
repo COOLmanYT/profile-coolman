@@ -219,7 +219,7 @@ export async function GET() {
                   durationMs: 0,
                   progressMs: 0,
                   embedUrl: undefined,
-                  contextType: 'fallback',
+                  contextType: undefined,
                   contextUri: undefined,
                   contextUrl: undefined,
                   ...(DEBUG ? { debug: { fallback: 'discord_lanyard' } } : {}),
