@@ -5,7 +5,6 @@ import Image from 'next/image'
 
 interface SpotifyTrack {
   isPlaying: boolean
-  isPaused?: boolean
   title?: string
   artist?: string
   artists?: string[]
@@ -79,12 +78,12 @@ export default function SpotifyWidget({ showEmbed = true }: SpotifyWidgetProps) 
   }, [])
 
   useEffect(() => {
-    if (!track?.durationMs) return
+    if (track?.durationMs === undefined || track?.durationMs === null) return
     setDisplayProgressMs(Math.max(0, track.progressMs ?? 0))
   }, [track?.songUrl, track?.progressMs, track?.durationMs])
 
   useEffect(() => {
-    if (!track?.isPlaying || !track.durationMs) return
+    if (!track?.isPlaying || track.durationMs === undefined || track.durationMs === null) return
     const durationMs = track.durationMs
     const tick = setInterval(() => {
       setDisplayProgressMs((prev) => Math.min(prev + PROGRESS_TICK_MS, durationMs))

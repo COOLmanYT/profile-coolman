@@ -94,7 +94,6 @@ function mapTrackData(data: SpotifyPlaybackResponse) {
 
   return {
     isPlaying: !!data.is_playing,
-    isPaused: !data.is_playing,
     title: item.name,
     artist: artists.join(', '),
     artists,
@@ -210,7 +209,6 @@ export async function GET() {
 
                 return NextResponse.json({
                   isPlaying: true,
-                  isPaused: false,
                   title,
                   artist,
                   artists: artist ? [artist] : [],

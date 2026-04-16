@@ -98,6 +98,7 @@ const BADGE_MAP: Array<{ bit: number; label: string }> = [
   { bit: 1 << 17, label: 'Active Developer' },
 ]
 const MAX_DISPLAYED_BADGES = 4
+const DISCORD_POLL_MS = 20000
 
 function getBadges(flags?: number) {
   if (flags === undefined || flags === null) return []
@@ -120,7 +121,6 @@ export default function DiscordWidget({
   showStatus = true,
   showOther = true,
 }: DiscordWidgetProps) {
-  const DISCORD_POLL_MS = 20000
   const [presence, setPresence] = useState<DiscordPresence | null>(null)
   const [loading, setLoading] = useState(true)
 
