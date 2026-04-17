@@ -95,8 +95,9 @@ async function getPlaylistVisibility(accessToken: string, playlistId?: string): 
     )
     if (!res.ok) return false
     const playlistJson: unknown = await res.json().catch(() => null)
-    if (!playlistJson || typeof playlistJson !== 'object' || !('public' in playlistJson)) return false
-    return (playlistJson as { public?: unknown }).public === true
+    if (!playlistJson || typeof playlistJson !== 'object') return false
+    const playlistPublic = (playlistJson as { public?: unknown }).public
+    return playlistPublic === true
   } catch {
     return false
   }

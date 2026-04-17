@@ -231,7 +231,7 @@ function DiscordWidget({
                 <div aria-label="Discord avatar placeholder" className="w-full h-full flex items-center justify-center text-[10px] text-white/60">DC</div>
               )}
               {avatarDecorationUrl && (
-                <Image src={avatarDecorationUrl} alt="" fill className="object-cover pointer-events-none" unoptimized />
+                <Image src={avatarDecorationUrl} alt="" aria-hidden="true" fill className="object-cover pointer-events-none" unoptimized />
               )}
             </div>
             <div className="min-w-0 flex-1">
