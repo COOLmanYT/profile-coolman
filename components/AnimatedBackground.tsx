@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { memo, useEffect, useRef, useState } from 'react'
 
 /** Try HEAD requests for local banner files in priority order. */
 async function resolveLocalBanner(): Promise<string | null> {
@@ -125,13 +125,28 @@ const BANNER_BOT: WaveParams[] = [
 // Overlapping semi-transparent fills blend naturally with the red background,
 // producing smooth organic colour transitions instead of hard panel edges.
 const LAYER_ALPHAS = [0.88, 0.76, 0.64] as const
+const MIN_RENDER_SCALE = 0.55
+const MAX_RENDER_SCALE_CAP = 1.5
+const LOW_FPS_THRESHOLD = 42
+const HIGH_FPS_THRESHOLD = 56
+const FPS_SAMPLE_WINDOW_MS = 1200
+const SCALE_STEP = 0.1
+const INITIAL_FRAME_DELTA_MS = 16.67
+const MAX_FRAME_DELTA_MS = 120
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function AnimatedBackground() {
+function AnimatedBackground() {
   const [bannerUrl, setBannerUrl]   = useState<string | null>(null)
   const canvasRef                   = useRef<HTMLCanvasElement>(null)
   const rafRef                      = useRef<number>(0)
+  const renderScaleRef              = useRef<number>(1)
+  const maxRenderScaleRef           = useRef<number>(1)
+  const elapsedTimeRef              = useRef<number>(0)
+  const lastFrameTimeRef            = useRef<number | null>(null)
+  const fpsFramesRef                = useRef<number>(0)
+  const fpsElapsedMsRef             = useRef<number>(0)
+  const isPageHiddenRef             = useRef<boolean>(false)
   // Ref keeps the animation loop in sync with state without stale closures.
   const hasBannerRef                = useRef<boolean>(false)
 
@@ -186,21 +201,68 @@ export default function AnimatedBackground() {
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    const startTime = performance.now()
+    function updateMaxRenderScale() {
+      maxRenderScaleRef.current = Math.max(
+        1,
+        Math.min(MAX_RENDER_SCALE_CAP, window.devicePixelRatio || 1)
+      )
+      renderScaleRef.current = Math.min(renderScaleRef.current, maxRenderScaleRef.current)
+    }
+
+    function applyCanvasSize() {
+      if (!canvas || !ctx) return
+      const scale = renderScaleRef.current
+      canvas.width = Math.max(1, Math.round(window.innerWidth * scale))
+      canvas.height = Math.max(1, Math.round(window.innerHeight * scale))
+      canvas.style.width = `${window.innerWidth}px`
+      canvas.style.height = `${window.innerHeight}px`
+      ctx.setTransform(scale, 0, 0, scale, 0, 0)
+    }
 
     function resize() {
-      if (!canvas) return
-      canvas.width  = window.innerWidth
-      canvas.height = window.innerHeight
+      updateMaxRenderScale()
+      applyCanvasSize()
     }
+
     resize()
     window.addEventListener('resize', resize)
 
-    function draw() {
+    function adaptRenderScale(fps: number) {
+      if (fps < LOW_FPS_THRESHOLD && renderScaleRef.current > MIN_RENDER_SCALE) {
+        renderScaleRef.current = Math.max(MIN_RENDER_SCALE, renderScaleRef.current - SCALE_STEP)
+        applyCanvasSize()
+      } else if (fps > HIGH_FPS_THRESHOLD && renderScaleRef.current < maxRenderScaleRef.current) {
+        renderScaleRef.current = Math.min(maxRenderScaleRef.current, renderScaleRef.current + SCALE_STEP)
+        applyCanvasSize()
+      }
+    }
+
+    function draw(now: number) {
       if (!canvas || !ctx) return
-      const W = canvas.width
-      const H = canvas.height
-      const t = (performance.now() - startTime) / 1000
+
+      if (isPageHiddenRef.current) {
+        return
+      }
+
+      const previous = lastFrameTimeRef.current
+      const frameDeltaMs = previous === null
+        ? INITIAL_FRAME_DELTA_MS
+        : Math.min(MAX_FRAME_DELTA_MS, Math.max(0, now - previous))
+      lastFrameTimeRef.current = now
+      elapsedTimeRef.current += frameDeltaMs / 1000
+
+      fpsFramesRef.current += 1
+      fpsElapsedMsRef.current += frameDeltaMs
+      if (fpsElapsedMsRef.current >= FPS_SAMPLE_WINDOW_MS) {
+        const fps = (fpsFramesRef.current * 1000) / fpsElapsedMsRef.current
+        adaptRenderScale(fps)
+        fpsFramesRef.current = 0
+        fpsElapsedMsRef.current = 0
+      }
+
+      const W = window.innerWidth
+      const H = window.innerHeight
+      const t = elapsedTimeRef.current
 
       // ── 1. Animated red gradient background ────────────────────────────
       // Computed each frame from a slow sine → continuous, never twitches.
@@ -230,11 +292,27 @@ export default function AnimatedBackground() {
       rafRef.current = requestAnimationFrame(draw)
     }
 
+    function onVisibilityChange() {
+      isPageHiddenRef.current = document.visibilityState !== 'visible'
+      if (isPageHiddenRef.current) {
+        if (rafRef.current) cancelAnimationFrame(rafRef.current)
+        rafRef.current = 0
+        lastFrameTimeRef.current = null
+        return
+      }
+      if (!rafRef.current) {
+        rafRef.current = requestAnimationFrame(draw)
+      }
+    }
+
+    isPageHiddenRef.current = document.visibilityState !== 'visible'
+    document.addEventListener('visibilitychange', onVisibilityChange)
     rafRef.current = requestAnimationFrame(draw)
 
     return () => {
       window.removeEventListener('resize', resize)
-      cancelAnimationFrame(rafRef.current)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+      if (rafRef.current) cancelAnimationFrame(rafRef.current)
     }
   }, [])
 
@@ -284,3 +362,5 @@ export default function AnimatedBackground() {
     </div>
   )
 }
+
+export default memo(AnimatedBackground)

@@ -10,6 +10,8 @@ interface DashboardClientProps {
 
 const TOGGLE_LABELS: Record<string, string> = {
   spotify: 'Spotify Widget',
+  spotify_embed: 'Spotify Embed Player',
+  spotify_playlist: 'Spotify Playlist Link',
   discord_music: 'Discord — Music',
   discord_video: 'Discord — Video',
   discord_games: 'Discord — Games',

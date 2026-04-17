@@ -8,6 +8,7 @@ export const dynamic = 'force-dynamic'
 const SPOTIFY_TOKEN_URL = 'https://accounts.spotify.com/api/token'
 const SPOTIFY_NOW_PLAYING_URL = 'https://api.spotify.com/v1/me/player/currently-playing'
 const SPOTIFY_PLAYBACK_URL = 'https://api.spotify.com/v1/me/player'
+const SPOTIFY_PLAYLIST_URL = 'https://api.spotify.com/v1/playlists'
 
 // Set SPOTIFY_DEBUG=true in your environment to include upstream status codes and
 // limited error text in API responses. Never enable this in production long-term.
@@ -16,6 +17,26 @@ const DEBUG = process.env.SPOTIFY_DEBUG === 'true'
 type TokenResult =
   | { accessToken: string; error?: never }
   | { accessToken?: never; error: string }
+
+type SpotifyPlaybackResponse = {
+  is_playing?: boolean
+  progress_ms?: number
+  item?: {
+    id?: string
+    name: string
+    duration_ms?: number
+    artists?: Array<{ name: string }>
+    album?: { images?: Array<{ url: string }> }
+    external_urls?: { spotify?: string }
+  } | null
+  context?: {
+    type?: string
+    uri?: string
+    external_urls?: {
+      spotify?: string
+    }
+  } | null
+}
 
 async function getAccessToken(): Promise<TokenResult> {
   const clientId = process.env.SPOTIFY_CLIENT_ID
@@ -62,23 +83,54 @@ async function getAccessToken(): Promise<TokenResult> {
   return { accessToken: data.access_token as string }
 }
 
-function mapTrackData(data: {
-  is_playing: boolean
-  item: {
-    name: string
-    artists?: Array<{ name: string }>
-    album?: { images?: Array<{ url: string }> }
-    external_urls?: { spotify?: string }
-  } | null
-}) {
+async function getPlaylistVisibility(accessToken: string, playlistId?: string): Promise<boolean> {
+  if (!playlistId) return false
+  try {
+    const res = await fetch(
+      `${SPOTIFY_PLAYLIST_URL}/${playlistId}?fields=public`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        cache: 'no-store',
+      }
+    )
+    if (!res.ok) return false
+    const playlistJson: unknown = await res.json().catch(() => null)
+    if (!playlistJson || typeof playlistJson !== 'object') return false
+    const playlistPublic = (playlistJson as { public?: unknown }).public
+    return playlistPublic === true
+  } catch {
+    return false
+  }
+}
+
+async function mapTrackData(data: SpotifyPlaybackResponse, accessToken: string) {
   const item = data.item
   if (!item) return null
+  const artists = (item.artists ?? []).map((a) => a.name)
+  const contextUri = data.context?.uri
+  const playlistId =
+    data.context?.type === 'playlist' && typeof contextUri === 'string'
+      ? contextUri.replace('spotify:playlist:', '')
+      : undefined
+
+  const contextIsPublic = await getPlaylistVisibility(accessToken, playlistId)
+
   return {
-    isPlaying: true,
+    isPlaying: !!data.is_playing,
     title: item.name,
-    artist: (item.artists ?? []).map((a) => a.name).join(', '),
+    artist: artists.join(', '),
+    artists,
     albumArt: item.album?.images?.[0]?.url,
     songUrl: item.external_urls?.spotify,
+    durationMs: item.duration_ms ?? 0,
+    progressMs: data.progress_ms ?? 0,
+    embedUrl: item.id ? `https://open.spotify.com/embed/track/${item.id}` : undefined,
+    contextType: data.context?.type,
+    contextUri,
+    contextUrl:
+      data.context?.external_urls?.spotify ??
+      (playlistId ? `https://open.spotify.com/playlist/${playlistId}` : undefined),
+    contextIsPublic,
   }
 }
 
@@ -103,7 +155,10 @@ export async function GET() {
       }, noStore)
     }
 
-    const { accessToken } = tokenResult
+    const accessToken = tokenResult.accessToken
+    if (!accessToken) {
+      return NextResponse.json({ isPlaying: false }, noStore)
+    }
 
     // Primary: /v1/me/player/currently-playing
     const nowPlayingRes = await fetch(SPOTIFY_NOW_PLAYING_URL, {
@@ -112,9 +167,9 @@ export async function GET() {
     })
 
     if (nowPlayingRes.status === 200) {
-      const data = await nowPlayingRes.json()
-      if (data.is_playing && data.item) {
-        const track = mapTrackData(data)
+      const data = (await nowPlayingRes.json()) as SpotifyPlaybackResponse
+      if (data.item) {
+        const track = await mapTrackData(data, accessToken)
         if (track) return NextResponse.json(track, noStore)
       }
     }
@@ -128,9 +183,9 @@ export async function GET() {
     })
 
     if (playbackRes.status === 200) {
-      const data = await playbackRes.json()
-      if (data.is_playing && data.item) {
-        const track = mapTrackData(data)
+      const data = (await playbackRes.json()) as SpotifyPlaybackResponse
+      if (data.item) {
+        const track = await mapTrackData(data, accessToken)
         if (track) return NextResponse.json(track, noStore)
       }
       return NextResponse.json({
@@ -179,15 +234,22 @@ export async function GET() {
                   ? `https://open.spotify.com/search/${encodeURIComponent(`${title ?? ''} ${artist ?? ''}`.trim())}`
                   : undefined
 
-              return NextResponse.json({
-                isPlaying: true,
-                title,
-                artist,
-                albumArt,
-                songUrl,
-                ...(DEBUG ? { debug: { fallback: 'discord_lanyard' } } : {}),
-              }, noStore)
-            }
+                return NextResponse.json({
+                  isPlaying: true,
+                  title,
+                  artist,
+                  artists: artist ? [artist] : [],
+                  albumArt,
+                  songUrl,
+                  durationMs: undefined,
+                  progressMs: undefined,
+                  embedUrl: undefined,
+                  contextType: undefined,
+                  contextUri: undefined,
+                  contextUrl: undefined,
+                  ...(DEBUG ? { debug: { fallback: 'discord_lanyard' } } : {}),
+                }, noStore)
+              }
           }
         }
       } catch {

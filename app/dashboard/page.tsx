@@ -12,6 +12,8 @@ async function getToggles() {
   if (!url || !key || url.includes('placeholder')) {
     return {
       spotify: true,
+      spotify_embed: true,
+      spotify_playlist: true,
       discord_music: true,
       discord_video: true,
       discord_games: true,
@@ -24,6 +26,8 @@ async function getToggles() {
     const { data } = await supabase.from('toggles').select('id, value')
     const defaults: Record<string, boolean> = {
       spotify: true,
+      spotify_embed: true,
+      spotify_playlist: true,
       discord_music: true,
       discord_video: true,
       discord_games: true,
@@ -39,6 +43,8 @@ async function getToggles() {
   } catch {
     return {
       spotify: true,
+      spotify_embed: true,
+      spotify_playlist: true,
       discord_music: true,
       discord_video: true,
       discord_games: true,
