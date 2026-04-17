@@ -18,14 +18,21 @@ interface DiscordActivity {
 interface DiscordPresence {
   discord_status: 'online' | 'idle' | 'dnd' | 'offline'
   activities: DiscordActivity[]
+  kv?: Record<string, unknown>
   discord_user?: {
     username: string
     global_name?: string
     discriminator?: string
     avatar?: string
     banner?: string
+    premium_type?: number
+    premium_since?: string
+    premium_guild_since?: string
     avatar_decoration_data?: {
       asset?: string
+    }
+    primary_guild?: {
+      tag?: string
     }
     clan?: {
       tag?: string
@@ -89,7 +96,13 @@ function getAvatarDecorationUrl(user?: DiscordPresence['discord_user']) {
 }
 
 function getNameplateUrl(user?: DiscordPresence['discord_user']) {
-  const asset = user?.avatar_decoration_data?.asset
+  const record = user as (Record<string, unknown> | undefined)
+  const nested = record?.nameplate as (Record<string, unknown> | undefined)
+  const asset = (
+    (nested?.asset as string | undefined)
+    ?? (record?.nameplate_asset as string | undefined)
+    ?? (record?.nameplateAsset as string | undefined)
+  )
   if (!asset) return undefined
   return `https://cdn.discordapp.com/avatar-decoration-presets/${asset}.png?size=512&passthrough=true`
 }
@@ -111,12 +124,57 @@ const BADGE_MAP: Array<{ bit: number; label: string; iconHash: string }> = [
   { bit: 1 << 9, label: 'Early Supporter', iconHash: '7060786766c9c840eb3019e725d2b358' },
   { bit: 1 << 17, label: 'Active Developer', iconHash: '6bdc42827a38498929a4920da12695d9' },
 ]
+const SPECIAL_BADGES = {
+  nitro1y: 'Nitro 1 Year',
+  booster1y: 'Booster 1 Year',
+  questComplete: 'Completed a Quest',
+  orbsApprentice: 'Orbs Apprentice',
+} as const
+const ONE_YEAR_MS = 365.25 * 24 * 60 * 60 * 1000
+const NITRO_YEAR_HINTS = ['nitro_1_year', 'nitro 1 year']
+const BOOSTER_YEAR_HINTS = ['booster_1_year', 'booster 1 year', 'guild_boost_12_month']
+const QUEST_COMPLETE_HINTS = ['completed_quest', 'quest_completed', 'completed a quest']
+const ORBS_APPRENTICE_HINTS = ['orbs_apprentice', 'orbs apprentice']
 const DISCORD_POLL_MS = 20000
 const STATUS_PULSE_DURATION_MS = 260
 
 function getBadges(flags?: number) {
   if (flags === undefined || flags === null) return []
   return BADGE_MAP.filter((badge) => (flags & badge.bit) === badge.bit)
+}
+
+function hasBadgeHint(value: unknown, hints: string[]) {
+  const haystack = JSON.stringify(value ?? '').toLowerCase()
+  return hints.some((hint) => haystack.includes(hint))
+}
+
+function getSpecialBadges(presence?: DiscordPresence) {
+  if (!presence?.discord_user) return []
+  const user = presence.discord_user
+  const kv = presence.kv
+  const special = new Set<string>()
+
+  const nitroSince = user.premium_since ? Date.parse(user.premium_since) : NaN
+  const hasNitroYear = Number.isFinite(nitroSince) && (Date.now() - nitroSince) >= ONE_YEAR_MS
+  if (hasNitroYear || hasBadgeHint({ user, kv }, NITRO_YEAR_HINTS)) {
+    special.add(SPECIAL_BADGES.nitro1y)
+  }
+
+  const boostSince = user.premium_guild_since ? Date.parse(user.premium_guild_since) : NaN
+  const hasBoostYear = Number.isFinite(boostSince) && (Date.now() - boostSince) >= ONE_YEAR_MS
+  if (hasBoostYear || hasBadgeHint({ user, kv }, BOOSTER_YEAR_HINTS)) {
+    special.add(SPECIAL_BADGES.booster1y)
+  }
+
+  if (hasBadgeHint({ user, kv }, QUEST_COMPLETE_HINTS)) {
+    special.add(SPECIAL_BADGES.questComplete)
+  }
+
+  if (hasBadgeHint({ user, kv }, ORBS_APPRENTICE_HINTS)) {
+    special.add(SPECIAL_BADGES.orbsApprentice)
+  }
+
+  return [...special]
 }
 
 // Activity type 0=Playing, 1=Streaming, 2=Listening, 3=Watching, 4=Custom, 5=Competing
@@ -216,6 +274,8 @@ function DiscordWidget({
   const nameplateUrl = getNameplateUrl(presence?.discord_user)
   const bannerUrl = getDiscordBannerUrl(presence?.discord_user)
   const badges = getBadges(presence?.discord_user?.public_flags)
+  const specialBadges = getSpecialBadges(presence ?? undefined)
+  const serverTag = presence?.discord_user?.primary_guild?.tag ?? presence?.discord_user?.clan?.tag
   const displayName = presence?.discord_user?.username ?? 'coolman_yt'
 
   return (
@@ -254,33 +314,25 @@ function DiscordWidget({
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="relative inline-flex max-w-full">
-                {nameplateUrl && (
-                  <Image
-                    src={nameplateUrl}
-                    alt=""
-                    aria-hidden="true"
-                    width={188}
-                    height={48}
-                    className="absolute inset-0 w-full h-full object-contain pointer-events-none opacity-80"
-                    unoptimized
-                  />
-                )}
-                <p className="relative text-white text-sm font-semibold leading-tight truncate px-1">{displayName}</p>
-              </div>
+              <p className="text-white text-sm font-semibold leading-tight truncate">{displayName}</p>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <StatusIcon status={presence.discord_status} pulse={statusPulse} />
                 <span className="text-white/75 text-[11px]">{STATUS_LABELS[presence.discord_status] || 'Offline'}</span>
-                {presence.discord_user?.clan?.tag && (
+                {serverTag && (
                   <span className="text-[10px] text-white/60 border border-white/15 rounded px-1 py-[1px]">
-                    {presence.discord_user.clan.tag}
+                    {serverTag}
                   </span>
                 )}
               </div>
+              {nameplateUrl && (
+                <div className="mt-1.5 w-[120px] h-5 relative">
+                  <Image src={nameplateUrl} alt="Discord nameplate" fill className="object-contain" unoptimized />
+                </div>
+              )}
             </div>
           </div>
 
-          {badges.length > 0 && (
+          {(badges.length > 0 || specialBadges.length > 0) && (
             <div className="flex flex-wrap gap-1.5">
               {badges.map((badge) => (
                 <Image
@@ -294,6 +346,14 @@ function DiscordWidget({
                   height={16}
                   unoptimized
                 />
+              ))}
+              {specialBadges.map((badge) => (
+                <span
+                  key={badge}
+                  className="text-[10px] text-white/75 border border-white/15 rounded px-1.5 py-[2px] bg-black/20"
+                >
+                  {badge}
+                </span>
               ))}
             </div>
           )}

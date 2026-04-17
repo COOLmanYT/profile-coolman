@@ -24,6 +24,7 @@ export async function GET() {
       discord_status: data.discord_status,
       activities: data.activities ?? [],
       discord_user: data.discord_user,
+      kv: data.kv ?? {},
       active_on_discord_mobile: data.active_on_discord_mobile ?? false,
       active_on_discord_web: data.active_on_discord_web ?? false,
       active_on_discord_desktop: data.active_on_discord_desktop ?? false,

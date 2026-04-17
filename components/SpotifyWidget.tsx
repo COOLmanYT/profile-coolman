@@ -111,7 +111,7 @@ function SpotifyWidget({ showEmbed = true, showPlaylistLink = true }: SpotifyWid
     return () => clearInterval(tick)
   }, [track?.isPlaying, track?.durationMs])
 
-  const artistsLabel = track?.artists?.join(', ') ?? ''
+  const artistsLabel = track?.artists?.join(', ') ?? track?.artist ?? ''
   const durationMs = Math.max(0, track?.durationMs ?? 0)
   const progressMs = Math.min(Math.max(0, displayProgressMs), durationMs || displayProgressMs)
   const progressPercent = durationMs > 0 ? Math.min(100, (progressMs / durationMs) * 100) : 0
@@ -146,19 +146,15 @@ function SpotifyWidget({ showEmbed = true, showPlaylistLink = true }: SpotifyWid
               <Image src={track.albumArt} alt="Album art" fill className="object-cover" unoptimized />
             </div>
           )}
-          <div className="flex-1 min-w-0 text-center">
+          <div className="flex-1 min-w-0 flex flex-col justify-center items-start">
             {track.songUrl ? (
               <a href={track.songUrl} target="_blank" rel="noopener noreferrer" className="hover:underline transition-colors duration-200 ease-out">
-                <div className="overflow-x-auto hide-scrollbar">
-                  <p className="text-white text-sm font-semibold leading-tight whitespace-nowrap inline-block min-w-full px-1">{track.title}</p>
-                </div>
+                <p className="text-white text-sm font-semibold leading-tight truncate">{track.title}</p>
               </a>
             ) : (
-              <div className="overflow-x-auto hide-scrollbar">
-                <p className="text-white text-sm font-semibold leading-tight whitespace-nowrap inline-block min-w-full px-1">{track.title}</p>
-              </div>
+              <p className="text-white text-sm font-semibold leading-tight truncate">{track.title}</p>
             )}
-            <p className="text-white/60 text-xs truncate mt-0.5 text-center">{artistsLabel}</p>
+            <p className="text-white/60 text-xs truncate mt-0.5 text-left w-full">{artistsLabel}</p>
             {canShowPlaylistLink && (
               <p className="mt-1">
                 <a
