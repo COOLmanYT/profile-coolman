@@ -23,6 +23,7 @@ interface DiscordPresence {
     global_name?: string
     discriminator?: string
     avatar?: string
+    banner?: string
     avatar_decoration_data?: {
       asset?: string
     }
@@ -87,6 +88,18 @@ function getAvatarDecorationUrl(user?: DiscordPresence['discord_user']) {
   return `https://cdn.discordapp.com/avatar-decoration-presets/${asset}.png?size=128&passthrough=true`
 }
 
+function getNameplateUrl(user?: DiscordPresence['discord_user']) {
+  const asset = user?.avatar_decoration_data?.asset
+  if (!asset) return undefined
+  return `https://cdn.discordapp.com/avatar-decoration-presets/${asset}.png?size=512&passthrough=true`
+}
+
+function getDiscordBannerUrl(user?: DiscordPresence['discord_user']) {
+  if (!user?.id || !user?.banner) return undefined
+  const ext = user.banner.startsWith('a_') ? 'gif' : 'png'
+  return `https://cdn.discordapp.com/banners/${user.id}/${user.banner}.${ext}?size=480`
+}
+
 // Based on Discord user public_flags bit values:
 // https://discord.com/developers/docs/resources/user#user-object-user-flags
 const BADGE_MAP: Array<{ bit: number; label: string; iconHash: string }> = [
@@ -98,7 +111,6 @@ const BADGE_MAP: Array<{ bit: number; label: string; iconHash: string }> = [
   { bit: 1 << 9, label: 'Early Supporter', iconHash: '7060786766c9c840eb3019e725d2b358' },
   { bit: 1 << 17, label: 'Active Developer', iconHash: '6bdc42827a38498929a4920da12695d9' },
 ]
-const MAX_DISPLAYED_BADGES = 4
 const DISCORD_POLL_MS = 20000
 const STATUS_PULSE_DURATION_MS = 260
 
@@ -201,6 +213,8 @@ function DiscordWidget({
   const customStatus = presence?.activities?.find((a) => a.type === 4)
   const avatarUrl = getDiscordAvatarUrl(presence?.discord_user)
   const avatarDecorationUrl = getAvatarDecorationUrl(presence?.discord_user)
+  const nameplateUrl = getNameplateUrl(presence?.discord_user)
+  const bannerUrl = getDiscordBannerUrl(presence?.discord_user)
   const badges = getBadges(presence?.discord_user?.public_flags)
   const displayName = presence?.discord_user?.username ?? 'coolman_yt'
 
@@ -223,6 +237,11 @@ function DiscordWidget({
         )
       ) : (
         <div className="space-y-2">
+          {bannerUrl && (
+            <div className="relative w-full h-[74px] rounded-xl overflow-hidden border border-white/10 bg-white/5">
+              <Image src={bannerUrl} alt="Discord banner" fill className="object-cover" unoptimized />
+            </div>
+          )}
           <div className="flex items-center gap-2.5">
             <div className="relative w-9 h-9 rounded-full overflow-hidden border border-white/15 bg-white/10 flex-shrink-0">
               {avatarUrl ? (
@@ -235,7 +254,20 @@ function DiscordWidget({
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-white text-sm font-semibold leading-tight truncate">{displayName}</p>
+              <div className="relative inline-flex max-w-full">
+                {nameplateUrl && (
+                  <Image
+                    src={nameplateUrl}
+                    alt=""
+                    aria-hidden="true"
+                    width={188}
+                    height={48}
+                    className="absolute inset-0 w-full h-full object-contain pointer-events-none opacity-80"
+                    unoptimized
+                  />
+                )}
+                <p className="relative text-white text-sm font-semibold leading-tight truncate px-1">{displayName}</p>
+              </div>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <StatusIcon status={presence.discord_status} pulse={statusPulse} />
                 <span className="text-white/75 text-[11px]">{STATUS_LABELS[presence.discord_status] || 'Offline'}</span>
@@ -250,7 +282,7 @@ function DiscordWidget({
 
           {badges.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
-              {badges.slice(0, MAX_DISPLAYED_BADGES).map((badge) => (
+              {badges.map((badge) => (
                 <Image
                   key={badge.label}
                   src={`https://cdn.discordapp.com/badge-icons/${badge.iconHash}.png`}
