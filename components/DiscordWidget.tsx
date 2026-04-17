@@ -228,7 +228,7 @@ function DiscordWidget({
               {avatarUrl ? (
                 <Image src={avatarUrl} alt="Discord avatar" fill className="object-cover" unoptimized />
               ) : (
-                <span role="img" aria-label="Discord avatar placeholder" className="w-full h-full flex items-center justify-center text-[10px] text-white/60">DC</span>
+                <span aria-label="Discord avatar placeholder" className="w-full h-full flex items-center justify-center text-[10px] text-white/60">DC</span>
               )}
               {avatarDecorationUrl && (
                 <Image src={avatarDecorationUrl} alt="" aria-hidden="true" fill className="object-cover pointer-events-none" unoptimized />

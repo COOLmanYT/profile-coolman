@@ -6,7 +6,7 @@ A Next.js profile site with advanced Spotify mini-player, rich Discord presence,
 
 - 🎵 Spotify mini-player (album art, artists, duration/progress, paused state, responsive embed)
 - 🎮 Discord presence via [Lanyard API](https://github.com/Phineas/lanyard) with profile/avatar/status details
-- 👁 View counter via Supabase
+- 👁 View counter via Supabase (counts once per browser every 24h, not on every refresh)
 - 🔒 Dashboard with Discord OAuth (NextAuth.js) — only allowed user can access
 - 🎛 Toggle controls for Spotify and Discord widget categories
 - 🥚 Easter egg: type `rm -rf /` on the page

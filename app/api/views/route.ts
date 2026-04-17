@@ -1,5 +1,8 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+
+const VIEW_COOKIE_NAME = 'profile_view_counted'
+const VIEW_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 // 24h
 
 function getSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -23,7 +26,7 @@ export async function GET() {
   }
 }
 
-export async function POST() {
+export async function POST(req: NextRequest) {
   try {
     const supabase = getSupabase()
     if (!supabase) return NextResponse.json({ count: 0 })
@@ -34,13 +37,25 @@ export async function POST() {
       .eq('id', 'profile')
       .single()
 
+    if (req.cookies.get(VIEW_COOKIE_NAME)?.value === '1') {
+      return NextResponse.json({ count: existing?.count ?? 0 })
+    }
+
     const newCount = (existing?.count ?? 0) + 1
 
     await supabase
       .from('views')
       .upsert({ id: 'profile', count: newCount })
 
-    return NextResponse.json({ count: newCount })
+    const res = NextResponse.json({ count: newCount })
+    res.cookies.set(VIEW_COOKIE_NAME, '1', {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      path: '/',
+      maxAge: VIEW_COOKIE_MAX_AGE_SECONDS,
+    })
+    return res
   } catch {
     return NextResponse.json({ count: 0 })
   }
