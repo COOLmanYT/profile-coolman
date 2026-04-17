@@ -57,7 +57,7 @@ function StatusIcon({ status, pulse = false }: { status: DiscordPresence['discor
   if (status === 'idle') {
     return (
       <span aria-hidden className={`relative w-3 h-3 rounded-full bg-[#f0b232] transition-all duration-200 ease-out ${pulseClass}`}>
-        <span className="absolute right-[1px] top-[1px] w-[5px] h-[5px] rounded-full bg-[#1f1f1f]" />
+        <span aria-hidden className="absolute right-[1px] top-[1px] w-[5px] h-[5px] rounded-full bg-[#1f1f1f]" />
       </span>
     )
   }
@@ -153,7 +153,7 @@ function DiscordWidget({
           if (!mountedRef.current) return
           setPresence(data)
           setIsUnavailable(false)
-        } else if (!presenceRef.current) {
+        } else {
           setIsUnavailable(true)
         }
       } catch {

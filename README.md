@@ -56,6 +56,7 @@ create table toggles (
 Recommended toggle IDs include:
 - `spotify`
 - `spotify_embed`
+- `spotify_playlist`
 - `discord_music`
 - `discord_video`
 - `discord_games`

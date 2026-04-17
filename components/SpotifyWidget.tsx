@@ -111,7 +111,7 @@ function SpotifyWidget({ showEmbed = true, showPlaylistLink = true }: SpotifyWid
     return () => clearInterval(tick)
   }, [track?.isPlaying, track?.durationMs])
 
-  const artistsLabel = track?.artists?.length ? track.artists.join(', ') : (track?.artist ?? '')
+  const artistsLabel = track?.artists?.join(', ') ?? ''
   const durationMs = Math.max(0, track?.durationMs ?? 0)
   const progressMs = Math.min(Math.max(0, displayProgressMs), durationMs || displayProgressMs)
   const progressPercent = durationMs > 0 ? Math.min(100, (progressMs / durationMs) * 100) : 0
