@@ -1,3 +1,5 @@
+import Image from 'next/image'
+
 export default function SocialLinks() {
   const links = [
     {
@@ -51,9 +53,15 @@ export default function SocialLinks() {
       name: 'Steam',
       href: 'https://steamcommunity.com/id/coolmanyt',
       icon: (
-        <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-          <path d="M11.99 0A12 12 0 0 0 0 12a12 12 0 0 0 9.85 11.8l-4.16-2.05a3.06 3.06 0 0 1-1.42-4.09 3.06 3.06 0 0 1 4.09-1.43l1.76.87 2.72-1.11a4.6 4.6 0 1 1 1.94 1.5l-2.58 1.05a3.06 3.06 0 1 1-2.76 5.46A12 12 0 1 0 11.99 0zm5.3 6.22a3.14 3.14 0 1 0 3.14 3.14 3.14 3.14 0 0 0-3.14-3.14zM6.92 18.1a1.58 1.58 0 1 0 1.41 2.82 1.58 1.58 0 0 0-1.41-2.82z"/>
-        </svg>
+        <Image
+          src="https://cdn.simpleicons.org/steam/ffffff"
+          alt="Steam"
+          className="w-5 h-5"
+          loading="lazy"
+          width={20}
+          height={20}
+          unoptimized
+        />
       ),
     },
     {
@@ -69,15 +77,21 @@ export default function SocialLinks() {
       name: 'Roblox',
       href: 'https://roblox.com/users/coolmanyt',
       icon: (
-        <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-          <path d="M18.926 23.998L0 18.349 5.075.002l18.926 5.649-5.075 18.347zm-9.617-9.42l3.129.933 1.075-3.596-3.128-.933-1.076 3.596z"/>
-        </svg>
+        <Image
+          src="https://cdn.simpleicons.org/roblox/ffffff"
+          alt="Roblox"
+          className="w-5 h-5"
+          loading="lazy"
+          width={20}
+          height={20}
+          unoptimized
+        />
       ),
     },
   ]
 
   return (
-    <div className="flex gap-3 flex-wrap justify-center pt-1">
+    <div className="flex gap-2.5 sm:gap-3 flex-wrap justify-center pt-1">
       {links.map((link) => (
         <a
           key={link.name}
@@ -85,7 +99,7 @@ export default function SocialLinks() {
           target="_blank"
           rel="noopener noreferrer"
           title={link.name}
-          className="w-10 h-10 bg-black/25 hover:bg-black/40 border border-white/10 hover:border-white/20 rounded-xl flex items-center justify-center text-white transition-all duration-200 ease-out hover:scale-110 hover:shadow-lg"
+          className="w-9 h-9 sm:w-10 sm:h-10 bg-black/25 hover:bg-black/40 border border-white/10 hover:border-white/20 rounded-xl flex items-center justify-center text-white transition-all duration-200 ease-out hover:scale-110 hover:shadow-lg"
         >
           {link.icon}
         </a>

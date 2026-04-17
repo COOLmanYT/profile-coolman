@@ -8,6 +8,7 @@ export const dynamic = 'force-dynamic'
 const SPOTIFY_TOKEN_URL = 'https://accounts.spotify.com/api/token'
 const SPOTIFY_NOW_PLAYING_URL = 'https://api.spotify.com/v1/me/player/currently-playing'
 const SPOTIFY_PLAYBACK_URL = 'https://api.spotify.com/v1/me/player'
+const SPOTIFY_PLAYLIST_URL = 'https://api.spotify.com/v1/playlists'
 
 // Set SPOTIFY_DEBUG=true in your environment to include upstream status codes and
 // limited error text in API responses. Never enable this in production long-term.
@@ -82,7 +83,25 @@ async function getAccessToken(): Promise<TokenResult> {
   return { accessToken: data.access_token as string }
 }
 
-function mapTrackData(data: SpotifyPlaybackResponse) {
+async function getPlaylistVisibility(accessToken: string, playlistId?: string): Promise<boolean> {
+  if (!playlistId) return false
+  try {
+    const res = await fetch(
+      `${SPOTIFY_PLAYLIST_URL}/${playlistId}?fields=public`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        cache: 'no-store',
+      }
+    )
+    if (!res.ok) return false
+    const playlist = await res.json().catch(() => null) as { public?: boolean | null } | null
+    return playlist?.public === true
+  } catch {
+    return false
+  }
+}
+
+async function mapTrackData(data: SpotifyPlaybackResponse, accessToken: string) {
   const item = data.item
   if (!item) return null
   const artists = (item.artists ?? []).map((a) => a.name)
@@ -91,6 +110,8 @@ function mapTrackData(data: SpotifyPlaybackResponse) {
     data.context?.type === 'playlist' && typeof contextUri === 'string'
       ? contextUri.replace('spotify:playlist:', '')
       : undefined
+
+  const contextIsPublic = await getPlaylistVisibility(accessToken, playlistId)
 
   return {
     isPlaying: !!data.is_playing,
@@ -107,6 +128,7 @@ function mapTrackData(data: SpotifyPlaybackResponse) {
     contextUrl:
       data.context?.external_urls?.spotify ??
       (playlistId ? `https://open.spotify.com/playlist/${playlistId}` : undefined),
+    contextIsPublic,
   }
 }
 
@@ -131,7 +153,10 @@ export async function GET() {
       }, noStore)
     }
 
-    const { accessToken } = tokenResult
+    const accessToken = tokenResult.accessToken
+    if (!accessToken) {
+      return NextResponse.json({ isPlaying: false }, noStore)
+    }
 
     // Primary: /v1/me/player/currently-playing
     const nowPlayingRes = await fetch(SPOTIFY_NOW_PLAYING_URL, {
@@ -142,7 +167,7 @@ export async function GET() {
     if (nowPlayingRes.status === 200) {
       const data = (await nowPlayingRes.json()) as SpotifyPlaybackResponse
       if (data.item) {
-        const track = mapTrackData(data)
+        const track = await mapTrackData(data, accessToken)
         if (track) return NextResponse.json(track, noStore)
       }
     }
@@ -158,7 +183,7 @@ export async function GET() {
     if (playbackRes.status === 200) {
       const data = (await playbackRes.json()) as SpotifyPlaybackResponse
       if (data.item) {
-        const track = mapTrackData(data)
+        const track = await mapTrackData(data, accessToken)
         if (track) return NextResponse.json(track, noStore)
       }
       return NextResponse.json({

@@ -15,6 +15,7 @@ interface SpotifyTrack {
   embedUrl?: string
   contextType?: string
   contextUrl?: string
+  contextIsPublic?: boolean
 }
 
 const EQUALIZER_BARS = [
@@ -38,9 +39,10 @@ function isSameTrackState(prev: SpotifyTrack | null, next: SpotifyTrack) {
 
 interface SpotifyWidgetProps {
   showEmbed?: boolean
+  showPlaylistLink?: boolean
 }
 
-function SpotifyWidget({ showEmbed = true }: SpotifyWidgetProps) {
+function SpotifyWidget({ showEmbed = true, showPlaylistLink = true }: SpotifyWidgetProps) {
   const [track, setTrack] = useState<SpotifyTrack | null>(null)
   const [displayProgressMs, setDisplayProgressMs] = useState(0)
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false)
@@ -115,6 +117,10 @@ function SpotifyWidget({ showEmbed = true }: SpotifyWidgetProps) {
   const progressPercent = durationMs > 0 ? Math.min(100, (progressMs / durationMs) * 100) : 0
   const hasPlayback = !!track?.title
   const canShowEmbed = showEmbed && !!track?.embedUrl && hasPlayback
+  const canShowPlaylistLink = showPlaylistLink
+    && track?.contextType === 'playlist'
+    && !!track.contextUrl
+    && track.contextIsPublic === true
 
   return (
     <div className="w-full bg-black/25 rounded-2xl p-3 border border-white/10">
@@ -140,26 +146,26 @@ function SpotifyWidget({ showEmbed = true }: SpotifyWidgetProps) {
               <Image src={track.albumArt} alt="Album art" fill className="object-cover" unoptimized />
             </div>
           )}
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 text-center">
             {track.songUrl ? (
               <a href={track.songUrl} target="_blank" rel="noopener noreferrer" className="hover:underline transition-colors duration-200 ease-out">
                 <div className="overflow-x-auto hide-scrollbar">
-                  <p className="text-white text-sm font-semibold leading-tight whitespace-nowrap pr-2">{track.title}</p>
+                  <p className="text-white text-sm font-semibold leading-tight whitespace-nowrap inline-block min-w-full px-1">{track.title}</p>
                 </div>
               </a>
             ) : (
               <div className="overflow-x-auto hide-scrollbar">
-                <p className="text-white text-sm font-semibold leading-tight whitespace-nowrap pr-2">{track.title}</p>
+                <p className="text-white text-sm font-semibold leading-tight whitespace-nowrap inline-block min-w-full px-1">{track.title}</p>
               </div>
             )}
-            <p className="text-white/60 text-xs truncate mt-0.5">{artistsLabel}</p>
-            {track.contextType === 'playlist' && track.contextUrl && (
+            <p className="text-white/60 text-xs truncate mt-0.5 text-center">{artistsLabel}</p>
+            {canShowPlaylistLink && (
               <p className="mt-1">
                 <a
                   href={track.contextUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[#1DB954] text-[10px] font-medium hover:underline transition-colors duration-200 ease-out"
+                  className="text-[#1DB954] text-[10px] font-medium hover:underline transition-colors duration-200 ease-out inline-block"
                 >
                   Open Playlist
                 </a>
@@ -217,4 +223,7 @@ function SpotifyWidget({ showEmbed = true }: SpotifyWidgetProps) {
   )
 }
 
-export default memo(SpotifyWidget, (prev, next) => prev.showEmbed === next.showEmbed)
+export default memo(
+  SpotifyWidget,
+  (prev, next) => prev.showEmbed === next.showEmbed && prev.showPlaylistLink === next.showPlaylistLink
+)

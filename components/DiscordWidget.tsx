@@ -56,9 +56,9 @@ function StatusIcon({ status, pulse = false }: { status: DiscordPresence['discor
   }
   if (status === 'idle') {
     return (
-      <svg aria-hidden viewBox="0 0 16 16" className={`w-3 h-3 text-[#f0b232] transition-all duration-200 ease-out ${pulseClass}`} fill="currentColor">
-        <path d="M8 1a7 7 0 1 0 7 7A7.01 7.01 0 0 0 8 1Zm0 1.5a5.5 5.5 0 0 1 0 11Zm0 1.5v4h3v1.5H6.5V4Z" />
-      </svg>
+      <span aria-hidden className={`relative w-3 h-3 rounded-full bg-[#f0b232] transition-all duration-200 ease-out ${pulseClass}`}>
+        <span className="absolute right-[1px] top-[1px] w-[5px] h-[5px] rounded-full bg-[#1f1f1f]" />
+      </span>
     )
   }
   if (status === 'dnd') {
@@ -89,14 +89,14 @@ function getAvatarDecorationUrl(user?: DiscordPresence['discord_user']) {
 
 // Based on Discord user public_flags bit values:
 // https://discord.com/developers/docs/resources/user#user-object-user-flags
-const BADGE_MAP: Array<{ bit: number; label: string }> = [
-  { bit: 1 << 0, label: 'Staff' },
-  { bit: 1 << 1, label: 'Partner' },
-  { bit: 1 << 6, label: 'Hypesquad Bravery' },
-  { bit: 1 << 7, label: 'Hypesquad Brilliance' },
-  { bit: 1 << 8, label: 'Hypesquad Balance' },
-  { bit: 1 << 9, label: 'Early Supporter' },
-  { bit: 1 << 17, label: 'Active Developer' },
+const BADGE_MAP: Array<{ bit: number; label: string; iconHash: string }> = [
+  { bit: 1 << 0, label: 'Staff', iconHash: '5e74e9b61934fc1f67c65515d1f7e60d' },
+  { bit: 1 << 1, label: 'Partner', iconHash: '3f9748e53446a137a052f3454e2de41e' },
+  { bit: 1 << 6, label: 'HypeSquad Bravery', iconHash: '8a88d63823d8a71cd5e390baa45efa02' },
+  { bit: 1 << 7, label: 'HypeSquad Brilliance', iconHash: '011940fd013da3f7fb926e4a1cd2e618' },
+  { bit: 1 << 8, label: 'HypeSquad Balance', iconHash: '3aa41de486fa12454c3761e8e223442e' },
+  { bit: 1 << 9, label: 'Early Supporter', iconHash: '7060786766c9c840eb3019e725d2b358' },
+  { bit: 1 << 17, label: 'Active Developer', iconHash: '6bdc42827a38498929a4920da12695d9' },
 ]
 const MAX_DISPLAYED_BADGES = 4
 const DISCORD_POLL_MS = 20000
@@ -104,7 +104,7 @@ const STATUS_PULSE_DURATION_MS = 260
 
 function getBadges(flags?: number) {
   if (flags === undefined || flags === null) return []
-  return BADGE_MAP.filter((badge) => (flags & badge.bit) === badge.bit).map((badge) => badge.label)
+  return BADGE_MAP.filter((badge) => (flags & badge.bit) === badge.bit)
 }
 
 // Activity type 0=Playing, 1=Streaming, 2=Listening, 3=Watching, 4=Custom, 5=Competing
@@ -249,25 +249,27 @@ function DiscordWidget({
           </div>
 
           {badges.length > 0 && (
-            <div className="flex flex-wrap gap-1">
+            <div className="flex flex-wrap gap-1.5">
               {badges.slice(0, MAX_DISPLAYED_BADGES).map((badge) => (
-                <span key={badge} className="text-[10px] text-white/60 border border-white/15 rounded px-1.5 py-0.5">
-                  {badge}
-                </span>
+                <Image
+                  key={badge.label}
+                  src={`https://cdn.discordapp.com/badge-icons/${badge.iconHash}.png`}
+                  alt={badge.label}
+                  title={badge.label}
+                  className="w-4 h-4 rounded-sm"
+                  loading="lazy"
+                  width={16}
+                  height={16}
+                  unoptimized
+                />
               ))}
             </div>
           )}
 
-          {/* Status row */}
-          {showStatus && (
+          {/* Custom status row */}
+          {showStatus && customStatus?.state && (
             <div className="flex items-center gap-2">
-              <StatusIcon status={presence.discord_status} pulse={statusPulse} />
-              <span className="text-white/80 text-xs font-medium">
-                {STATUS_LABELS[presence.discord_status] || 'Offline'}
-              </span>
-              {customStatus?.state && (
-                <span className="text-white/40 text-xs truncate">— {customStatus.state}</span>
-              )}
+              <span className="text-white/40 text-xs truncate">{customStatus.state}</span>
             </div>
           )}
 

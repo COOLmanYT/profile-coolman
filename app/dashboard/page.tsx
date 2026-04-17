@@ -13,6 +13,7 @@ async function getToggles() {
     return {
       spotify: true,
       spotify_embed: true,
+      spotify_playlist: true,
       discord_music: true,
       discord_video: true,
       discord_games: true,
@@ -26,6 +27,7 @@ async function getToggles() {
     const defaults: Record<string, boolean> = {
       spotify: true,
       spotify_embed: true,
+      spotify_playlist: true,
       discord_music: true,
       discord_video: true,
       discord_games: true,
@@ -42,6 +44,7 @@ async function getToggles() {
     return {
       spotify: true,
       spotify_embed: true,
+      spotify_playlist: true,
       discord_music: true,
       discord_video: true,
       discord_games: true,

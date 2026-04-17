@@ -11,6 +11,7 @@ async function getToggles() {
     return {
       spotify: true,
       spotify_embed: true,
+      spotify_playlist: true,
       discord_music: true,
       discord_video: true,
       discord_games: true,
@@ -24,6 +25,7 @@ async function getToggles() {
     const toggleMap: Record<string, boolean> = {
       spotify: true,
       spotify_embed: true,
+      spotify_playlist: true,
       discord_music: true,
       discord_video: true,
       discord_games: true,
@@ -40,6 +42,7 @@ async function getToggles() {
     return {
       spotify: true,
       spotify_embed: true,
+      spotify_playlist: true,
       discord_music: true,
       discord_video: true,
       discord_games: true,
@@ -55,7 +58,7 @@ export default async function Home() {
   return (
     <>
       <AnimatedBackground />
-      <main className="relative min-h-screen flex items-center justify-center p-4" style={{ zIndex: 10 }}>
+      <main className="relative min-h-screen flex items-center justify-center p-3 sm:p-4" style={{ zIndex: 10 }}>
         <EasterEgg />
         <div className="relative">
           <ProfileCard toggles={toggles} />
