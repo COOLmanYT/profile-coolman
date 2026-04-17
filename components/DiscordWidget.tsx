@@ -303,4 +303,10 @@ function DiscordWidget({
   )
 }
 
-export default memo(DiscordWidget)
+export default memo(DiscordWidget, (prev, next) =>
+  prev.showMusic === next.showMusic
+  && prev.showVideo === next.showVideo
+  && prev.showGames === next.showGames
+  && prev.showStatus === next.showStatus
+  && prev.showOther === next.showOther
+)

@@ -217,4 +217,4 @@ function SpotifyWidget({ showEmbed = true }: SpotifyWidgetProps) {
   )
 }
 
-export default memo(SpotifyWidget)
+export default memo(SpotifyWidget, (prev, next) => prev.showEmbed === next.showEmbed)

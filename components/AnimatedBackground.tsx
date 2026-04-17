@@ -239,7 +239,6 @@ function AnimatedBackground() {
       if (!canvas || !ctx) return
 
       if (isPageHiddenRef.current) {
-        rafRef.current = 0
         return
       }
 
