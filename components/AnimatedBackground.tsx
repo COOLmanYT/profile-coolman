@@ -208,7 +208,7 @@ function AnimatedBackground() {
     }
 
     function applyCanvasSize() {
-      if (!canvas) return
+      if (!canvas || !ctx) return
       const scale = renderScaleRef.current
       canvas.width = Math.max(1, Math.round(window.innerWidth * scale))
       canvas.height = Math.max(1, Math.round(window.innerHeight * scale))
