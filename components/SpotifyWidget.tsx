@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { memo, useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 
 interface SpotifyTrack {
@@ -40,10 +40,13 @@ interface SpotifyWidgetProps {
   showEmbed?: boolean
 }
 
-export default function SpotifyWidget({ showEmbed = true }: SpotifyWidgetProps) {
+function SpotifyWidget({ showEmbed = true }: SpotifyWidgetProps) {
   const [track, setTrack] = useState<SpotifyTrack | null>(null)
   const [displayProgressMs, setDisplayProgressMs] = useState(0)
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false)
+  const requestInFlightRef = useRef(false)
+  const abortRef = useRef<AbortController | null>(null)
+  const mountedRef = useRef(true)
 
   const formatDuration = (ms: number) => {
     if (!Number.isFinite(ms) || ms <= 0) return '0:00'
@@ -54,10 +57,18 @@ export default function SpotifyWidget({ showEmbed = true }: SpotifyWidgetProps) 
   }
 
   useEffect(() => {
+    mountedRef.current = true
+
     const fetchTrack = async () => {
+      if (requestInFlightRef.current) return
+      requestInFlightRef.current = true
+      const controller = new AbortController()
+      abortRef.current = controller
+
       try {
-        const res = await fetch('/api/spotify')
+        const res = await fetch('/api/spotify', { signal: controller.signal })
         const data = await res.json().catch(() => ({ isPlaying: false }))
+        if (!mountedRef.current) return
         setTrack((prev) => {
           const next = data as SpotifyTrack
           if (isSameTrackState(prev, next)) {
@@ -67,14 +78,21 @@ export default function SpotifyWidget({ showEmbed = true }: SpotifyWidgetProps) 
         })
         setDisplayProgressMs(Math.max(0, data.progressMs ?? 0))
       } catch {
+        if (!mountedRef.current || controller.signal.aborted) return
         setTrack({ isPlaying: false })
       } finally {
-        setHasLoadedOnce(true)
+        requestInFlightRef.current = false
+        if (mountedRef.current) setHasLoadedOnce(true)
       }
     }
+
     fetchTrack()
     const interval = setInterval(fetchTrack, SPOTIFY_POLL_MS)
-    return () => clearInterval(interval)
+    return () => {
+      mountedRef.current = false
+      clearInterval(interval)
+      abortRef.current?.abort()
+    }
   }, [])
 
   useEffect(() => {
@@ -124,20 +142,24 @@ export default function SpotifyWidget({ showEmbed = true }: SpotifyWidgetProps) 
           )}
           <div className="flex-1 min-w-0">
             {track.songUrl ? (
-              <a href={track.songUrl} target="_blank" rel="noopener noreferrer" className="hover:underline">
-                <p className="text-white text-sm font-semibold leading-tight whitespace-normal">{track.title}</p>
+              <a href={track.songUrl} target="_blank" rel="noopener noreferrer" className="hover:underline transition-colors duration-200 ease-out">
+                <div className="overflow-x-auto hide-scrollbar">
+                  <p className="text-white text-sm font-semibold leading-tight whitespace-nowrap pr-2">{track.title}</p>
+                </div>
               </a>
             ) : (
-              <p className="text-white text-sm font-semibold leading-tight whitespace-normal">{track.title}</p>
+              <div className="overflow-x-auto hide-scrollbar">
+                <p className="text-white text-sm font-semibold leading-tight whitespace-nowrap pr-2">{track.title}</p>
+              </div>
             )}
-            <p className="text-white/60 text-xs whitespace-normal mt-0.5">{artistsLabel}</p>
+            <p className="text-white/60 text-xs truncate mt-0.5">{artistsLabel}</p>
             {track.contextType === 'playlist' && track.contextUrl && (
               <p className="mt-1">
                 <a
                   href={track.contextUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[#1DB954] text-[10px] font-medium hover:underline"
+                  className="text-[#1DB954] text-[10px] font-medium hover:underline transition-colors duration-200 ease-out"
                 >
                   Open Playlist
                 </a>
@@ -194,3 +216,5 @@ export default function SpotifyWidget({ showEmbed = true }: SpotifyWidgetProps) 
     </div>
   )
 }
+
+export default memo(SpotifyWidget)

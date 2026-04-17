@@ -85,7 +85,7 @@ export default function SocialLinks() {
           target="_blank"
           rel="noopener noreferrer"
           title={link.name}
-          className="w-10 h-10 bg-black/25 hover:bg-black/40 border border-white/10 hover:border-white/20 rounded-xl flex items-center justify-center text-white transition-all duration-150 hover:scale-110 hover:shadow-lg"
+          className="w-10 h-10 bg-black/25 hover:bg-black/40 border border-white/10 hover:border-white/20 rounded-xl flex items-center justify-center text-white transition-all duration-200 ease-out hover:scale-110 hover:shadow-lg"
         >
           {link.icon}
         </a>

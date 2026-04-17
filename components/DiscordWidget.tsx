@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { memo, useEffect, useRef, useState } from 'react'
 import Image from 'next/image'
 
 interface DiscordActivity {
@@ -49,26 +49,27 @@ const STATUS_LABELS: Record<string, string> = {
   offline: 'Offline',
 }
 
-function StatusIcon({ status }: { status: DiscordPresence['discord_status'] }) {
+function StatusIcon({ status, pulse = false }: { status: DiscordPresence['discord_status']; pulse?: boolean }) {
+  const pulseClass = pulse ? 'status-change-pop' : ''
   if (status === 'online') {
-    return <span aria-hidden className="w-2.5 h-2.5 rounded-full bg-[#23a55a] status-online-glow" />
+    return <span aria-hidden className={`w-2.5 h-2.5 rounded-full bg-[#23a55a] status-online-glow transition-all duration-200 ease-out ${pulseClass}`} />
   }
   if (status === 'idle') {
     return (
-      <svg aria-hidden viewBox="0 0 16 16" className="w-3 h-3 text-[#f0b232]" fill="currentColor">
+      <svg aria-hidden viewBox="0 0 16 16" className={`w-3 h-3 text-[#f0b232] transition-all duration-200 ease-out ${pulseClass}`} fill="currentColor">
         <path d="M8 1a7 7 0 1 0 7 7A7.01 7.01 0 0 0 8 1Zm0 1.5a5.5 5.5 0 0 1 0 11Zm0 1.5v4h3v1.5H6.5V4Z" />
       </svg>
     )
   }
   if (status === 'dnd') {
     return (
-      <svg aria-hidden viewBox="0 0 16 16" className="w-3 h-3 text-[#f23f43]" fill="currentColor">
+      <svg aria-hidden viewBox="0 0 16 16" className={`w-3 h-3 text-[#f23f43] transition-all duration-200 ease-out ${pulseClass}`} fill="currentColor">
         <path d="M8 1a7 7 0 1 0 7 7A7.01 7.01 0 0 0 8 1Zm3.5 7.75h-7v-1.5h7Z" />
       </svg>
     )
   }
   return (
-    <svg aria-hidden viewBox="0 0 16 16" className="w-3 h-3 text-[#80848e]" fill="currentColor">
+    <svg aria-hidden viewBox="0 0 16 16" className={`w-3 h-3 text-[#80848e] transition-all duration-200 ease-out ${pulseClass}`} fill="currentColor">
       <path d="M8 1a7 7 0 1 0 7 7A7.01 7.01 0 0 0 8 1Zm0 1.5a5.5 5.5 0 1 1-5.5 5.5A5.51 5.51 0 0 1 8 2.5Z" />
     </svg>
   )
@@ -114,7 +115,7 @@ function getActivityCategory(activity: DiscordActivity): string {
   return 'other'
 }
 
-export default function DiscordWidget({
+function DiscordWidget({
   showMusic = true,
   showVideo = true,
   showGames = true,
@@ -123,25 +124,66 @@ export default function DiscordWidget({
 }: DiscordWidgetProps) {
   const [presence, setPresence] = useState<DiscordPresence | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isUnavailable, setIsUnavailable] = useState(false)
+  const [statusPulse, setStatusPulse] = useState(false)
+  const requestInFlightRef = useRef(false)
+  const abortRef = useRef<AbortController | null>(null)
+  const mountedRef = useRef(true)
+  const presenceRef = useRef<DiscordPresence | null>(null)
+  const previousStatusRef = useRef<DiscordPresence['discord_status'] | null>(null)
 
   useEffect(() => {
+    presenceRef.current = presence
+  }, [presence])
+
+  useEffect(() => {
+    mountedRef.current = true
+
     const fetchPresence = async () => {
+      if (requestInFlightRef.current) return
+      requestInFlightRef.current = true
+      const controller = new AbortController()
+      abortRef.current = controller
+
       try {
-        const res = await fetch('/api/discord')
+        const res = await fetch('/api/discord', { signal: controller.signal })
         if (res.ok) {
           const data = await res.json()
+          if (!mountedRef.current) return
           setPresence(data)
+          setIsUnavailable(false)
+        } else if (!presenceRef.current) {
+          setIsUnavailable(true)
         }
       } catch {
-        setPresence(null)
+        if (!mountedRef.current || controller.signal.aborted) return
+        if (!presenceRef.current) setPresence(null)
+        setIsUnavailable(true)
       } finally {
-        setLoading(false)
+        requestInFlightRef.current = false
+        if (mountedRef.current) setLoading(false)
       }
     }
     fetchPresence()
     const interval = setInterval(fetchPresence, DISCORD_POLL_MS)
-    return () => clearInterval(interval)
+    return () => {
+      mountedRef.current = false
+      clearInterval(interval)
+      abortRef.current?.abort()
+    }
   }, [])
+
+  useEffect(() => {
+    const currentStatus = presence?.discord_status
+    if (!currentStatus) return
+    if (previousStatusRef.current && previousStatusRef.current !== currentStatus) {
+      setStatusPulse(true)
+      const timeout = setTimeout(() => setStatusPulse(false), 260)
+      previousStatusRef.current = currentStatus
+      return () => clearTimeout(timeout)
+    }
+    previousStatusRef.current = currentStatus
+  }, [presence?.discord_status])
 
   const categoryAllowed = (cat: string) => {
     if (cat === 'music') return showMusic
@@ -173,7 +215,11 @@ export default function DiscordWidget({
       {loading ? (
         <div className="h-8 bg-white/10 rounded-lg animate-pulse" />
       ) : !presence ? (
+        isUnavailable ? (
+          <p className="text-white/40 text-xs">Unavailable</p>
+        ) : (
         <p className="text-white/40 text-xs">Presence unavailable</p>
+        )
       ) : (
         <div className="space-y-2">
           <div className="flex items-center gap-2.5">
@@ -190,7 +236,7 @@ export default function DiscordWidget({
             <div className="min-w-0 flex-1">
               <p className="text-white text-sm font-semibold leading-tight truncate">{displayName}</p>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <StatusIcon status={presence.discord_status} />
+                <StatusIcon status={presence.discord_status} pulse={statusPulse} />
                 <span className="text-white/75 text-[11px]">{STATUS_LABELS[presence.discord_status] || 'Offline'}</span>
                 {presence.discord_user?.clan?.tag && (
                   <span className="text-[10px] text-white/60 border border-white/15 rounded px-1 py-[1px]">
@@ -214,7 +260,7 @@ export default function DiscordWidget({
           {/* Status row */}
           {showStatus && (
             <div className="flex items-center gap-2">
-              <StatusIcon status={presence.discord_status} />
+              <StatusIcon status={presence.discord_status} pulse={statusPulse} />
               <span className="text-white/80 text-xs font-medium">
                 {STATUS_LABELS[presence.discord_status] || 'Offline'}
               </span>
@@ -256,3 +302,5 @@ export default function DiscordWidget({
     </div>
   )
 }
+
+export default memo(DiscordWidget)
