@@ -100,6 +100,7 @@ const BADGE_MAP: Array<{ bit: number; label: string }> = [
 ]
 const MAX_DISPLAYED_BADGES = 4
 const DISCORD_POLL_MS = 20000
+const STATUS_PULSE_DURATION_MS = 260
 
 function getBadges(flags?: number) {
   if (flags === undefined || flags === null) return []
@@ -178,7 +179,7 @@ function DiscordWidget({
     if (!currentStatus) return
     if (previousStatusRef.current && previousStatusRef.current !== currentStatus) {
       setStatusPulse(true)
-      const timeout = setTimeout(() => setStatusPulse(false), 260)
+      const timeout = setTimeout(() => setStatusPulse(false), STATUS_PULSE_DURATION_MS)
       previousStatusRef.current = currentStatus
       return () => clearTimeout(timeout)
     }

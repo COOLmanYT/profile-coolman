@@ -131,6 +131,8 @@ const LOW_FPS_THRESHOLD = 42
 const HIGH_FPS_THRESHOLD = 56
 const FPS_SAMPLE_WINDOW_MS = 1200
 const SCALE_STEP = 0.1
+const INITIAL_FRAME_DELTA_MS = 16.67
+const MAX_FRAME_DELTA_MS = 120
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -243,7 +245,9 @@ function AnimatedBackground() {
       }
 
       const previous = lastFrameTimeRef.current
-      const frameDeltaMs = previous === null ? 16.67 : Math.min(120, Math.max(0, now - previous))
+      const frameDeltaMs = previous === null
+        ? INITIAL_FRAME_DELTA_MS
+        : Math.min(MAX_FRAME_DELTA_MS, Math.max(0, now - previous))
       lastFrameTimeRef.current = now
       elapsedTimeRef.current += frameDeltaMs / 1000
 
