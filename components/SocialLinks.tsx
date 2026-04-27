@@ -51,7 +51,7 @@ export default function SocialLinks() {
     },
     {
       name: 'Steam',
-      href: 'https://steamcommunity.com/id/coolmanyt',
+      href: 'https://steamcommunity.com/id/coolmanyt1',
       icon: (
         <Image
           src="https://cdn.simpleicons.org/steam/ffffff"
