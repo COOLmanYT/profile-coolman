@@ -14,6 +14,8 @@ async function getToggles() {
       spotify: true,
       spotify_embed: true,
       spotify_playlist: true,
+      twitch: true,
+      twitch_stats: true,
       discord_music: true,
       discord_video: true,
       discord_games: true,
@@ -31,6 +33,8 @@ async function getToggles() {
       spotify: true,
       spotify_embed: true,
       spotify_playlist: true,
+      twitch: true,
+      twitch_stats: true,
       discord_music: true,
       discord_video: true,
       discord_games: true,
@@ -51,6 +55,8 @@ async function getToggles() {
       spotify: true,
       spotify_embed: true,
       spotify_playlist: true,
+      twitch: true,
+      twitch_stats: true,
       discord_music: true,
       discord_video: true,
       discord_games: true,
@@ -91,6 +97,12 @@ export default async function DashboardPage() {
             <DashboardClient initialToggles={toggles} signOutOnly />
           </div>
           <DashboardClient initialToggles={toggles} />
+          <a
+            href="/api/twitch/connect"
+            className="mt-6 flex items-center justify-center rounded-xl bg-[#9146ff] px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#7c36e1]"
+          >
+            Connect Twitch
+          </a>
         </div>
       </div>
     </div>

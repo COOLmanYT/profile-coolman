@@ -14,6 +14,14 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'cdn.discordapp.com',
       },
+      {
+        protocol: 'https',
+        hostname: 'raw.githubusercontent.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'static-cdn.jtvnw.net',
+      },
     ],
   },
 }

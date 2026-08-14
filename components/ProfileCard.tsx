@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import AvatarImage from './AvatarImage'
 import SpotifyWidget from './SpotifyWidget'
+import TwitchWidget from './TwitchWidget'
 import DiscordWidget from './DiscordWidget'
 import SocialLinks from './SocialLinks'
 
@@ -77,6 +78,8 @@ export default function ProfileCard({ toggles }: ProfileCardProps) {
             showPlaylistLink={toggles.spotify_playlist ?? true}
           />
         )}
+
+        {toggles.twitch && <TwitchWidget showStats={toggles.twitch_stats ?? true} />}
 
         {/* Discord Widget */}
         {(toggles.discord_music || toggles.discord_video || toggles.discord_games || toggles.discord_status || toggles.discord_other) && (

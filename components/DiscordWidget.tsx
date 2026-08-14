@@ -137,6 +137,7 @@ const BADGE_MAP: Array<{ bit: number; label: string; iconHash: string }> = [
 ]
 const NITRO_STARTED_AT = '2025-01-26T00:00:00.000Z'
 const BOOSTER_STARTED_AT = '2025-01-27T00:00:00.000Z'
+const BADGE_ASSET_BASE = 'https://raw.githubusercontent.com/mezotv/discord-badges/main/assets'
 const ONE_YEAR_MS = 365.25 * 24 * 60 * 60 * 1000
 const DISCORD_POLL_MS = 20000
 const STATUS_PULSE_DURATION_MS = 260
@@ -145,8 +146,7 @@ type SpecialBadge = {
   key: string
   label: string
   details: string
-  glyph: string
-  className: string
+  iconUrl: string
 }
 
 function getBadges(flags?: number) {
@@ -166,6 +166,39 @@ function formatBadgeDate(startedAt: string) {
   return new Intl.DateTimeFormat('en', { day: 'numeric', month: 'long', year: 'numeric' }).format(date)
 }
 
+function getMonthsSince(startedAt: string) {
+  const start = Date.parse(startedAt)
+  if (!Number.isFinite(start)) return 1
+  return Math.max(1, Math.floor((Date.now() - start) / (ONE_YEAR_MS / 12)))
+}
+
+function getNitroBadgeUrl(startedAt: string) {
+  const months = getMonthsSince(startedAt)
+  const tier = months >= 72 ? 'opal'
+    : months >= 60 ? 'ruby'
+      : months >= 36 ? 'emerald'
+        : months >= 24 ? 'diamond'
+          : months >= 12 ? 'platinum'
+            : months >= 6 ? 'gold'
+              : months >= 3 ? 'silver'
+                : 'bronze'
+  return `${BADGE_ASSET_BASE}/subscriptions/${tier}.svg`
+}
+
+function getBoosterBadgeUrl(startedAt: string) {
+  const months = getMonthsSince(startedAt)
+  const tier = months >= 24 ? 9
+    : months >= 18 ? 8
+      : months >= 15 ? 7
+        : months >= 12 ? 6
+          : months >= 9 ? 5
+            : months >= 6 ? 4
+              : months >= 3 ? 3
+                : months >= 2 ? 2
+                  : 1
+  return `${BADGE_ASSET_BASE}/boosts/discord-boost-${tier}.svg`
+}
+
 function getSpecialBadges(presence?: DiscordPresence) {
   const user = presence?.discord_user
   const nitroStartedAt = user?.premium_since ?? NITRO_STARTED_AT
@@ -174,11 +207,11 @@ function getSpecialBadges(presence?: DiscordPresence) {
   const boosterYears = getMembershipYears(boosterStartedAt)
 
   return [
-    { key: 'nitro', label: `Nitro ${nitroYears} Year${nitroYears === 1 ? '' : 's'}`, details: `Subscription started ${formatBadgeDate(nitroStartedAt)}`, glyph: '✦', className: 'text-[#ff73fa] bg-[#ff73fa]/15 border-[#ff73fa]/30' },
-    { key: 'booster', label: `Server Booster ${boosterYears} Year${boosterYears === 1 ? '' : 's'}`, details: `Boosting started ${formatBadgeDate(boosterStartedAt)}`, glyph: '◆', className: 'text-[#f47fff] bg-[#f47fff]/15 border-[#f47fff]/30' },
-    { key: 'quest', label: 'Completed a Quest', details: 'Completed a Discord Quest', glyph: '✓', className: 'text-[#79d269] bg-[#79d269]/15 border-[#79d269]/30' },
-    { key: 'orbs', label: 'Orbs Apprentice', details: 'Earned the Orbs Apprentice badge', glyph: '✧', className: 'text-[#61b8ff] bg-[#61b8ff]/15 border-[#61b8ff]/30' },
-    { key: 'legend-gifting', label: 'Legend Gifting', details: 'Earned the Legend Gifting badge', glyph: '🎁', className: 'bg-[#5b6ef5]/15 border-[#5b6ef5]/30' },
+    { key: 'nitro', label: `Nitro ${nitroYears} Year${nitroYears === 1 ? '' : 's'}`, details: `Subscription started ${formatBadgeDate(nitroStartedAt)}`, iconUrl: getNitroBadgeUrl(nitroStartedAt) },
+    { key: 'booster', label: `Server Booster ${boosterYears} Year${boosterYears === 1 ? '' : 's'}`, details: `Boosting started ${formatBadgeDate(boosterStartedAt)}`, iconUrl: getBoosterBadgeUrl(boosterStartedAt) },
+    { key: 'quest', label: 'Completed a Quest', details: 'Completed a Discord Quest', iconUrl: `${BADGE_ASSET_BASE}/quest.png` },
+    { key: 'orbs', label: 'Orbs Apprentice', details: 'Earned the Orbs Apprentice badge', iconUrl: `${BADGE_ASSET_BASE}/orb.svg` },
+    { key: 'legend-gifting', label: 'Legend Gifting', details: 'Earned the Legend Gifting badge', iconUrl: `${BADGE_ASSET_BASE}/gifting/legend.png` },
   ] satisfies SpecialBadge[]
 }
 
@@ -405,9 +438,14 @@ function DiscordWidget({
                     ))}
                     {specialBadges.map((badge) => (
                       <BadgeTooltip key={badge.key} label={badge.label} details={badge.details}>
-                        <span className={`inline-flex w-4 h-4 items-center justify-center rounded-sm border text-[10px] leading-none ${badge.className}`}>
-                          <span aria-hidden="true">{badge.glyph}</span>
-                        </span>
+                        <Image
+                          src={badge.iconUrl}
+                          alt=""
+                          className="w-4 h-4 object-contain"
+                          width={16}
+                          height={16}
+                          unoptimized
+                        />
                       </BadgeTooltip>
                     ))}
                   </div>
