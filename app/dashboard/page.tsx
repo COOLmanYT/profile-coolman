@@ -3,6 +3,8 @@ import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
 import DashboardClient from '@/components/DashboardClient'
+import TwitchConnectionStatus from '@/components/TwitchConnectionStatus'
+import { getTwitchHealth } from '@/lib/twitch'
 
 const ALLOWED_DISCORD_ID = process.env.DISCORD_USER_ID
 
@@ -81,7 +83,7 @@ export default async function DashboardPage() {
     redirect('/auth/signin')
   }
 
-  const toggles = await getToggles()
+  const [toggles, twitchHealth] = await Promise.all([getToggles(), getTwitchHealth()])
 
   return (
     <div className="min-h-screen bg-[#1a1a1a] p-8">
@@ -97,11 +99,12 @@ export default async function DashboardPage() {
             <DashboardClient initialToggles={toggles} signOutOnly />
           </div>
           <DashboardClient initialToggles={toggles} />
+          <TwitchConnectionStatus health={twitchHealth} />
           <a
             href="/api/twitch/connect"
             className="mt-6 flex items-center justify-center rounded-xl bg-[#9146ff] px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#7c36e1]"
           >
-            Connect Twitch
+            {twitchHealth.state === 'connected' ? 'Reconnect Twitch' : 'Connect Twitch'}
           </a>
         </div>
       </div>

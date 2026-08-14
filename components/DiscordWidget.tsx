@@ -137,7 +137,7 @@ const BADGE_MAP: Array<{ bit: number; label: string; iconHash: string }> = [
 ]
 const NITRO_STARTED_AT = '2025-01-26T00:00:00.000Z'
 const BOOSTER_STARTED_AT = '2025-01-27T00:00:00.000Z'
-const BADGE_ASSET_BASE = 'https://raw.githubusercontent.com/mezotv/discord-badges/main/assets'
+const BADGE_ASSET_BASE = '/discord-badges'
 const ONE_YEAR_MS = 365.25 * 24 * 60 * 60 * 1000
 const DISCORD_POLL_MS = 20000
 const STATUS_PULSE_DURATION_MS = 260

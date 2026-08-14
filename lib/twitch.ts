@@ -14,6 +14,12 @@ type TwitchConfig = {
   clientSecret: string
 }
 
+export type TwitchHealth = {
+  state: 'connected' | 'needs_connection' | 'needs_configuration'
+  message: string
+  expiresAt?: string
+}
+
 export function getTwitchRedirectUri(fallbackOrigin: string) {
   const configuredUri = process.env.TWITCH_REDIRECT_URI?.trim()
   if (configuredUri) {
@@ -40,6 +46,34 @@ function getSupabase() {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key || url.includes('placeholder')) return null
   return createClient(url, key)
+}
+
+export async function getTwitchHealth(): Promise<TwitchHealth> {
+  const missing = [
+    !getTwitchConfig() && 'client credentials',
+    !process.env.TWITCH_BROADCASTER_LOGIN && 'broadcaster login',
+    !process.env.TWITCH_REDIRECT_URI && 'redirect URI',
+  ].filter(Boolean)
+  if (missing.length > 0) {
+    return { state: 'needs_configuration', message: `Missing ${missing.join(', ')}` }
+  }
+
+  const supabase = getSupabase()
+  if (!supabase) return { state: 'needs_configuration', message: 'Missing Supabase configuration' }
+  const { data, error } = await supabase
+    .from('twitch_oauth')
+    .select('expires_at')
+    .eq('id', 'profile')
+    .maybeSingle()
+  if (error) return { state: 'needs_connection', message: 'Unable to read Twitch connection' }
+  if (!data?.expires_at) return { state: 'needs_connection', message: 'Twitch has not been connected yet' }
+
+  const expired = Date.parse(data.expires_at) <= Date.now()
+  return {
+    state: 'connected',
+    message: expired ? 'Connected — token will refresh when needed' : 'Connected and ready',
+    expiresAt: data.expires_at,
+  }
 }
 
 async function saveToken(token: TwitchTokenRow) {

@@ -106,6 +106,12 @@ Recommended toggle IDs include:
 
 Set `TWITCH_REDIRECT_URI` to the exact public URL of this profile deployment. Register that same URL in your Twitch Developer application, for example `https://profile.coolmanyt.com/api/twitch/callback`, plus `http://localhost:3000/api/twitch/callback` for local development. In Vercel, set `TWITCH_BROADCASTER_LOGIN=coolman_yt1` as well as the Twitch client credentials and redirect URI. After setting these values, sign in to the dashboard and select **Connect Twitch**. Approve the `moderator:read:followers` and `channel:read:subscriptions` scopes to display follower and subscriber totals.
 
+The Dashboard reports whether Twitch is configured and connected. The public Twitch endpoint is cached for 25 seconds to keep API use bounded when multiple visitors load the profile.
+
+## Quality checks
+
+Run `npm run lint`, `npm test`, `npx tsc --noEmit`, and `npm run audit` before deploying.
+
 ## Avatar
 
 Place your `avatar.png` in the `public/` folder.
