@@ -20,7 +20,7 @@ interface ProfileCardProps {
 }
 
 export default function ProfileCard({ toggles, preview = false }: ProfileCardProps) {
-  const { hiddenModules, hiddenFeatures } = useVisitorPreferences()
+  const { hiddenModules, hiddenFeatures, mediaPreferences } = useVisitorPreferences()
   const showFeature = (feature: TemporaryFeature) => preview || !hiddenFeatures.includes(feature)
   const router = useRouter()
   const locationTapCountRef = useRef(0)
@@ -91,7 +91,7 @@ export default function ProfileCard({ toggles, preview = false }: ProfileCardPro
           />
         )}
 
-        {toggles.twitch && (preview || !hiddenModules.includes('twitch')) && ((toggles.twitch_profile ?? true) || (toggles.twitch_stats ?? true) || (toggles.twitch_live ?? true) || (toggles.twitch_schedule ?? true)) && <TwitchWidget showProfile={(toggles.twitch_profile ?? true) && showFeature('twitch_profile')} showStats={(toggles.twitch_stats ?? true) && showFeature('twitch_stats')} showLive={(toggles.twitch_live ?? true) && showFeature('twitch_live')} showSchedule={(toggles.twitch_schedule ?? true) && showFeature('twitch_schedule')} />}
+        {toggles.twitch && (preview || !hiddenModules.includes('twitch')) && ((toggles.twitch_profile ?? true) || (toggles.twitch_stats ?? true) || (toggles.twitch_live ?? true) || (toggles.twitch_schedule ?? true)) && <TwitchWidget showProfile={(toggles.twitch_profile ?? true) && showFeature('twitch_profile')} showStats={(toggles.twitch_stats ?? true) && showFeature('twitch_stats')} showLive={(toggles.twitch_live ?? true) && showFeature('twitch_live')} showSchedule={(toggles.twitch_schedule ?? true) && showFeature('twitch_schedule')} scheduleTimeZone={mediaPreferences.scheduleTimeZone ?? undefined} />}
 
         {/* Discord Widget */}
         {toggles.discord !== false && (preview || !hiddenModules.includes('discord')) && ((toggles.discord_profile ?? true) || toggles.discord_music || toggles.discord_video || toggles.discord_games || toggles.discord_status || toggles.discord_other) && (
@@ -112,7 +112,7 @@ export default function ProfileCard({ toggles, preview = false }: ProfileCardPro
           />
         )}
 
-        {toggles.youtube !== false && <YouTubeWidget />}
+        {toggles.youtube !== false && <YouTubeWidget showShort={mediaPreferences.showLatestShort} showLongform={mediaPreferences.showLatestLongform} />}
 
         {/* Social Links */}
         <SocialLinks />

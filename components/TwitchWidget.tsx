@@ -46,7 +46,7 @@ function downloadCalendarEvent(stream: NonNullable<TwitchPresence['nextStream']>
   setTimeout(() => URL.revokeObjectURL(url), 0)
 }
 
-function TwitchWidget({ showProfile = true, showStats = true, showLive = true, showSchedule = true }: { showProfile?: boolean; showStats?: boolean; showLive?: boolean; showSchedule?: boolean }) {
+function TwitchWidget({ showProfile = true, showStats = true, showLive = true, showSchedule = true, scheduleTimeZone }: { showProfile?: boolean; showStats?: boolean; showLive?: boolean; showSchedule?: boolean; scheduleTimeZone?: string }) {
   const [presence, setPresence] = useState<TwitchPresence | null>(null)
   const [loaded, setLoaded] = useState(false)
   const mountedRef = useRef(true)
@@ -120,7 +120,7 @@ function TwitchWidget({ showProfile = true, showStats = true, showLive = true, s
             <div className={`${showProfile || showStats ? 'mt-3 ' : ''}rounded-lg border border-[#bf94ff]/20 bg-white/5 px-3 py-2`}>
               <p className="text-[10px] font-bold uppercase tracking-widest text-[#bf94ff]">Next stream</p>
               <p className="mt-1 truncate text-xs font-semibold text-white">{presence.nextStream.title ?? 'Scheduled stream'}</p>
-              <p className="mt-0.5 text-[10px] text-white/55">{new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(presence.nextStream.startsAt))}{presence.nextStream.category ? ` · ${presence.nextStream.category}` : ''}</p>
+              <p className="mt-0.5 text-[10px] text-white/55">{new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short', ...(scheduleTimeZone ? { timeZone: scheduleTimeZone } : {}) }).format(new Date(presence.nextStream.startsAt))}{presence.nextStream.category ? ` · ${presence.nextStream.category}` : ''}</p>
             </div>
           )}
           </a>
@@ -131,4 +131,4 @@ function TwitchWidget({ showProfile = true, showStats = true, showLive = true, s
   )
 }
 
-export default memo(TwitchWidget, (prev, next) => prev.showProfile === next.showProfile && prev.showStats === next.showStats && prev.showLive === next.showLive && prev.showSchedule === next.showSchedule)
+export default memo(TwitchWidget, (prev, next) => prev.showProfile === next.showProfile && prev.showStats === next.showStats && prev.showLive === next.showLive && prev.showSchedule === next.showSchedule && prev.scheduleTimeZone === next.scheduleTimeZone)

@@ -11,6 +11,10 @@ import SeasonalSettingsClient from '@/components/SeasonalSettingsClient'
 import { getSeasonalSettings } from '@/lib/site-settings'
 import LegalSettingsClient from '@/components/LegalSettingsClient'
 import { getLegalSettings } from '@/lib/legal-settings'
+import StatusSettingsClient from '@/components/StatusSettingsClient'
+import { getStatusSettings } from '@/lib/status-settings'
+import SeasonalPreview from '@/components/SeasonalPreview'
+import SeasonalSimulationControls from '@/components/SeasonalSimulationControls'
 
 const ALLOWED_DISCORD_ID = process.env.DISCORD_USER_ID
 
@@ -128,7 +132,7 @@ export default async function DashboardPage() {
     redirect('/auth/signin')
   }
 
-  const [toggles, twitchHealth, seasonalSettings, legalSettings] = await Promise.all([getToggles(), getTwitchHealth(), getSeasonalSettings(), getLegalSettings()])
+  const [toggles, twitchHealth, seasonalSettings, legalSettings, statusSettings] = await Promise.all([getToggles(), getTwitchHealth(), getSeasonalSettings(), getLegalSettings(), getStatusSettings()])
 
   return (
     <div className="min-h-screen bg-[#1a1a1a] p-8">
@@ -145,7 +149,10 @@ export default async function DashboardPage() {
           </div>
           <DashboardWorkspace initialToggles={toggles} />
           <SeasonalSettingsClient initialSettings={seasonalSettings} />
+          <SeasonalSimulationControls compact />
+          <SeasonalPreview />
           <LegalSettingsClient initialSettings={legalSettings} />
+          <StatusSettingsClient initialSettings={statusSettings} />
           <TwitchConnectionStatus health={twitchHealth} />
           <a
             href="/api/twitch/connect"

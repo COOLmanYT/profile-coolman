@@ -4,7 +4,9 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { SEASONAL_THEMES, type SeasonalTheme } from '@/lib/seasonal'
 import { useSeasonalTheme } from './SeasonalThemeProvider'
-import { useVisitorPreferences, type PerceivedLocation, type TemporaryFeature, type TemporaryModule } from './VisitorPreferencesProvider'
+import { useVisitorPreferences, type TemporaryFeature, type TemporaryModule } from './VisitorPreferencesProvider'
+import SeasonalPreview from './SeasonalPreview'
+import SeasonalSimulationControls from './SeasonalSimulationControls'
 
 const LABELS: Record<SeasonalTheme, string> = {
   christmas: 'Christmas',
@@ -39,7 +41,7 @@ const TEMPORARY_FEATURES: Array<{ category: string; id: TemporaryFeature; label:
 
 export default function SeasonalOptionsClient({ legalSimpleModeDefault }: { legalSimpleModeDefault: boolean }) {
   const { preference, setPreference, activateOnce, clearOnce, timeZone } = useSeasonalTheme()
-  const { simulation, setSimulation, hiddenModules, setModuleHidden, hiddenFeatures, setFeatureHidden } = useVisitorPreferences()
+  const { hiddenModules, setModuleHidden, hiddenFeatures, setFeatureHidden, mediaPreferences, setMediaPreferences } = useVisitorPreferences()
   const [theme, setTheme] = useState<SeasonalTheme | ''>(preference.theme ?? 'christmas')
   const [until, setUntil] = useState(preference.until ? preference.until.slice(0, 16) : '')
   const [legalSimpleMode, setLegalSimpleMode] = useState<'default' | 'simple' | 'standard'>('default')
@@ -54,9 +56,6 @@ export default function SeasonalOptionsClient({ legalSimpleModeDefault }: { lega
     if (!until || !theme) return
     setPreference({ theme, until: new Date(until).toISOString() })
   }
-  const setSimulatedDate = (value: string) => setSimulation({ ...simulation, dateTime: value || null, dateTimeSetAt: value ? Date.now() : null })
-  const setLocation = (location: PerceivedLocation) => setSimulation({ ...simulation, location })
-  const setTimeZone = (value: string) => setSimulation({ ...simulation, timeZone: value || null })
   const updateLegalSimpleMode = (value: 'default' | 'simple' | 'standard') => {
     setLegalSimpleMode(value)
     if (value === 'default') window.localStorage.removeItem(LEGAL_SIMPLE_MODE_KEY)
@@ -84,28 +83,21 @@ export default function SeasonalOptionsClient({ legalSimpleModeDefault }: { lega
           <button onClick={saveUntil} disabled={!until || !theme} className="rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold enabled:hover:bg-red-500 disabled:opacity-40">Save timed theme</button>
           <button onClick={() => { setPreference({ theme: null, until: null }); setUntil('') }} className="text-sm text-white/60 hover:text-white">Use automatic settings</button>
         </div>
-        <section className="mt-8 border-t border-white/10 pt-5">
-          <h2 className="text-base font-semibold">Simulate your environment</h2>
-          <p className="mt-1 text-xs text-white/50">Only affects this visit and resets after refresh.</p>
-          <label className="mt-4 block text-xs text-white/60">Perceived time zone
-            <input value={simulation.timeZone ?? ''} onChange={(event) => setTimeZone(event.target.value)} placeholder={`System (${timeZone})`} className="mt-1 w-full rounded bg-black/25 px-2 py-2 text-sm text-white" />
-          </label>
-          <label className="mt-3 block text-xs text-white/60">Perceived location
-            <select value={simulation.location} onChange={(event) => setLocation(event.target.value as PerceivedLocation)} className="mt-1 w-full rounded bg-black/25 px-2 py-2 text-sm text-white">
-              <option value="auto">Use time zone</option><option value="australia">Australia</option><option value="outside-australia">Outside Australia</option>
-            </select>
-          </label>
-          <label className="mt-3 block text-xs text-white/60">Perceived date and time
-            <input type="datetime-local" value={simulation.dateTime ? simulation.dateTime.slice(0, 16) : ''} onChange={(event) => setSimulatedDate(event.target.value)} className="mt-1 w-full rounded bg-black/25 px-2 py-2 text-sm text-white" />
-          </label>
-          <button onClick={() => setSimulation({ timeZone: null, location: 'auto', dateTime: null, dateTimeSetAt: null })} className="mt-3 text-sm text-white/60 hover:text-white">Use real environment</button>
-        </section>
+        <SeasonalSimulationControls />
+        <SeasonalPreview />
         <section className="mt-8 border-t border-white/10 pt-5">
           <h2 className="text-base font-semibold">Hide modules for this visit</h2>
           <p className="mt-1 text-xs text-white/50">These only affect your browser and clear after refresh.</p>
           {([['spotify', 'Spotify listening'], ['twitch', 'Twitch presence'], ['discord', 'Discord presence']] as [TemporaryModule, string][]).map(([module, label]) => (
             <label key={module} className="mt-3 flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-sm"><span>{label}</span><input type="checkbox" checked={hiddenModules.includes(module)} onChange={(event) => setModuleHidden(module, event.target.checked)} className="h-4 w-4 accent-red-600" /></label>
           ))}
+        </section>
+        <section className="mt-8 border-t border-white/10 pt-5">
+          <h2 className="text-base font-semibold">Media preferences</h2>
+          <p className="mt-1 text-xs text-white/50">Saved only in this browser. Latest YouTube content is off by default.</p>
+          <label className="mt-4 flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-sm"><span>Show latest YouTube Short</span><input type="checkbox" checked={mediaPreferences.showLatestShort} onChange={(event) => setMediaPreferences({ ...mediaPreferences, showLatestShort: event.target.checked })} className="h-4 w-4 accent-red-600" /></label>
+          <label className="mt-2 flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-sm"><span>Show latest YouTube long-form video</span><input type="checkbox" checked={mediaPreferences.showLatestLongform} onChange={(event) => setMediaPreferences({ ...mediaPreferences, showLatestLongform: event.target.checked })} className="h-4 w-4 accent-red-600" /></label>
+          <label className="mt-4 block text-xs text-white/60">Twitch schedule time zone<select value={mediaPreferences.scheduleTimeZone ?? ''} onChange={(event) => setMediaPreferences({ ...mediaPreferences, scheduleTimeZone: event.target.value || null })} className="mt-1 w-full rounded bg-black/25 px-2 py-2 text-sm text-white"><option value="">Use your local time zone</option><option value="Australia/Sydney">Australia/Sydney</option><option value="UTC">UTC</option><option value="America/Los_Angeles">America/Los Angeles</option><option value="America/New_York">America/New York</option><option value="Europe/London">Europe/London</option></select></label>
         </section>
         <section className="mt-8 border-t border-white/10 pt-5">
           <h2 className="text-base font-semibold">Hide module features for this visit</h2>
