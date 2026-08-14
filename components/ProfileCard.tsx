@@ -79,7 +79,7 @@ export default function ProfileCard({ toggles }: ProfileCardProps) {
           />
         )}
 
-        {toggles.twitch && <TwitchWidget showStats={toggles.twitch_stats ?? true} />}
+        {toggles.twitch && <TwitchWidget />}
 
         {/* Discord Widget */}
         {(toggles.discord_music || toggles.discord_video || toggles.discord_games || toggles.discord_status || toggles.discord_other) && (

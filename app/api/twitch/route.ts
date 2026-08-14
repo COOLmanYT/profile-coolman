@@ -6,7 +6,14 @@ export const dynamic = 'force-dynamic'
 const TWITCH_API_URL = 'https://api.twitch.tv/helix'
 const noStore = { headers: { 'Cache-Control': 'no-store' } }
 
-type TwitchUser = { id: string; display_name: string; profile_image_url?: string }
+type TwitchUser = {
+  id: string
+  login: string
+  display_name: string
+  profile_image_url?: string
+  description?: string
+  broadcaster_type?: string
+}
 type TwitchStream = {
   title: string
   game_name?: string
@@ -36,27 +43,31 @@ export async function GET() {
     const user = users?.data?.[0]
     if (!user) return NextResponse.json({ isLive: false }, noStore)
 
-    const streams = await twitchFetch<{ data?: TwitchStream[] }>(`/streams?user_id=${encodeURIComponent(user.id)}`, accessToken, config.clientId)
-    const stream = streams?.data?.[0]
-    if (!stream) return NextResponse.json({ isLive: false }, noStore)
-
-    const [followers, subscriptions] = await Promise.all([
+    const [streams, followers, subscriptions] = await Promise.all([
+      twitchFetch<{ data?: TwitchStream[] }>(`/streams?user_id=${encodeURIComponent(user.id)}`, accessToken, config.clientId),
       twitchFetch<{ total?: number }>(`/channels/followers?broadcaster_id=${encodeURIComponent(user.id)}`, accessToken, config.clientId),
       twitchFetch<{ total?: number }>(`/subscriptions?broadcaster_id=${encodeURIComponent(user.id)}`, accessToken, config.clientId),
     ])
+    const stream = streams?.data?.[0]
 
     return NextResponse.json({
-      isLive: true,
-      title: stream.title,
-      game: stream.game_name,
-      viewers: stream.viewer_count,
+      isLive: Boolean(stream),
       followers: followers?.total ?? null,
       subscribers: subscriptions?.total ?? null,
-      thumbnailUrl: stream.thumbnail_url?.replace('{width}', '440').replace('{height}', '248'),
-      startedAt: stream.started_at,
-      tags: stream.tags ?? [],
+      profileImageUrl: user.profile_image_url,
       channelName: user.display_name,
-      channelUrl: `https://www.twitch.tv/${encodeURIComponent(login)}`,
+      channelLogin: user.login,
+      description: user.description,
+      broadcasterType: user.broadcaster_type,
+      channelUrl: `https://www.twitch.tv/${encodeURIComponent(user.login)}`,
+      ...(stream && {
+        title: stream.title,
+        game: stream.game_name,
+        viewers: stream.viewer_count,
+        thumbnailUrl: stream.thumbnail_url?.replace('{width}', '440').replace('{height}', '248'),
+        startedAt: stream.started_at,
+        tags: stream.tags ?? [],
+      }),
     }, noStore)
   } catch {
     return NextResponse.json({ isLive: false }, noStore)

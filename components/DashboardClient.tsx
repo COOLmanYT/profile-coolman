@@ -12,8 +12,7 @@ const TOGGLE_LABELS: Record<string, string> = {
   spotify: 'Widget',
   spotify_embed: 'Embed Player',
   spotify_playlist: 'Playlist Link',
-  twitch: 'Live Widget',
-  twitch_stats: 'Stream Statistics',
+  twitch: 'Twitch Presence',
   discord_music: 'Music',
   discord_video: 'Video',
   discord_games: 'Games',
@@ -26,7 +25,7 @@ const TOGGLE_LABELS: Record<string, string> = {
 
 const TOGGLE_GROUPS = [
   { title: 'Spotify', description: 'Control the Spotify card and its links.', keys: ['spotify', 'spotify_embed', 'spotify_playlist'] },
-  { title: 'Twitch', description: 'Show your live stream and its audience statistics.', keys: ['twitch', 'twitch_stats'] },
+  { title: 'Twitch', description: 'Show your channel information, audience totals, and live stream when active.', keys: ['twitch'] },
   { title: 'Discord Activity', description: 'Choose which Discord activity types appear.', keys: ['discord_music', 'discord_video', 'discord_games', 'discord_status', 'discord_other'] },
   { title: 'Discord Devices', description: 'Choose which active Discord devices appear.', keys: ['discord_mobile', 'discord_web', 'discord_desktop'] },
 ]

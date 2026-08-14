@@ -14,11 +14,11 @@ interface TwitchPresence {
   startedAt?: string
   tags?: string[]
   channelName?: string
+  channelLogin?: string
+  profileImageUrl?: string
+  description?: string
+  broadcasterType?: string
   channelUrl?: string
-}
-
-interface TwitchWidgetProps {
-  showStats?: boolean
 }
 
 const TWITCH_POLL_MS = 30_000
@@ -31,7 +31,7 @@ function formatDuration(startedAt?: string) {
   return hours > 0 ? `${hours}h ${minutes}m live` : `${minutes}m live`
 }
 
-function TwitchWidget({ showStats = true }: TwitchWidgetProps) {
+function TwitchWidget() {
   const [presence, setPresence] = useState<TwitchPresence | null>(null)
   const [loaded, setLoaded] = useState(false)
   const mountedRef = useRef(true)
@@ -58,39 +58,52 @@ function TwitchWidget({ showStats = true }: TwitchWidgetProps) {
     }
   }, [])
 
-  if (loaded && !presence?.isLive) return null
-
   return (
     <div className="w-full rounded-2xl border border-[#9146ff]/35 bg-[#170b29]/75 p-3 shadow-lg shadow-[#9146ff]/10">
       {!loaded ? (
         <div className="h-24 animate-pulse rounded-xl bg-white/10" />
       ) : (
-        <a href={presence?.channelUrl} target="_blank" rel="noopener noreferrer" className="block group">
-          <div className="flex items-center gap-1.5 mb-2">
-            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" aria-hidden="true" />
-            <span className="text-[#bf94ff] text-[10px] font-bold tracking-widest uppercase">Live on Twitch</span>
-            <span className="ml-auto text-[10px] text-white/55">{formatDuration(presence?.startedAt)}</span>
-          </div>
-          <div className="flex gap-2.5">
-            <div className="relative h-[72px] w-[128px] flex-shrink-0 overflow-hidden rounded-lg bg-white/10">
-              {presence?.thumbnailUrl && <Image src={presence.thumbnailUrl} alt={`${presence.channelName ?? 'Twitch'} live stream`} fill className="object-cover transition-transform duration-200 group-hover:scale-105" unoptimized />}
+        <a href={presence?.channelUrl ?? 'https://www.twitch.tv/coolman_yt1'} target="_blank" rel="noopener noreferrer" className="block group">
+          <div className="flex items-center gap-2.5">
+            <div className="relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-full bg-white/10 ring-1 ring-[#bf94ff]/40">
+              {presence?.profileImageUrl && <Image src={presence.profileImageUrl} alt={`${presence.channelName ?? 'Twitch'} profile`} fill className="object-cover" unoptimized />}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold leading-tight text-white">{presence?.title}</p>
-              {presence?.game && <p className="mt-0.5 truncate text-xs text-[#bf94ff]">{presence.game}</p>}
-              {showStats && (
-                <div className="mt-2 flex flex-wrap gap-x-2.5 gap-y-0.5 text-[10px] text-white/65">
-                  <span>👁 {presence?.viewers?.toLocaleString() ?? 0}</span>
-                  {presence?.followers !== null && presence?.followers !== undefined && <span>♥ {presence.followers.toLocaleString()}</span>}
-                  {presence?.subscribers !== null && presence?.subscribers !== undefined && <span>★ {presence.subscribers.toLocaleString()}</span>}
-                </div>
-              )}
+              <div className="flex items-center gap-1.5">
+                <p className="truncate text-sm font-semibold leading-tight text-white">{presence?.channelName ?? 'COOLmanYT'}</p>
+                <span className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${presence?.isLive ? 'bg-red-500 animate-pulse' : 'bg-white/35'}`} aria-hidden="true" />
+                <span className={`text-[9px] font-bold uppercase tracking-wider ${presence?.isLive ? 'text-red-300' : 'text-white/45'}`}>{presence?.isLive ? 'Live' : 'Offline'}</span>
+              </div>
+              <p className="truncate text-[11px] text-[#bf94ff]">{presence?.channelLogin ? `twitch.tv/${presence.channelLogin}` : 'twitch.tv/coolman_yt1'}</p>
             </div>
           </div>
+          <div className="mt-3 grid grid-cols-2 gap-2 text-center text-[11px]">
+            <div className="rounded-lg bg-white/5 px-2 py-1.5 text-white/75"><span className="block text-sm font-semibold text-white">{presence?.followers?.toLocaleString() ?? '—'}</span>Followers</div>
+            <div className="rounded-lg bg-white/5 px-2 py-1.5 text-white/75"><span className="block text-sm font-semibold text-white">{presence?.subscribers?.toLocaleString() ?? '—'}</span>Subscribers</div>
+          </div>
+          {presence?.isLive && (
+            <div className="mt-3">
+              <div className="mb-1.5 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" aria-hidden="true" />
+                <span className="text-[#bf94ff] text-[10px] font-bold tracking-widest uppercase">Live on Twitch</span>
+                <span className="ml-auto text-[10px] text-white/55">{formatDuration(presence.startedAt)}</span>
+              </div>
+              <div className="flex gap-2.5">
+                <div className="relative h-[72px] w-[128px] flex-shrink-0 overflow-hidden rounded-lg bg-white/10">
+                  {presence.thumbnailUrl && <Image src={presence.thumbnailUrl} alt={`${presence.channelName ?? 'Twitch'} live stream`} fill className="object-cover transition-transform duration-200 group-hover:scale-105" unoptimized />}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold leading-tight text-white">{presence.title}</p>
+                  {presence.game && <p className="mt-0.5 truncate text-xs text-[#bf94ff]">{presence.game}</p>}
+                  <p className="mt-2 text-[10px] text-white/65">👁 {presence.viewers?.toLocaleString() ?? 0} watching</p>
+                </div>
+              </div>
+            </div>
+          )}
         </a>
       )}
     </div>
   )
 }
 
-export default memo(TwitchWidget, (prev, next) => prev.showStats === next.showStats)
+export default memo(TwitchWidget)
