@@ -22,7 +22,7 @@ A Next.js profile site with advanced Spotify mini-player, rich Discord presence,
 ## Environment Variables
 
 | Variable | Description |
-|---|---|
+| --- | --- |
 | `NEXTAUTH_URL` | Your site URL |
 | `NEXTAUTH_SECRET` | Random secret for NextAuth |
 | `DISCORD_CLIENT_ID` | Discord OAuth app client ID |
@@ -87,6 +87,7 @@ create table twitch_oauth (
 ```
 
 Recommended toggle IDs include:
+
 - `spotify`
 - `spotify_embed`
 - `spotify_playlist`
