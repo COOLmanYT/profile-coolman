@@ -1,6 +1,6 @@
 'use client'
 
-import { memo, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { memo, useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import Image from 'next/image'
 
 interface SpotifyTrack {
@@ -24,6 +24,19 @@ interface SpotifyHistoryItem {
   albumArt?: string
   songUrl?: string
   playedAt?: string
+}
+
+function formatRelativeTime(value?: string) {
+  const timestamp = value ? Date.parse(value) : NaN
+  if (!Number.isFinite(timestamp)) return ''
+  const seconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000))
+  if (seconds < 60) return 'just now'
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  return `${days}d ago`
 }
 
 const EQUALIZER_BARS = [
@@ -53,17 +66,22 @@ interface SpotifyWidgetProps {
   showHistory?: boolean
 }
 
-function RecentHistory({ items }: { items: SpotifyHistoryItem[] }) {
-  if (items.length === 0) return null
+function RecentHistory({ items, isLoading }: { items: SpotifyHistoryItem[]; isLoading: boolean }) {
+  const [isExpanded, setIsExpanded] = useState(false)
+  const contentId = useId()
   return (
     <div className="mt-2.5 border-t border-white/10 pt-2">
-      <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-white/45">Recently played</p>
-      <div className="space-y-1.5">{items.slice(0, 3).map((item) => (
-        <a key={`${item.songUrl}-${item.playedAt}`} href={item.songUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-md px-1 py-0.5 transition-colors hover:bg-white/5">
-          {item.albumArt && <span className="relative h-6 w-6 flex-shrink-0 overflow-hidden rounded"><Image src={item.albumArt} alt="" fill className="object-cover" unoptimized /></span>}
-          <span className="min-w-0"><span className="block truncate text-[11px] font-medium text-white/85">{item.title}</span><span className="block truncate text-[10px] text-white/45">{item.artist}</span></span>
-        </a>
-      ))}</div>
+      <button type="button" onClick={() => setIsExpanded((value) => !value)} aria-expanded={isExpanded} aria-controls={contentId} className="text-[10px] font-semibold uppercase tracking-widest text-[#1DB954] transition-colors hover:text-[#6fe29a]">
+        Listening History {isExpanded ? '−' : '+'}
+      </button>
+      {isExpanded && <div id={contentId} className="mt-2 space-y-1.5">
+        {isLoading ? <p className="text-[11px] text-white/45">Loading recent songs…</p> : items.length === 0 ? <p className="text-[11px] text-white/45">No recent songs are available.</p> : items.slice(0, 5).map((item) => (
+          <a key={`${item.songUrl}-${item.playedAt}`} href={item.songUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-md px-1 py-0.5 transition-colors hover:bg-white/5">
+            {item.albumArt && <span className="relative h-6 w-6 flex-shrink-0 overflow-hidden rounded"><Image src={item.albumArt} alt="" fill className="object-cover" unoptimized /></span>}
+            <span className="min-w-0"><span className="block truncate text-[11px] font-medium text-white/85">{item.title}</span><span className="block truncate text-[10px] text-white/45">{item.artist}{formatRelativeTime(item.playedAt) ? ` · ${formatRelativeTime(item.playedAt)}` : ''}</span></span>
+          </a>
+        ))}
+      </div>}
     </div>
   )
 }
@@ -113,6 +131,7 @@ function SpotifyWidget({ showWidget = true, showPosition = true, showEmbed = tru
   const [displayProgressMs, setDisplayProgressMs] = useState(0)
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false)
   const [history, setHistory] = useState<SpotifyHistoryItem[]>([])
+  const [historyLoaded, setHistoryLoaded] = useState(false)
   const requestInFlightRef = useRef(false)
   const abortRef = useRef<AbortController | null>(null)
   const mountedRef = useRef(true)
@@ -171,9 +190,15 @@ function SpotifyWidget({ showWidget = true, showPosition = true, showEmbed = tru
       try {
         const response = await fetch('/api/spotify?history=1', { cache: 'no-store' })
         const data = await response.json() as { items?: SpotifyHistoryItem[] }
-        if (active) setHistory(data.items ?? [])
+        if (active) {
+          setHistory(data.items ?? [])
+          setHistoryLoaded(true)
+        }
       } catch {
-        if (active) setHistory([])
+        if (active) {
+          setHistory([])
+          setHistoryLoaded(true)
+        }
       }
     }
     fetchHistory()
@@ -304,7 +329,7 @@ function SpotifyWidget({ showWidget = true, showPosition = true, showEmbed = tru
       ) : (
         <p className="text-white/40 text-xs">Not listening right now</p>
       ))}
-      {showHistory && <RecentHistory items={history} />}
+      {showHistory && <RecentHistory items={history} isLoading={!historyLoaded} />}
     </div>
   )
 }

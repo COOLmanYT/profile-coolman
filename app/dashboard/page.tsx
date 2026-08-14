@@ -15,6 +15,7 @@ import StatusSettingsClient from '@/components/StatusSettingsClient'
 import { getStatusSettings } from '@/lib/status-settings'
 import SeasonalPreview from '@/components/SeasonalPreview'
 import SeasonalSimulationControls from '@/components/SeasonalSimulationControls'
+import ProviderHealthClient from '@/components/ProviderHealthClient'
 
 const ALLOWED_DISCORD_ID = process.env.DISCORD_USER_ID
 
@@ -153,6 +154,7 @@ export default async function DashboardPage() {
           <SeasonalPreview />
           <LegalSettingsClient initialSettings={legalSettings} />
           <StatusSettingsClient initialSettings={statusSettings} />
+          <ProviderHealthClient />
           <TwitchConnectionStatus health={twitchHealth} />
           <a
             href="/api/twitch/connect"
