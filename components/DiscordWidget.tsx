@@ -1,6 +1,6 @@
 'use client'
 
-import { memo, useEffect, useRef, useState } from 'react'
+import { memo, useEffect, useRef, useState, type ReactNode } from 'react'
 import Image from 'next/image'
 
 interface DiscordActivity {
@@ -135,57 +135,84 @@ const BADGE_MAP: Array<{ bit: number; label: string; iconHash: string }> = [
   { bit: 1 << 9, label: 'Early Supporter', iconHash: '7060786766c9c840eb3019e725d2b358' },
   { bit: 1 << 17, label: 'Active Developer', iconHash: '6bdc42827a38498929a4920da12695d9' },
 ]
-const SPECIAL_BADGES = {
-  nitro1y: 'Nitro 1 Year',
-  booster1y: 'Booster 1 Year',
-  questComplete: 'Completed a Quest',
-  orbsApprentice: 'Orbs Apprentice',
-} as const
+const NITRO_STARTED_AT = '2025-01-26T00:00:00.000Z'
+const BOOSTER_STARTED_AT = '2025-01-27T00:00:00.000Z'
 const ONE_YEAR_MS = 365.25 * 24 * 60 * 60 * 1000
-const NITRO_YEAR_HINTS = ['nitro_1_year', 'nitro 1 year']
-const BOOSTER_YEAR_HINTS = ['booster_1_year', 'booster 1 year', 'guild_boost_12_month']
-const QUEST_COMPLETE_HINTS = ['completed_quest', 'quest_completed', 'completed a quest']
-const ORBS_APPRENTICE_HINTS = ['orbs_apprentice', 'orbs apprentice']
 const DISCORD_POLL_MS = 20000
 const STATUS_PULSE_DURATION_MS = 260
+
+type SpecialBadge = {
+  key: string
+  label: string
+  details: string
+  glyph: string
+  className: string
+}
 
 function getBadges(flags?: number) {
   if (flags === undefined || flags === null) return []
   return BADGE_MAP.filter((badge) => (flags & badge.bit) === badge.bit)
 }
 
-function hasBadgeHint(value: unknown, hints: string[]) {
-  const haystack = JSON.stringify(value ?? '').toLowerCase()
-  return hints.some((hint) => haystack.includes(hint))
+function getMembershipYears(startedAt: string) {
+  const start = Date.parse(startedAt)
+  if (!Number.isFinite(start)) return 1
+  return Math.max(1, Math.floor((Date.now() - start) / ONE_YEAR_MS))
+}
+
+function formatBadgeDate(startedAt: string) {
+  const date = new Date(startedAt)
+  if (Number.isNaN(date.getTime())) return 'Unknown start date'
+  return new Intl.DateTimeFormat('en', { day: 'numeric', month: 'long', year: 'numeric' }).format(date)
 }
 
 function getSpecialBadges(presence?: DiscordPresence) {
-  if (!presence?.discord_user) return []
-  const user = presence.discord_user
-  const kv = presence.kv
-  const special = new Set<string>()
+  const user = presence?.discord_user
+  const nitroStartedAt = user?.premium_since ?? NITRO_STARTED_AT
+  const boosterStartedAt = user?.premium_guild_since ?? BOOSTER_STARTED_AT
+  const nitroYears = getMembershipYears(nitroStartedAt)
+  const boosterYears = getMembershipYears(boosterStartedAt)
 
-  const nitroSince = user.premium_since ? Date.parse(user.premium_since) : NaN
-  const hasNitroYear = Number.isFinite(nitroSince) && (Date.now() - nitroSince) >= ONE_YEAR_MS
-  if (hasNitroYear || hasBadgeHint({ user, kv }, NITRO_YEAR_HINTS)) {
-    special.add(SPECIAL_BADGES.nitro1y)
-  }
+  return [
+    { key: 'nitro', label: `Nitro ${nitroYears} Year${nitroYears === 1 ? '' : 's'}`, details: `Subscription started ${formatBadgeDate(nitroStartedAt)}`, glyph: '✦', className: 'text-[#ff73fa] bg-[#ff73fa]/15 border-[#ff73fa]/30' },
+    { key: 'booster', label: `Server Booster ${boosterYears} Year${boosterYears === 1 ? '' : 's'}`, details: `Boosting started ${formatBadgeDate(boosterStartedAt)}`, glyph: '◆', className: 'text-[#f47fff] bg-[#f47fff]/15 border-[#f47fff]/30' },
+    { key: 'quest', label: 'Completed a Quest', details: 'Completed a Discord Quest', glyph: '✓', className: 'text-[#79d269] bg-[#79d269]/15 border-[#79d269]/30' },
+    { key: 'orbs', label: 'Orbs Apprentice', details: 'Earned the Orbs Apprentice badge', glyph: '✧', className: 'text-[#61b8ff] bg-[#61b8ff]/15 border-[#61b8ff]/30' },
+    { key: 'legend-gifting', label: 'Legend Gifting', details: 'Earned the Legend Gifting badge', glyph: '🎁', className: 'bg-[#5b6ef5]/15 border-[#5b6ef5]/30' },
+  ] satisfies SpecialBadge[]
+}
 
-  const boostSince = user.premium_guild_since ? Date.parse(user.premium_guild_since) : NaN
-  const hasBoostYear = Number.isFinite(boostSince) && (Date.now() - boostSince) >= ONE_YEAR_MS
-  if (hasBoostYear || hasBadgeHint({ user, kv }, BOOSTER_YEAR_HINTS)) {
-    special.add(SPECIAL_BADGES.booster1y)
-  }
+function BadgeTooltip({ label, details, children }: { label: string; details: string; children: ReactNode }) {
+  return (
+    <span className="group/badge relative inline-flex" tabIndex={0} aria-label={`${label}. ${details}`}>
+      {children}
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 hidden w-max max-w-[190px] -translate-x-1/2 rounded-md border border-white/15 bg-[#151515] px-2 py-1.5 text-left shadow-xl group-hover/badge:flex group-focus/badge:flex flex-col"
+      >
+        <strong className="text-[10px] leading-tight text-white">{label}</strong>
+        <span className="mt-0.5 text-[9px] leading-tight text-white/65">{details}</span>
+      </span>
+    </span>
+  )
+}
 
-  if (hasBadgeHint({ user, kv }, QUEST_COMPLETE_HINTS)) {
-    special.add(SPECIAL_BADGES.questComplete)
-  }
+function CustomStatusEmoji({ emoji }: { emoji?: DiscordActivity['emoji'] }) {
+  if (!emoji?.name) return null
+  if (!emoji.id) return <span className="text-xs leading-none" aria-hidden="true">{emoji.name}</span>
 
-  if (hasBadgeHint({ user, kv }, ORBS_APPRENTICE_HINTS)) {
-    special.add(SPECIAL_BADGES.orbsApprentice)
-  }
-
-  return [...special]
+  const extension = emoji.animated ? 'gif' : 'png'
+  return (
+    <Image
+      src={`https://cdn.discordapp.com/emojis/${emoji.id}.${extension}?size=32&quality=lossless`}
+      alt={`:${emoji.name}:`}
+      title={`:${emoji.name}:`}
+      className="w-4 h-4 object-contain"
+      width={16}
+      height={16}
+      unoptimized
+    />
+  )
 }
 
 // Activity type 0=Playing, 1=Streaming, 2=Listening, 3=Watching, 4=Custom, 5=Competing
@@ -314,7 +341,7 @@ function DiscordWidget({
   const serverTag = presence?.discord_user?.primary_guild?.tag ?? presence?.discord_user?.clan?.tag
   const displayName = presence?.discord_user?.username ?? 'coolman_yt'
   const deviceLabel = presence ? getDeviceLabel(presence, { showMobile, showWeb, showDesktop }) : null
-  const customStatusEmoji = customStatus?.emoji?.id ? undefined : customStatus?.emoji?.name
+  const customStatusEmoji = customStatus?.emoji
 
   return (
     <div className="w-full bg-black/25 rounded-2xl p-3 border border-white/10">
@@ -364,25 +391,24 @@ function DiscordWidget({
                 {(badges.length > 0 || specialBadges.length > 0) && (
                   <div className="flex flex-wrap items-center gap-1">
                     {badges.map((badge) => (
-                      <Image
-                        key={badge.label}
-                        src={`https://cdn.discordapp.com/badge-icons/${badge.iconHash}.png`}
-                        alt={badge.label}
-                        title={badge.label}
-                        className="w-4 h-4 rounded-sm"
-                        loading="lazy"
-                        width={16}
-                        height={16}
-                        unoptimized
-                      />
+                      <BadgeTooltip key={badge.label} label={badge.label} details="Discord profile badge">
+                        <Image
+                          src={`https://cdn.discordapp.com/badge-icons/${badge.iconHash}.png`}
+                          alt=""
+                          className="w-4 h-4 rounded-sm"
+                          loading="lazy"
+                          width={16}
+                          height={16}
+                          unoptimized
+                        />
+                      </BadgeTooltip>
                     ))}
                     {specialBadges.map((badge) => (
-                      <span
-                        key={badge}
-                        className="text-[10px] text-white/75 border border-white/15 rounded px-1.5 py-[2px] bg-black/20"
-                      >
-                        {badge}
-                      </span>
+                      <BadgeTooltip key={badge.key} label={badge.label} details={badge.details}>
+                        <span className={`inline-flex w-4 h-4 items-center justify-center rounded-sm border text-[10px] leading-none ${badge.className}`}>
+                          <span aria-hidden="true">{badge.glyph}</span>
+                        </span>
+                      </BadgeTooltip>
                     ))}
                   </div>
                 )}
@@ -399,7 +425,7 @@ function DiscordWidget({
           {/* Custom status row */}
           {showStatus && customStatus && (customStatus.state || customStatusEmoji) && (
             <div className="flex items-center gap-2">
-              {customStatusEmoji && <span className="text-xs" aria-hidden="true">{customStatusEmoji}</span>}
+              <CustomStatusEmoji emoji={customStatusEmoji} />
               {customStatus.state && <span className="min-w-0 text-white/40 text-xs truncate">{customStatus.state}</span>}
             </div>
           )}
