@@ -7,6 +7,7 @@ import SpotifyWidget from './SpotifyWidget'
 import TwitchWidget from './TwitchWidget'
 import DiscordWidget from './DiscordWidget'
 import SocialLinks from './SocialLinks'
+import YouTubeWidget from './YouTubeWidget'
 import SeasonalHat from './SeasonalHat'
 import { useVisitorPreferences, type TemporaryFeature } from './VisitorPreferencesProvider'
 
@@ -56,7 +57,7 @@ export default function ProfileCard({ toggles, preview = false }: ProfileCardPro
       <div className="flex flex-col items-center px-5 sm:px-7 pt-8 sm:pt-9 pb-6 sm:pb-7 gap-4">
         {/* Avatar */}
         <div className="relative h-[88px] w-[88px] flex-shrink-0">
-          <div className="h-full w-full overflow-hidden rounded-full ring-4 ring-white/30 shadow-xl">
+          <div className="h-full w-full overflow-hidden rounded-full ring-4 ring-white/30 shadow-xl [clip-path:circle(50%)]">
             <AvatarImage />
           </div>
           <SeasonalHat />
@@ -110,6 +111,8 @@ export default function ProfileCard({ toggles, preview = false }: ProfileCardPro
             showDesktop={toggles.discord_desktop ?? true}
           />
         )}
+
+        {toggles.youtube !== false && <YouTubeWidget />}
 
         {/* Social Links */}
         <SocialLinks />

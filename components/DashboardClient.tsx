@@ -21,6 +21,7 @@ const TOGGLE_LABELS: Record<string, string> = {
   twitch_stats: 'Follower and subscriber totals',
   twitch_live: 'Live stream widget',
   twitch_schedule: 'Next scheduled stream',
+  youtube: 'Latest YouTube video',
   discord: 'Entire module',
   discord_profile: 'Profile and presence status',
   discord_banner: 'Profile banner',
@@ -40,6 +41,7 @@ const TOGGLE_LABELS: Record<string, string> = {
 const TOGGLE_GROUPS = [
   { title: 'Spotify', description: 'Control the entire Spotify module or its individual sections.', parentKey: 'spotify', keys: ['spotify', 'spotify_widget', 'spotify_position', 'spotify_embed', 'spotify_playlist', 'spotify_history'] },
   { title: 'Twitch', description: 'Control the entire Twitch module or its channel, stats and stream sections.', parentKey: 'twitch', keys: ['twitch', 'twitch_profile', 'twitch_stats', 'twitch_live', 'twitch_schedule'] },
+  { title: 'YouTube', description: 'Show the newest public upload from the COOLmanGamer channel.', parentKey: 'youtube', keys: ['youtube'] },
   { title: 'Discord profile', description: 'Control the entire Discord module or its profile details.', parentKey: 'discord', keys: ['discord', 'discord_profile', 'discord_banner', 'discord_badges', 'discord_decoration', 'discord_devices'] },
   { title: 'Discord Activity', description: 'Choose which Discord activity types appear.', parentKey: 'discord', keys: ['discord_music', 'discord_video', 'discord_games', 'discord_status', 'discord_other'] },
   { title: 'Discord Devices', description: 'Choose which active Discord devices appear.', parentKey: 'discord', keys: ['discord_mobile', 'discord_web', 'discord_desktop'] },

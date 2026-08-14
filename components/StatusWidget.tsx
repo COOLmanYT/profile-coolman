@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 
 type HealthState = 'operational' | 'maintenance' | 'degraded' | 'outage' | 'unknown'
-type StatusData = { state: HealthState; label: string; components: Array<{ name: string; status: HealthState; description?: string }> }
+type StatusData = { services: Array<{ name: string; state: HealthState; label: string }> }
 
 const STATUS_URL = 'https://status.coolmanyt.com'
 const STATE_STYLE: Record<HealthState, string> = {
@@ -22,7 +22,7 @@ export default function StatusWidget() {
         const data = await response.json() as StatusData
         if (active) setStatus(data)
       } catch {
-        if (active) setStatus({ state: 'unknown', label: 'Status temporarily unavailable', components: [] })
+        if (active) setStatus({ services: [{ name: 'Profile page', state: 'unknown', label: 'Status temporarily unavailable' }, { name: 'COOLman brand', state: 'unknown', label: 'Status temporarily unavailable' }] })
       }
     }
     load()
@@ -30,12 +30,11 @@ export default function StatusWidget() {
     return () => { active = false; clearInterval(interval) }
   }, [])
 
-  const state = status?.state ?? 'unknown'
+  const services = status?.services ?? [{ name: 'Profile page', state: 'unknown' as const, label: 'Checking status…' }, { name: 'COOLman brand', state: 'unknown' as const, label: 'Checking status…' }]
   return (
-    <a href={STATUS_URL} target="_blank" rel="noopener noreferrer" className="mt-3 flex w-full items-center gap-3 rounded-xl border border-white/10 bg-black/20 px-3 py-2.5 text-left transition-colors hover:bg-black/30" aria-label="Open COOLman status page">
-      <span className={`h-2.5 w-2.5 flex-shrink-0 rounded-full ${STATE_STYLE[state]}`} aria-hidden />
-      <span className="min-w-0 flex-1"><span className="block text-xs font-semibold text-white/85">Website status</span><span className="block truncate text-[10px] text-white/45">{status?.label ?? 'Checking status…'}</span></span>
-      <span className="text-xs text-white/45">↗</span>
+    <a href={STATUS_URL} target="_blank" rel="noopener noreferrer" className="mt-3 block w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2.5 text-left transition-colors hover:bg-black/30" aria-label="Open COOLman status page">
+      <div className="flex items-center justify-between"><span className="text-xs font-semibold text-white/85">Status</span><span className="text-xs text-white/45">↗</span></div>
+      <div className="mt-2 space-y-1.5">{services.map((service) => <div key={service.name} className="flex items-center gap-2"><span className={`h-2 w-2 flex-shrink-0 rounded-full ${STATE_STYLE[service.state]}`} aria-hidden /><span className="min-w-0 flex-1 text-[10px] text-white/75">{service.name}</span><span className="max-w-[45%] truncate text-[10px] text-white/40">{service.label}</span></div>)}</div>
     </a>
   )
 }

@@ -32,6 +32,20 @@ function formatDuration(startedAt?: string) {
   return hours > 0 ? `${hours}h ${minutes}m live` : `${minutes}m live`
 }
 
+function downloadCalendarEvent(stream: NonNullable<TwitchPresence['nextStream']>) {
+  const start = new Date(stream.startsAt)
+  const end = new Date(start.getTime() + 60 * 60 * 1000)
+  const format = (date: Date) => date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z')
+  const escape = (value: string) => value.replace(/[\\,;]/g, '\\$&').replace(/\n/g, '\\n')
+  const event = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//COOLman//Twitch Stream//EN', 'BEGIN:VEVENT', `UID:coolman-${start.getTime()}@coolmanyt.com`, `DTSTAMP:${format(new Date())}`, `DTSTART:${format(start)}`, `DTEND:${format(end)}`, `SUMMARY:${escape(stream.title ?? 'COOLman Twitch stream')}`, `DESCRIPTION:${escape(`Watch COOLman on Twitch${stream.category ? ` — ${stream.category}` : ''}`)}`, 'URL:https://www.twitch.tv/coolman_yt1', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n')
+  const url = URL.createObjectURL(new Blob([event], { type: 'text/calendar;charset=utf-8' }))
+  const link = document.createElement('a')
+  link.href = url
+  link.download = 'coolman-twitch-stream.ics'
+  link.click()
+  setTimeout(() => URL.revokeObjectURL(url), 0)
+}
+
 function TwitchWidget({ showProfile = true, showStats = true, showLive = true, showSchedule = true }: { showProfile?: boolean; showStats?: boolean; showLive?: boolean; showSchedule?: boolean }) {
   const [presence, setPresence] = useState<TwitchPresence | null>(null)
   const [loaded, setLoaded] = useState(false)
@@ -64,7 +78,8 @@ function TwitchWidget({ showProfile = true, showStats = true, showLive = true, s
       {!loaded ? (
         <div className="h-24 animate-pulse rounded-xl bg-white/10" />
       ) : (
-        <a href={presence?.channelUrl ?? 'https://www.twitch.tv/coolman_yt1'} target="_blank" rel="noopener noreferrer" className="block group">
+        <div className="group">
+          <a href={presence?.channelUrl ?? 'https://www.twitch.tv/coolman_yt1'} target="_blank" rel="noopener noreferrer" className="block">
           {showProfile && <div className="flex items-center gap-2.5">
             <div className="relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-full bg-white/10 ring-1 ring-[#bf94ff]/40">
               {presence?.profileImageUrl && <Image src={presence.profileImageUrl} alt={`${presence.channelName ?? 'Twitch'} profile`} fill className="object-cover" unoptimized />}
@@ -108,7 +123,9 @@ function TwitchWidget({ showProfile = true, showStats = true, showLive = true, s
               <p className="mt-0.5 text-[10px] text-white/55">{new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(presence.nextStream.startsAt))}{presence.nextStream.category ? ` · ${presence.nextStream.category}` : ''}</p>
             </div>
           )}
-        </a>
+          </a>
+          {showSchedule && !presence?.isLive && presence?.nextStream && <button type="button" onClick={() => downloadCalendarEvent(presence.nextStream!)} className="mt-2 w-full rounded-lg border border-[#bf94ff]/25 bg-[#9146ff]/15 px-3 py-1.5 text-[11px] font-semibold text-[#dec8ff] transition-colors hover:bg-[#9146ff]/25">Add to calendar</button>}
+        </div>
       )}
     </div>
   )

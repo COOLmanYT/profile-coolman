@@ -19,14 +19,16 @@ export async function GET() {
     const response = await fetch(STATUS_URL, { next: { revalidate: 60 } })
     if (!response.ok) throw new Error('Status service unavailable')
     const summary = await response.json() as StatusSummary
-    const components = (summary.components ?? []).slice(0, 3).flatMap((component) => component.name ? [{
-      name: component.name,
-      status: normaliseState(component.status),
-      description: component.description,
-    }] : [])
     const rawState = summary.status ?? summary.page?.status
-    return NextResponse.json({ state: normaliseState(rawState), label: rawState ?? 'Status unavailable', components }, { headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120' } })
+    const relevant = (pattern: RegExp) => (summary.components ?? []).find((component) => pattern.test(component.name ?? ''))
+    const profile = relevant(/profile|website/i)
+    const brand = relevant(/coolman|brand/i)
+    const services = [
+      { name: 'Profile page', state: profile ? normaliseState(profile.status) : 'unknown' as const, label: profile?.status ?? 'Not separately tracked' },
+      { name: 'COOLman brand', state: normaliseState(brand?.status ?? rawState), label: brand?.status ?? rawState ?? 'Status unavailable' },
+    ]
+    return NextResponse.json({ services }, { headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120' } })
   } catch {
-    return NextResponse.json({ state: 'unknown', label: 'Status temporarily unavailable', components: [] }, { headers: { 'Cache-Control': 'public, s-maxage=30' } })
+    return NextResponse.json({ services: [{ name: 'Profile page', state: 'unknown', label: 'Status temporarily unavailable' }, { name: 'COOLman brand', state: 'unknown', label: 'Status temporarily unavailable' }] }, { headers: { 'Cache-Control': 'public, s-maxage=30' } })
   }
 }
