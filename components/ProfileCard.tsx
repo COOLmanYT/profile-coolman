@@ -8,15 +8,18 @@ import TwitchWidget from './TwitchWidget'
 import DiscordWidget from './DiscordWidget'
 import SocialLinks from './SocialLinks'
 import SeasonalHat from './SeasonalHat'
+import { useVisitorPreferences } from './VisitorPreferencesProvider'
 
 const LOCATION_TAP_RESET_MS = 6000
 const LOCATION_TAP_THRESHOLD = 10
 
 interface ProfileCardProps {
   toggles: Record<string, boolean>
+  preview?: boolean
 }
 
-export default function ProfileCard({ toggles }: ProfileCardProps) {
+export default function ProfileCard({ toggles, preview = false }: ProfileCardProps) {
+  const { hiddenModules } = useVisitorPreferences()
   const router = useRouter()
   const locationTapCountRef = useRef(0)
   const locationTapResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -49,11 +52,13 @@ export default function ProfileCard({ toggles }: ProfileCardProps) {
 
   return (
     <div className="relative w-full rounded-3xl shadow-2xl overflow-hidden border border-white/10 bg-[linear-gradient(180deg,#ff0000_0%,#8B0000_100%)]">
-      <SeasonalHat />
       <div className="flex flex-col items-center px-5 sm:px-7 pt-8 sm:pt-9 pb-6 sm:pb-7 gap-4">
         {/* Avatar */}
-        <div className="relative w-[88px] h-[88px] rounded-full overflow-hidden ring-4 ring-white/30 shadow-xl flex-shrink-0">
-          <AvatarImage />
+        <div className="relative h-[88px] w-[88px] flex-shrink-0">
+          <div className="h-full w-full overflow-hidden rounded-full ring-4 ring-white/30 shadow-xl">
+            <AvatarImage />
+          </div>
+          <SeasonalHat />
         </div>
 
         {/* Username */}
@@ -74,18 +79,24 @@ export default function ProfileCard({ toggles }: ProfileCardProps) {
         </button>
 
         {/* Spotify Widget */}
-        {toggles.spotify && (
+        {toggles.spotify && (preview || !hiddenModules.includes('spotify')) && (
           <SpotifyWidget
+            showWidget={toggles.spotify_widget ?? true}
             showEmbed={toggles.spotify_embed ?? true}
             showPlaylistLink={toggles.spotify_playlist ?? true}
+            showHistory={toggles.spotify_history ?? true}
           />
         )}
 
-        {toggles.twitch && <TwitchWidget />}
+        {toggles.twitch && (preview || !hiddenModules.includes('twitch')) && ((toggles.twitch_profile ?? true) || (toggles.twitch_stats ?? true) || (toggles.twitch_live ?? true)) && <TwitchWidget showProfile={toggles.twitch_profile ?? true} showStats={toggles.twitch_stats ?? true} showLive={toggles.twitch_live ?? true} />}
 
         {/* Discord Widget */}
-        {(toggles.discord_music || toggles.discord_video || toggles.discord_games || toggles.discord_status || toggles.discord_other) && (
+        {toggles.discord !== false && (preview || !hiddenModules.includes('discord')) && ((toggles.discord_profile ?? true) || toggles.discord_music || toggles.discord_video || toggles.discord_games || toggles.discord_status || toggles.discord_other) && (
           <DiscordWidget
+            showProfile={toggles.discord_profile ?? true}
+            showBanner={toggles.discord_banner ?? true}
+            showBadges={toggles.discord_badges ?? true}
+            showDevices={toggles.discord_devices ?? true}
             showMusic={toggles.discord_music}
             showVideo={toggles.discord_video}
             showGames={toggles.discord_games}

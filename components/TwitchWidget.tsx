@@ -31,7 +31,7 @@ function formatDuration(startedAt?: string) {
   return hours > 0 ? `${hours}h ${minutes}m live` : `${minutes}m live`
 }
 
-function TwitchWidget() {
+function TwitchWidget({ showProfile = true, showStats = true, showLive = true }: { showProfile?: boolean; showStats?: boolean; showLive?: boolean }) {
   const [presence, setPresence] = useState<TwitchPresence | null>(null)
   const [loaded, setLoaded] = useState(false)
   const mountedRef = useRef(true)
@@ -64,7 +64,7 @@ function TwitchWidget() {
         <div className="h-24 animate-pulse rounded-xl bg-white/10" />
       ) : (
         <a href={presence?.channelUrl ?? 'https://www.twitch.tv/coolman_yt1'} target="_blank" rel="noopener noreferrer" className="block group">
-          <div className="flex items-center gap-2.5">
+          {showProfile && <div className="flex items-center gap-2.5">
             <div className="relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-full bg-white/10 ring-1 ring-[#bf94ff]/40">
               {presence?.profileImageUrl && <Image src={presence.profileImageUrl} alt={`${presence.channelName ?? 'Twitch'} profile`} fill className="object-cover" unoptimized />}
             </div>
@@ -76,13 +76,13 @@ function TwitchWidget() {
               </div>
               <p className="truncate text-[11px] text-[#bf94ff]">{presence?.channelLogin ? `twitch.tv/${presence.channelLogin}` : 'twitch.tv/coolman_yt1'}</p>
             </div>
-          </div>
-          <div className="mt-3 grid grid-cols-2 gap-2 text-center text-[11px]">
+          </div>}
+          {showStats && <div className={`${showProfile ? 'mt-3 ' : ''}grid grid-cols-2 gap-2 text-center text-[11px]`}>
             <div className="rounded-lg bg-white/5 px-2 py-1.5 text-white/75"><span className="block text-sm font-semibold text-white">{presence?.followers?.toLocaleString() ?? '—'}</span>Followers</div>
             <div className="rounded-lg bg-white/5 px-2 py-1.5 text-white/75"><span className="block text-sm font-semibold text-white">{presence?.subscribers?.toLocaleString() ?? '—'}</span>Subscribers</div>
-          </div>
-          {presence?.isLive && (
-            <div className="mt-3">
+          </div>}
+          {showLive && presence?.isLive && (
+            <div className={`${showProfile || showStats ? 'mt-3' : ''}`}>
               <div className="mb-1.5 flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" aria-hidden="true" />
                 <span className="text-[#bf94ff] text-[10px] font-bold tracking-widest uppercase">Live on Twitch</span>
@@ -106,4 +106,4 @@ function TwitchWidget() {
   )
 }
 
-export default memo(TwitchWidget)
+export default memo(TwitchWidget, (prev, next) => prev.showProfile === next.showProfile && prev.showStats === next.showStats && prev.showLive === next.showLive)

@@ -6,13 +6,24 @@ import { useState } from 'react'
 interface DashboardClientProps {
   initialToggles: Record<string, boolean>
   signOutOnly?: boolean
+  onTogglesChange?: (toggles: Record<string, boolean>) => void
 }
 
 const TOGGLE_LABELS: Record<string, string> = {
-  spotify: 'Widget',
+  spotify: 'Entire module',
+  spotify_widget: 'Now-playing widget',
   spotify_embed: 'Embed Player',
   spotify_playlist: 'Playlist Link',
-  twitch: 'Twitch Presence',
+  spotify_history: 'Listening History',
+  twitch: 'Entire module',
+  twitch_profile: 'Channel profile and live status',
+  twitch_stats: 'Follower and subscriber totals',
+  twitch_live: 'Live stream widget',
+  discord: 'Entire module',
+  discord_profile: 'Profile and presence status',
+  discord_banner: 'Profile banner',
+  discord_badges: 'Profile badges',
+  discord_devices: 'Device presence',
   discord_music: 'Music',
   discord_video: 'Video',
   discord_games: 'Games',
@@ -24,13 +35,14 @@ const TOGGLE_LABELS: Record<string, string> = {
 }
 
 const TOGGLE_GROUPS = [
-  { title: 'Spotify', description: 'Control the Spotify card and its links.', keys: ['spotify', 'spotify_embed', 'spotify_playlist'] },
-  { title: 'Twitch', description: 'Show your channel information, audience totals, and live stream when active.', keys: ['twitch'] },
+  { title: 'Spotify', description: 'Control the entire Spotify module or its individual sections.', keys: ['spotify', 'spotify_widget', 'spotify_embed', 'spotify_playlist', 'spotify_history'] },
+  { title: 'Twitch', description: 'Control the entire Twitch module or its channel, stats and stream sections.', keys: ['twitch', 'twitch_profile', 'twitch_stats', 'twitch_live'] },
+  { title: 'Discord profile', description: 'Control the entire Discord module or its profile details.', keys: ['discord', 'discord_profile', 'discord_banner', 'discord_badges', 'discord_devices'] },
   { title: 'Discord Activity', description: 'Choose which Discord activity types appear.', keys: ['discord_music', 'discord_video', 'discord_games', 'discord_status', 'discord_other'] },
   { title: 'Discord Devices', description: 'Choose which active Discord devices appear.', keys: ['discord_mobile', 'discord_web', 'discord_desktop'] },
 ]
 
-export default function DashboardClient({ initialToggles, signOutOnly }: DashboardClientProps) {
+export default function DashboardClient({ initialToggles, signOutOnly, onTogglesChange }: DashboardClientProps) {
   const [toggles, setToggles] = useState(initialToggles)
   const [saving, setSaving] = useState<string | null>(null)
   const [saved, setSaved] = useState<string | null>(null)
@@ -48,7 +60,11 @@ export default function DashboardClient({ initialToggles, signOutOnly }: Dashboa
 
   const handleToggle = async (key: string) => {
     const newValue = !toggles[key]
-    setToggles((prev) => ({ ...prev, [key]: newValue }))
+    setToggles((prev) => {
+      const next = { ...prev, [key]: newValue }
+      onTogglesChange?.(next)
+      return next
+    })
     setSaving(key)
     try {
       const response = await fetch('/api/dashboard/toggle', {
@@ -60,7 +76,11 @@ export default function DashboardClient({ initialToggles, signOutOnly }: Dashboa
       setSaved(key)
       setTimeout(() => setSaved(null), 2000)
     } catch {
-      setToggles((prev) => ({ ...prev, [key]: !newValue }))
+      setToggles((prev) => {
+        const next = { ...prev, [key]: !newValue }
+        onTogglesChange?.(next)
+        return next
+      })
     } finally {
       setSaving(null)
     }

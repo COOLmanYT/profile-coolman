@@ -7,6 +7,7 @@ import SeasonalThemeProvider from '@/components/SeasonalThemeProvider'
 import SeasonalEffects from '@/components/SeasonalEffects'
 import { getSeasonalSettings } from '@/lib/site-settings'
 import Link from 'next/link'
+import ShareCard from '@/components/ShareCard'
 
 async function getToggles() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -14,10 +15,19 @@ async function getToggles() {
   if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('placeholder')) {
     return {
       spotify: true,
+      spotify_widget: true,
       spotify_embed: true,
       spotify_playlist: true,
+      spotify_history: true,
       twitch: true,
+      twitch_profile: true,
       twitch_stats: true,
+      twitch_live: true,
+      discord: true,
+      discord_profile: true,
+      discord_banner: true,
+      discord_badges: true,
+      discord_devices: true,
       discord_music: true,
       discord_video: true,
       discord_games: true,
@@ -33,10 +43,19 @@ async function getToggles() {
     const { data } = await supabase.from('toggles').select('id, value')
     const toggleMap: Record<string, boolean> = {
       spotify: true,
+      spotify_widget: true,
       spotify_embed: true,
       spotify_playlist: true,
+      spotify_history: true,
       twitch: true,
+      twitch_profile: true,
       twitch_stats: true,
+      twitch_live: true,
+      discord: true,
+      discord_profile: true,
+      discord_banner: true,
+      discord_badges: true,
+      discord_devices: true,
       discord_music: true,
       discord_video: true,
       discord_games: true,
@@ -55,10 +74,19 @@ async function getToggles() {
   } catch {
     return {
       spotify: true,
+      spotify_widget: true,
       spotify_embed: true,
       spotify_playlist: true,
+      spotify_history: true,
       twitch: true,
+      twitch_profile: true,
       twitch_stats: true,
+      twitch_live: true,
+      discord: true,
+      discord_profile: true,
+      discord_banner: true,
+      discord_badges: true,
+      discord_devices: true,
       discord_music: true,
       discord_video: true,
       discord_games: true,
@@ -88,6 +116,12 @@ export default async function Home() {
           <Link href="/options" className="transition-colors hover:text-white/80">Options</Link>
           <span aria-hidden>•</span>
           <Link href="/dashboard" className="transition-colors hover:text-white/80">Dashboard</Link>
+          <span aria-hidden>•</span>
+          <ShareCard />
+          <span aria-hidden>•</span>
+          <Link href="/terms" className="transition-colors hover:text-white/80">Terms</Link>
+          <span aria-hidden>•</span>
+          <Link href="/privacy" className="transition-colors hover:text-white/80">Privacy</Link>
         </footer>
       </main>
     </SeasonalThemeProvider>

@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { SEASONAL_THEMES, type SeasonalTheme } from '@/lib/seasonal'
 import { useSeasonalTheme } from './SeasonalThemeProvider'
+import { useVisitorPreferences, type PerceivedLocation, type TemporaryModule } from './VisitorPreferencesProvider'
 
 const LABELS: Record<SeasonalTheme, string> = {
   christmas: 'Christmas',
@@ -13,14 +14,32 @@ const LABELS: Record<SeasonalTheme, string> = {
   birthday: 'Birthday',
 }
 
-export default function SeasonalOptionsClient() {
-  const { preference, setPreference, activateOnce, timeZone } = useSeasonalTheme()
-  const [theme, setTheme] = useState<SeasonalTheme>(preference.theme ?? 'christmas')
+const LEGAL_SIMPLE_MODE_KEY = 'coolman-legal-simple-mode'
+
+export default function SeasonalOptionsClient({ legalSimpleModeDefault }: { legalSimpleModeDefault: boolean }) {
+  const { preference, setPreference, activateOnce, clearOnce, timeZone } = useSeasonalTheme()
+  const { simulation, setSimulation, hiddenModules, setModuleHidden } = useVisitorPreferences()
+  const [theme, setTheme] = useState<SeasonalTheme | ''>(preference.theme ?? 'christmas')
   const [until, setUntil] = useState(preference.until ? preference.until.slice(0, 16) : '')
+  const [legalSimpleMode, setLegalSimpleMode] = useState<'default' | 'simple' | 'standard'>('default')
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem(LEGAL_SIMPLE_MODE_KEY)
+    if (saved === 'true') setLegalSimpleMode('simple')
+    if (saved === 'false') setLegalSimpleMode('standard')
+  }, [])
 
   const saveUntil = () => {
-    if (!until) return
+    if (!until || !theme) return
     setPreference({ theme, until: new Date(until).toISOString() })
+  }
+  const setSimulatedDate = (value: string) => setSimulation({ ...simulation, dateTime: value || null, dateTimeSetAt: value ? Date.now() : null })
+  const setLocation = (location: PerceivedLocation) => setSimulation({ ...simulation, location })
+  const setTimeZone = (value: string) => setSimulation({ ...simulation, timeZone: value || null })
+  const updateLegalSimpleMode = (value: 'default' | 'simple' | 'standard') => {
+    setLegalSimpleMode(value)
+    if (value === 'default') window.localStorage.removeItem(LEGAL_SIMPLE_MODE_KEY)
+    else window.localStorage.setItem(LEGAL_SIMPLE_MODE_KEY, String(value === 'simple'))
   }
 
   return (
@@ -30,18 +49,53 @@ export default function SeasonalOptionsClient() {
         <h1 className="mt-4 text-2xl font-bold">Seasonal Options</h1>
         <p className="mt-1 text-sm text-white/55">Automatic dates use your browser time zone: {timeZone}.</p>
         <label className="mt-6 block text-sm font-medium">Theme</label>
-        <select value={theme} onChange={(event) => setTheme(event.target.value as SeasonalTheme)} className="mt-2 w-full rounded-lg border border-white/15 bg-black/25 px-3 py-2 text-sm">
+        <select value={theme} onChange={(event) => { const next = event.target.value as SeasonalTheme | ''; setTheme(next); if (!next) clearOnce() }} className="mt-2 w-full rounded-lg border border-white/15 bg-black/25 px-3 py-2 text-sm">
+          <option value="">None</option>
           {SEASONAL_THEMES.map((item) => <option key={item} value={item}>{LABELS[item]}</option>)}
         </select>
         <div className="mt-4 grid gap-2">
-          <button onClick={() => activateOnce(theme)} className="rounded-lg bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/15">Turn on once for this visit</button>
+          <button onClick={() => theme ? activateOnce(theme) : clearOnce()} className="rounded-lg bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/15">{theme ? 'Turn on once for this visit' : 'Turn off one-visit theme'}</button>
+          <button onClick={clearOnce} className="text-sm text-white/60 hover:text-white">Turn off one-visit theme / select None</button>
           <label className="rounded-lg border border-white/10 p-3 text-sm">
             Turn on until a date and time
             <input type="datetime-local" value={until} onChange={(event) => setUntil(event.target.value)} className="mt-2 w-full rounded bg-black/25 px-2 py-1.5 text-white" />
           </label>
-          <button onClick={saveUntil} disabled={!until} className="rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold enabled:hover:bg-red-500 disabled:opacity-40">Save timed theme</button>
+          <button onClick={saveUntil} disabled={!until || !theme} className="rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold enabled:hover:bg-red-500 disabled:opacity-40">Save timed theme</button>
           <button onClick={() => { setPreference({ theme: null, until: null }); setUntil('') }} className="text-sm text-white/60 hover:text-white">Use automatic settings</button>
         </div>
+        <section className="mt-8 border-t border-white/10 pt-5">
+          <h2 className="text-base font-semibold">Simulate your environment</h2>
+          <p className="mt-1 text-xs text-white/50">Only affects this visit and resets after refresh.</p>
+          <label className="mt-4 block text-xs text-white/60">Perceived time zone
+            <input value={simulation.timeZone ?? ''} onChange={(event) => setTimeZone(event.target.value)} placeholder={`System (${timeZone})`} className="mt-1 w-full rounded bg-black/25 px-2 py-2 text-sm text-white" />
+          </label>
+          <label className="mt-3 block text-xs text-white/60">Perceived location
+            <select value={simulation.location} onChange={(event) => setLocation(event.target.value as PerceivedLocation)} className="mt-1 w-full rounded bg-black/25 px-2 py-2 text-sm text-white">
+              <option value="auto">Use time zone</option><option value="australia">Australia</option><option value="outside-australia">Outside Australia</option>
+            </select>
+          </label>
+          <label className="mt-3 block text-xs text-white/60">Perceived date and time
+            <input type="datetime-local" value={simulation.dateTime ? simulation.dateTime.slice(0, 16) : ''} onChange={(event) => setSimulatedDate(event.target.value)} className="mt-1 w-full rounded bg-black/25 px-2 py-2 text-sm text-white" />
+          </label>
+          <button onClick={() => setSimulation({ timeZone: null, location: 'auto', dateTime: null, dateTimeSetAt: null })} className="mt-3 text-sm text-white/60 hover:text-white">Use real environment</button>
+        </section>
+        <section className="mt-8 border-t border-white/10 pt-5">
+          <h2 className="text-base font-semibold">Hide modules for this visit</h2>
+          <p className="mt-1 text-xs text-white/50">These only affect your browser and clear after refresh.</p>
+          {([['spotify', 'Spotify listening'], ['twitch', 'Twitch presence'], ['discord', 'Discord presence']] as [TemporaryModule, string][]).map(([module, label]) => (
+            <label key={module} className="mt-3 flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-sm"><span>{label}</span><input type="checkbox" checked={hiddenModules.includes(module)} onChange={(event) => setModuleHidden(module, event.target.checked)} className="h-4 w-4 accent-red-600" /></label>
+          ))}
+        </section>
+        <section className="mt-8 border-t border-white/10 pt-5">
+          <h2 className="text-base font-semibold">Legal page reading mode</h2>
+          <p className="mt-1 text-xs text-white/50">Choose your default for the Terms and Privacy Policy. This is stored only in this browser.</p>
+          <select value={legalSimpleMode} onChange={(event) => updateLegalSimpleMode(event.target.value as 'default' | 'simple' | 'standard')} className="mt-3 w-full rounded bg-black/25 px-2 py-2 text-sm text-white">
+            <option value="default">Use site default ({legalSimpleModeDefault ? 'Simple Mode' : 'standard language'})</option>
+            <option value="simple">Always use Simple Mode</option>
+            <option value="standard">Always use standard language</option>
+          </select>
+          <div className="mt-3 flex gap-3 text-sm text-white/60"><Link href="/terms" className="hover:text-white">Terms</Link><Link href="/privacy" className="hover:text-white">Privacy Policy</Link></div>
+        </section>
       </main>
     </div>
   )

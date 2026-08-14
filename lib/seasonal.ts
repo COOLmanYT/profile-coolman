@@ -74,9 +74,10 @@ export function isAustralia(timeZone: string) {
   return timeZone.startsWith('Australia/')
 }
 
-function matchesLocation(location: ThemeLocation, timeZone: string) {
+function matchesLocation(location: ThemeLocation, timeZone: string, perceivedLocation: ThemeLocation = 'anywhere') {
   if (location === 'anywhere') return true
-  return location === 'australia' ? isAustralia(timeZone) : !isAustralia(timeZone)
+  const visitorIsAustralian = perceivedLocation === 'anywhere' ? isAustralia(timeZone) : perceivedLocation === 'australia'
+  return location === 'australia' ? visitorIsAustralian : !visitorIsAustralian
 }
 
 export function automaticThemeAt(date: Date, timeZone: string): SeasonalTheme | null {
@@ -92,7 +93,7 @@ export function automaticThemeAt(date: Date, timeZone: string): SeasonalTheme | 
   return daysFromEaster >= -2 && daysFromEaster <= 1 ? 'easter' : null
 }
 
-export function resolveGlobalTheme(settings: SeasonalSettings, date: Date, timeZone: string) {
+export function resolveGlobalTheme(settings: SeasonalSettings, date: Date, timeZone: string, perceivedLocation: ThemeLocation = 'anywhere') {
   const startsAt = settings.scheduledStartsAt ? Date.parse(settings.scheduledStartsAt) : Number.NaN
   const endsAt = settings.scheduledEndsAt ? Date.parse(settings.scheduledEndsAt) : Number.NaN
   const scheduledActive = settings.scheduledTheme
@@ -100,7 +101,7 @@ export function resolveGlobalTheme(settings: SeasonalSettings, date: Date, timeZ
     && Number.isFinite(endsAt)
     && date.getTime() >= startsAt
     && date.getTime() <= endsAt
-    && matchesLocation(settings.scheduledLocation, timeZone)
+    && matchesLocation(settings.scheduledLocation, timeZone, perceivedLocation)
   if (scheduledActive) return settings.scheduledTheme
   return settings.automaticEnabled ? automaticThemeAt(date, timeZone) : null
 }

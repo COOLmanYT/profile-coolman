@@ -18,6 +18,14 @@ interface SpotifyTrack {
   contextIsPublic?: boolean
 }
 
+interface SpotifyHistoryItem {
+  title: string
+  artist: string
+  albumArt?: string
+  songUrl?: string
+  playedAt?: string
+}
+
 const EQUALIZER_BARS = [
   { heightClass: 'h-[10px]', delayClass: '[animation-delay:0.15s]' },
   { heightClass: 'h-[14px]', delayClass: '[animation-delay:0.3s]' },
@@ -38,8 +46,25 @@ function isSameTrackState(prev: SpotifyTrack | null, next: SpotifyTrack) {
 }
 
 interface SpotifyWidgetProps {
+  showWidget?: boolean
   showEmbed?: boolean
   showPlaylistLink?: boolean
+  showHistory?: boolean
+}
+
+function RecentHistory({ items }: { items: SpotifyHistoryItem[] }) {
+  if (items.length === 0) return null
+  return (
+    <div className="mt-2.5 border-t border-white/10 pt-2">
+      <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-white/45">Recently played</p>
+      <div className="space-y-1.5">{items.slice(0, 3).map((item) => (
+        <a key={`${item.songUrl}-${item.playedAt}`} href={item.songUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-md px-1 py-0.5 transition-colors hover:bg-white/5">
+          {item.albumArt && <span className="relative h-6 w-6 flex-shrink-0 overflow-hidden rounded"><Image src={item.albumArt} alt="" fill className="object-cover" unoptimized /></span>}
+          <span className="min-w-0"><span className="block truncate text-[11px] font-medium text-white/85">{item.title}</span><span className="block truncate text-[10px] text-white/45">{item.artist}</span></span>
+        </a>
+      ))}</div>
+    </div>
+  )
 }
 
 function ScrollingText({ children, className }: { children: ReactNode; className: string }) {
@@ -82,10 +107,11 @@ function ScrollingText({ children, className }: { children: ReactNode; className
   )
 }
 
-function SpotifyWidget({ showEmbed = true, showPlaylistLink = true }: SpotifyWidgetProps) {
+function SpotifyWidget({ showWidget = true, showEmbed = true, showPlaylistLink = true, showHistory = true }: SpotifyWidgetProps) {
   const [track, setTrack] = useState<SpotifyTrack | null>(null)
   const [displayProgressMs, setDisplayProgressMs] = useState(0)
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false)
+  const [history, setHistory] = useState<SpotifyHistoryItem[]>([])
   const requestInFlightRef = useRef(false)
   const abortRef = useRef<AbortController | null>(null)
   const mountedRef = useRef(true)
@@ -138,6 +164,23 @@ function SpotifyWidget({ showEmbed = true, showPlaylistLink = true }: SpotifyWid
   }, [])
 
   useEffect(() => {
+    if (!showHistory) return
+    let active = true
+    const fetchHistory = async () => {
+      try {
+        const response = await fetch('/api/spotify?history=1', { cache: 'no-store' })
+        const data = await response.json() as { items?: SpotifyHistoryItem[] }
+        if (active) setHistory(data.items ?? [])
+      } catch {
+        if (active) setHistory([])
+      }
+    }
+    fetchHistory()
+    const interval = setInterval(fetchHistory, 120_000)
+    return () => { active = false; clearInterval(interval) }
+  }, [showHistory])
+
+  useEffect(() => {
     if (track?.durationMs === undefined || track?.durationMs === null) return
     setDisplayProgressMs(Math.max(0, track.progressMs ?? 0))
   }, [track?.songUrl, track?.progressMs, track?.durationMs])
@@ -170,7 +213,7 @@ function SpotifyWidget({ showEmbed = true, showPlaylistLink = true }: SpotifyWid
         </svg>
         <span className="text-[#1DB954] text-[10px] font-bold tracking-widest uppercase">Listening on Spotify</span>
       </div>
-      {!hasLoadedOnce ? (
+      {showWidget && (!hasLoadedOnce ? (
         <div className="flex items-center gap-2.5">
           <div className="w-10 h-10 bg-white/10 rounded-lg animate-pulse flex-shrink-0" />
           <div className="flex-1">
@@ -259,12 +302,13 @@ function SpotifyWidget({ showEmbed = true, showPlaylistLink = true }: SpotifyWid
         </div>
       ) : (
         <p className="text-white/40 text-xs">Not listening right now</p>
-      )}
+      ))}
+      {showHistory && <RecentHistory items={history} />}
     </div>
   )
 }
 
 export default memo(
   SpotifyWidget,
-  (prev, next) => prev.showEmbed === next.showEmbed && prev.showPlaylistLink === next.showPlaylistLink
+  (prev, next) => prev.showWidget === next.showWidget && prev.showEmbed === next.showEmbed && prev.showPlaylistLink === next.showPlaylistLink && prev.showHistory === next.showHistory
 )

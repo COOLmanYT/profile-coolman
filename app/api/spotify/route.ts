@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 
 // Force this route to always be dynamic so Next.js / Vercel never statically
 // caches the response. Without this, the CDN can serve a stale snapshot to
@@ -9,6 +9,7 @@ const SPOTIFY_TOKEN_URL = 'https://accounts.spotify.com/api/token'
 const SPOTIFY_NOW_PLAYING_URL = 'https://api.spotify.com/v1/me/player/currently-playing'
 const SPOTIFY_PLAYBACK_URL = 'https://api.spotify.com/v1/me/player'
 const SPOTIFY_PLAYLIST_URL = 'https://api.spotify.com/v1/playlists'
+const SPOTIFY_RECENTLY_PLAYED_URL = 'https://api.spotify.com/v1/me/player/recently-played?limit=5'
 
 // Set SPOTIFY_DEBUG=true in your environment to include upstream status codes and
 // limited error text in API responses. Never enable this in production long-term.
@@ -142,7 +143,19 @@ type LanyardActivity = {
   assets?: { large_image?: string }
 }
 
-export async function GET() {
+type SpotifyRecentlyPlayedResponse = {
+  items?: Array<{
+    played_at?: string
+    track?: {
+      name?: string
+      artists?: Array<{ name?: string }>
+      album?: { images?: Array<{ url?: string }> }
+      external_urls?: { spotify?: string }
+    }
+  }>
+}
+
+export async function GET(req: NextRequest) {
   // Prevent CDN / Vercel edge caches from serving stale playback state.
   const noStore = { headers: { 'Cache-Control': 'no-store' } }
 
@@ -158,6 +171,20 @@ export async function GET() {
     const accessToken = tokenResult.accessToken
     if (!accessToken) {
       return NextResponse.json({ isPlaying: false }, noStore)
+    }
+
+    if (req.nextUrl.searchParams.get('history') === '1') {
+      const historyRes = await fetch(SPOTIFY_RECENTLY_PLAYED_URL, { headers: { Authorization: `Bearer ${accessToken}` }, cache: 'no-store' })
+      if (!historyRes.ok) return NextResponse.json({ items: [] }, noStore)
+      const history = await historyRes.json() as SpotifyRecentlyPlayedResponse
+      const items = (history.items ?? []).flatMap((item) => item.track?.name ? [{
+        title: item.track.name,
+        artist: (item.track.artists ?? []).map((artist) => artist.name).filter(Boolean).join(', '),
+        albumArt: item.track.album?.images?.[0]?.url,
+        songUrl: item.track.external_urls?.spotify,
+        playedAt: item.played_at,
+      }] : [])
+      return NextResponse.json({ items }, noStore)
     }
 
     // Primary: /v1/me/player/currently-playing

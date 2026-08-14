@@ -3,10 +3,14 @@ import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
 import DashboardClient from '@/components/DashboardClient'
+import DashboardWorkspace from '@/components/DashboardWorkspace'
+import SeasonalThemeProvider from '@/components/SeasonalThemeProvider'
 import TwitchConnectionStatus from '@/components/TwitchConnectionStatus'
 import { getTwitchHealth } from '@/lib/twitch'
 import SeasonalSettingsClient from '@/components/SeasonalSettingsClient'
 import { getSeasonalSettings } from '@/lib/site-settings'
+import LegalSettingsClient from '@/components/LegalSettingsClient'
+import { getLegalSettings } from '@/lib/legal-settings'
 
 const ALLOWED_DISCORD_ID = process.env.DISCORD_USER_ID
 
@@ -16,10 +20,19 @@ async function getToggles() {
   if (!url || !key || url.includes('placeholder')) {
     return {
       spotify: true,
+      spotify_widget: true,
       spotify_embed: true,
       spotify_playlist: true,
+      spotify_history: true,
       twitch: true,
+      twitch_profile: true,
       twitch_stats: true,
+      twitch_live: true,
+      discord: true,
+      discord_profile: true,
+      discord_banner: true,
+      discord_badges: true,
+      discord_devices: true,
       discord_music: true,
       discord_video: true,
       discord_games: true,
@@ -35,10 +48,19 @@ async function getToggles() {
     const { data } = await supabase.from('toggles').select('id, value')
     const defaults: Record<string, boolean> = {
       spotify: true,
+      spotify_widget: true,
       spotify_embed: true,
       spotify_playlist: true,
+      spotify_history: true,
       twitch: true,
+      twitch_profile: true,
       twitch_stats: true,
+      twitch_live: true,
+      discord: true,
+      discord_profile: true,
+      discord_banner: true,
+      discord_badges: true,
+      discord_devices: true,
       discord_music: true,
       discord_video: true,
       discord_games: true,
@@ -57,10 +79,19 @@ async function getToggles() {
   } catch {
     return {
       spotify: true,
+      spotify_widget: true,
       spotify_embed: true,
       spotify_playlist: true,
+      spotify_history: true,
       twitch: true,
+      twitch_profile: true,
       twitch_stats: true,
+      twitch_live: true,
+      discord: true,
+      discord_profile: true,
+      discord_banner: true,
+      discord_badges: true,
+      discord_devices: true,
       discord_music: true,
       discord_video: true,
       discord_games: true,
@@ -85,12 +116,12 @@ export default async function DashboardPage() {
     redirect('/auth/signin')
   }
 
-  const [toggles, twitchHealth, seasonalSettings] = await Promise.all([getToggles(), getTwitchHealth(), getSeasonalSettings()])
+  const [toggles, twitchHealth, seasonalSettings, legalSettings] = await Promise.all([getToggles(), getTwitchHealth(), getSeasonalSettings(), getLegalSettings()])
 
   return (
     <div className="min-h-screen bg-[#1a1a1a] p-8">
       <div className="max-w-lg mx-auto">
-        <div className="bg-[#2a2a2a] rounded-2xl p-6 shadow-xl">
+        <SeasonalThemeProvider settings={seasonalSettings}><div className="bg-[#2a2a2a] rounded-2xl p-6 shadow-xl">
           <div className="flex items-center justify-between mb-6">
             <div>
               <h1 className="text-white text-2xl font-bold">Dashboard</h1>
@@ -100,8 +131,9 @@ export default async function DashboardPage() {
             </div>
             <DashboardClient initialToggles={toggles} signOutOnly />
           </div>
-          <DashboardClient initialToggles={toggles} />
+          <DashboardWorkspace initialToggles={toggles} />
           <SeasonalSettingsClient initialSettings={seasonalSettings} />
+          <LegalSettingsClient initialSettings={legalSettings} />
           <TwitchConnectionStatus health={twitchHealth} />
           <a
             href="/api/twitch/connect"
@@ -109,7 +141,7 @@ export default async function DashboardPage() {
           >
             {twitchHealth.state === 'connected' ? 'Reconnect Twitch' : 'Connect Twitch'}
           </a>
-        </div>
+        </div></SeasonalThemeProvider>
       </div>
     </div>
   )

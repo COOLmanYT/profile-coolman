@@ -51,6 +51,10 @@ interface DiscordPresence {
 }
 
 interface DiscordWidgetProps {
+  showProfile?: boolean
+  showBanner?: boolean
+  showBadges?: boolean
+  showDevices?: boolean
   showMusic?: boolean
   showVideo?: boolean
   showGames?: boolean
@@ -280,6 +284,10 @@ function getDeviceLabel(
 }
 
 function DiscordWidget({
+  showProfile = true,
+  showBanner = true,
+  showBadges = true,
+  showDevices = true,
   showMusic = true,
   showVideo = true,
   showGames = true,
@@ -395,12 +403,12 @@ function DiscordWidget({
         )
       ) : (
         <div className="space-y-2">
-          {bannerUrl && (
+          {showProfile && showBanner && bannerUrl && (
             <div className="relative w-full h-[74px] rounded-xl overflow-hidden border border-white/10 bg-white/5">
               <Image src={bannerUrl} alt="Discord banner" fill className="object-cover" unoptimized />
             </div>
           )}
-          <div className="flex items-center gap-2.5">
+          {showProfile && <div className="flex items-center gap-2.5">
             <div className="relative w-9 h-9 rounded-full overflow-hidden border border-white/15 bg-white/10 flex-shrink-0">
               {avatarUrl ? (
                 <Image src={avatarUrl} alt="Discord avatar" fill className="object-cover" unoptimized />
@@ -421,7 +429,7 @@ function DiscordWidget({
                     {serverTag}
                   </span>
                 )}
-                {(badges.length > 0 || specialBadges.length > 0) && (
+                {showBadges && (badges.length > 0 || specialBadges.length > 0) && (
                   <div className="flex flex-wrap items-center gap-1">
                     {badges.map((badge) => (
                       <BadgeTooltip key={badge.label} label={badge.label} details="Discord profile badge">
@@ -451,14 +459,14 @@ function DiscordWidget({
                   </div>
                 )}
               </div>
-              {deviceLabel && <p className="mt-1 text-[10px] text-white/50">Active on: {deviceLabel}</p>}
+              {showDevices && deviceLabel && <p className="mt-1 text-[10px] text-white/50">Active on: {deviceLabel}</p>}
               {nameplateUrl && (
                 <div className="mt-1.5 w-[120px] h-5 relative">
                   <Image src={nameplateUrl} alt="Discord nameplate" fill className="object-contain" unoptimized />
                 </div>
               )}
             </div>
-          </div>
+          </div>}
 
           {/* Custom status row */}
           {showStatus && customStatus && (customStatus.state || customStatusEmoji) && (
@@ -502,7 +510,11 @@ function DiscordWidget({
 }
 
 export default memo(DiscordWidget, (prev, next) =>
-  prev.showMusic === next.showMusic
+  prev.showProfile === next.showProfile
+  && prev.showBanner === next.showBanner
+  && prev.showBadges === next.showBadges
+  && prev.showDevices === next.showDevices
+  && prev.showMusic === next.showMusic
   && prev.showVideo === next.showVideo
   && prev.showGames === next.showGames
   && prev.showStatus === next.showStatus

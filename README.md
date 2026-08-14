@@ -31,7 +31,7 @@ A Next.js profile site with advanced Spotify mini-player, rich Discord presence,
 | `DISCORD_BOT_TOKEN` | Discord bot token (optional) |
 | `SPOTIFY_CLIENT_ID` | Spotify app client ID |
 | `SPOTIFY_CLIENT_SECRET` | Spotify app client secret |
-| `SPOTIFY_REFRESH_TOKEN` | Spotify refresh token (required scopes: `user-read-currently-playing`, `user-read-playback-state`) |
+| `SPOTIFY_REFRESH_TOKEN` | Spotify refresh token (required scopes: `user-read-currently-playing`, `user-read-playback-state`, `user-read-recently-played`) |
 | `SPOTIFY_DEBUG` | Set to `true` to include upstream status codes in `/api/spotify` responses (for troubleshooting only; leave unset or `false` in production) |
 | `TWITCH_CLIENT_ID` | Twitch Developer application client ID |
 | `TWITCH_CLIENT_SECRET` | Twitch Developer application client secret |
@@ -89,10 +89,19 @@ create table twitch_oauth (
 Recommended toggle IDs include:
 
 - `spotify`
+- `spotify_widget`
 - `spotify_embed`
 - `spotify_playlist`
+- `spotify_history`
 - `twitch`
+- `twitch_profile`
 - `twitch_stats`
+- `twitch_live`
+- `discord`
+- `discord_profile`
+- `discord_banner`
+- `discord_badges`
+- `discord_devices`
 - `discord_music`
 - `discord_video`
 - `discord_games`
