@@ -7,6 +7,7 @@ import SpotifyWidget from './SpotifyWidget'
 import TwitchWidget from './TwitchWidget'
 import DiscordWidget from './DiscordWidget'
 import SocialLinks from './SocialLinks'
+import SeasonalHat from './SeasonalHat'
 
 const LOCATION_TAP_RESET_MS = 6000
 const LOCATION_TAP_THRESHOLD = 10
@@ -47,7 +48,8 @@ export default function ProfileCard({ toggles }: ProfileCardProps) {
   }
 
   return (
-    <div className="w-full max-w-[390px] rounded-3xl shadow-2xl overflow-hidden border border-white/10 bg-[linear-gradient(180deg,#ff0000_0%,#8B0000_100%)]">
+    <div className="relative w-full rounded-3xl shadow-2xl overflow-hidden border border-white/10 bg-[linear-gradient(180deg,#ff0000_0%,#8B0000_100%)]">
+      <SeasonalHat />
       <div className="flex flex-col items-center px-5 sm:px-7 pt-8 sm:pt-9 pb-6 sm:pb-7 gap-4">
         {/* Avatar */}
         <div className="relative w-[88px] h-[88px] rounded-full overflow-hidden ring-4 ring-white/30 shadow-xl flex-shrink-0">

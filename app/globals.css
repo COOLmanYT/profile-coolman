@@ -49,4 +49,49 @@
   .hide-scrollbar::-webkit-scrollbar {
     display: none;
   }
+
+  @keyframes seasonal-snowfall {
+    from { transform: translate3d(0, -10vh, 0) rotate(0deg); }
+    to { transform: translate3d(18px, 110vh, 0) rotate(300deg); }
+  }
+  @keyframes seasonal-confetti-fall {
+    from { transform: translateY(-12vh) rotate(0deg); opacity: 1; }
+    to { transform: translateY(110vh) rotate(720deg); opacity: 0.85; }
+  }
+  @keyframes seasonal-bunny-hop {
+    0% { transform: translate(-10vw, 0) scaleX(1); opacity: 0; }
+    10% { opacity: 1; }
+    35% { transform: translate(25vw, -38px) scaleX(1); }
+    55% { transform: translate(52vw, 0) scaleX(1); }
+    75% { transform: translate(78vw, -38px) scaleX(1); }
+    100% { transform: translate(110vw, 0) scaleX(-1); opacity: 0; }
+  }
+  @keyframes seasonal-pulse-light {
+    0%, 100% { opacity: 0.78; } 50% { opacity: 1; }
+  }
+
+  .seasonal-snow, .seasonal-confetti { position: fixed; inset: 0; z-index: 20; pointer-events: none; overflow: hidden; }
+  .seasonal-snow span { position: absolute; top: -8vh; color: rgba(255,255,255,.88); text-shadow: 0 0 8px rgba(255,255,255,.7); animation: seasonal-snowfall linear infinite; }
+  .seasonal-confetti span { position: absolute; top: -4vh; width: 8px; height: 13px; border-radius: 2px; animation: seasonal-confetti-fall 4s linear infinite; }
+  .seasonal-figure { position: fixed; z-index: 30; border: 0; background: transparent; padding: 0; cursor: pointer; filter: drop-shadow(0 8px 12px rgba(0,0,0,.3)); transition: transform .35s ease, opacity .45s ease; }
+  .seasonal-figure:hover { transform: scale(1.08); }
+  .seasonal-figure-left { left: max(16px, env(safe-area-inset-left)); bottom: max(14px, env(safe-area-inset-bottom)); }
+  .seasonal-figure-right { right: max(16px, env(safe-area-inset-right)); bottom: max(14px, env(safe-area-inset-bottom)); cursor: default; }
+  .seasonal-figure-main { font-size: clamp(44px, 6vw, 76px); line-height: 1; }
+  .seasonal-gifts { position: absolute; display: block; width: max-content; right: -32px; bottom: -8px; font-size: 23px; transform: rotate(-8deg); }
+  .seasonal-melted { transform: translateY(20px) scaleX(1.35) scaleY(.28); opacity: .55; cursor: default; pointer-events: none; }
+  .seasonal-pumpkin { filter: drop-shadow(0 8px 15px rgba(255,125,0,.38)); }
+  .seasonal-lantern-light { position: fixed; inset: 0; z-index: 21; pointer-events: none; background: radial-gradient(circle 260px at 72px calc(100% - 75px), rgba(255,180,55,.56), rgba(0,0,0,.75) 58%); animation: seasonal-pulse-light 1.2s ease-in-out infinite; }
+  .seasonal-easter-basket { font-size: clamp(40px, 5vw, 64px); }
+  .seasonal-bunny { position: fixed; z-index: 31; left: 0; bottom: 25px; font-size: 38px; pointer-events: none; animation: seasonal-bunny-hop 4.2s ease-in forwards; }
+  .seasonal-countdown { position: fixed; z-index: 31; left: 50%; top: 16%; transform: translateX(-50%); font-size: clamp(68px, 18vw, 180px); font-weight: 800; color: white; text-shadow: 0 0 28px #ffd60a, 0 0 60px #ff453a; pointer-events: none; }
+  .minecraft-cake { width: 70px; height: 46px; border: 4px solid #2c1914; border-radius: 2px; background: linear-gradient(#fff6e7 0 28%, #e74b4b 28% 52%, #9a5031 52%); image-rendering: pixelated; box-shadow: inset 0 7px 0 #ff7878, inset 13px 0 0 rgba(255,255,255,.22), inset -10px -7px 0 rgba(63,25,19,.28), 0 8px 12px rgba(0,0,0,.3); }
+  .minecraft-cake span { position: absolute; left: 30px; top: -17px; width: 7px; height: 17px; background: #f4bc2d; box-shadow: 0 -5px 0 #fff4a9, -18px 12px 0 #fff6e7, 18px 12px 0 #fff6e7; }
+  .seasonal-santa-hat { position: absolute; z-index: 5; top: -5px; right: -3px; width: 58px; height: 39px; transform: rotate(18deg); pointer-events: none; }
+  .seasonal-santa-hat::before { content: ''; position: absolute; right: 7px; top: 0; width: 0; height: 0; border-left: 21px solid transparent; border-right: 21px solid transparent; border-bottom: 34px solid #e52b38; filter: drop-shadow(0 2px 2px rgba(0,0,0,.2)); }
+  .seasonal-santa-hat::after { content: ''; position: absolute; bottom: 0; right: 0; width: 47px; height: 10px; border-radius: 999px; background: #fff; box-shadow: 24px -28px 0 -2px #fff; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .seasonal-snow span, .seasonal-confetti span, .seasonal-bunny, .seasonal-lantern-light { animation: none; }
+  }
 }

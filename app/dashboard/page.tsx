@@ -5,6 +5,8 @@ import { createClient } from '@supabase/supabase-js'
 import DashboardClient from '@/components/DashboardClient'
 import TwitchConnectionStatus from '@/components/TwitchConnectionStatus'
 import { getTwitchHealth } from '@/lib/twitch'
+import SeasonalSettingsClient from '@/components/SeasonalSettingsClient'
+import { getSeasonalSettings } from '@/lib/site-settings'
 
 const ALLOWED_DISCORD_ID = process.env.DISCORD_USER_ID
 
@@ -83,7 +85,7 @@ export default async function DashboardPage() {
     redirect('/auth/signin')
   }
 
-  const [toggles, twitchHealth] = await Promise.all([getToggles(), getTwitchHealth()])
+  const [toggles, twitchHealth, seasonalSettings] = await Promise.all([getToggles(), getTwitchHealth(), getSeasonalSettings()])
 
   return (
     <div className="min-h-screen bg-[#1a1a1a] p-8">
@@ -99,6 +101,7 @@ export default async function DashboardPage() {
             <DashboardClient initialToggles={toggles} signOutOnly />
           </div>
           <DashboardClient initialToggles={toggles} />
+          <SeasonalSettingsClient initialSettings={seasonalSettings} />
           <TwitchConnectionStatus health={twitchHealth} />
           <a
             href="/api/twitch/connect"

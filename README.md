@@ -112,6 +112,10 @@ The Dashboard reports whether Twitch is configured and connected. The public Twi
 
 Run `npm run lint`, `npm test`, `npx tsc --noEmit`, and `npm run audit` before deploying.
 
+## Seasonal themes
+
+Apply `supabase/migrations/20260814000002_add_site_settings.sql` before using the Dashboard seasonal controls. The profile automatically celebrates Christmas (including an Australia-aware sandman), Halloween, Easter, New Year, and 28 November. Visitors can choose a one-visit or timed override in **Options**; Dashboard controls manage automatic events and a location-scoped global event schedule.
+
 ## Avatar
 
 Place your `avatar.png` in the `public/` folder.

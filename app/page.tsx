@@ -3,6 +3,10 @@ import EasterEgg from '@/components/EasterEgg'
 import ViewCounter from '@/components/ViewCounter'
 import ProfileCard from '@/components/ProfileCard'
 import AnimatedBackground from '@/components/AnimatedBackground'
+import SeasonalThemeProvider from '@/components/SeasonalThemeProvider'
+import SeasonalEffects from '@/components/SeasonalEffects'
+import { getSeasonalSettings } from '@/lib/site-settings'
+import Link from 'next/link'
 
 async function getToggles() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -68,18 +72,24 @@ async function getToggles() {
 }
 
 export default async function Home() {
-  const toggles = await getToggles()
+  const [toggles, seasonalSettings] = await Promise.all([getToggles(), getSeasonalSettings()])
 
   return (
-    <>
+    <SeasonalThemeProvider settings={seasonalSettings}>
       <AnimatedBackground />
-      <main className="relative min-h-screen flex items-center justify-center p-3 sm:p-4" style={{ zIndex: 10 }}>
+      <main className="relative flex min-h-screen flex-col items-center justify-center px-3 pb-16 pt-6 sm:px-4 sm:py-8" style={{ zIndex: 10 }}>
         <EasterEgg />
-        <div className="relative">
+        <SeasonalEffects />
+        <div className="relative w-full max-w-[390px] lg:max-w-[460px]">
           <ProfileCard toggles={toggles} />
           <ViewCounter />
         </div>
+        <footer className="mt-5 flex items-center gap-3 text-[11px] text-white/35">
+          <Link href="/options" className="transition-colors hover:text-white/80">Options</Link>
+          <span aria-hidden>•</span>
+          <Link href="/dashboard" className="transition-colors hover:text-white/80">Dashboard</Link>
+        </footer>
       </main>
-    </>
+    </SeasonalThemeProvider>
   )
 }
