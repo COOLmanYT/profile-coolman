@@ -11,11 +11,26 @@
     0% { transform: scale(0.9); opacity: 0.8; }
     100% { transform: scale(1); opacity: 1; }
   }
+  @keyframes spotify-marquee {
+    0%, 15% { transform: translateX(0); }
+    85%, 100% { transform: translateX(var(--spotify-marquee-distance)); }
+  }
   .animate-fade-in {
     animation: fade-in 0.4s ease forwards;
   }
   .status-change-pop {
     animation: status-pop 220ms ease-out;
+  }
+  .animate-spotify-marquee {
+    animation-name: spotify-marquee;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-spotify-marquee {
+      animation: none;
+    }
   }
 
   .status-online-glow {

@@ -1,6 +1,6 @@
 'use client'
 
-import { memo, useEffect, useRef, useState } from 'react'
+import { memo, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import Image from 'next/image'
 
 interface SpotifyTrack {
@@ -40,6 +40,46 @@ function isSameTrackState(prev: SpotifyTrack | null, next: SpotifyTrack) {
 interface SpotifyWidgetProps {
   showEmbed?: boolean
   showPlaylistLink?: boolean
+}
+
+function ScrollingText({ children, className }: { children: ReactNode; className: string }) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
+  const [scrollDistance, setScrollDistance] = useState(0)
+
+  useEffect(() => {
+    const measure = () => {
+      const container = containerRef.current
+      const content = contentRef.current
+      if (!container || !content) return
+      setScrollDistance(content.scrollWidth > container.clientWidth ? content.scrollWidth + 24 : 0)
+    }
+
+    measure()
+    const resizeObserver = new ResizeObserver(measure)
+    if (containerRef.current) resizeObserver.observe(containerRef.current)
+    return () => resizeObserver.disconnect()
+  }, [children])
+
+  const shouldScroll = scrollDistance > 0
+  const duration = Math.min(16, Math.max(6, scrollDistance / 24))
+  const marqueeStyle = {
+    '--spotify-marquee-distance': `-${scrollDistance}px`,
+    animationDuration: `${duration}s`,
+  } as CSSProperties
+
+  return (
+    <div ref={containerRef} className={`w-full overflow-hidden ${className}`}>
+      <div
+        ref={contentRef}
+        className={`inline-flex min-w-max whitespace-nowrap ${shouldScroll ? 'animate-spotify-marquee' : ''}`}
+        style={shouldScroll ? marqueeStyle : undefined}
+      >
+        <span>{children}</span>
+        {shouldScroll && <span aria-hidden="true" className="pl-6">{children}</span>}
+      </div>
+    </div>
+  )
 }
 
 function SpotifyWidget({ showEmbed = true, showPlaylistLink = true }: SpotifyWidgetProps) {
@@ -148,13 +188,18 @@ function SpotifyWidget({ showEmbed = true, showPlaylistLink = true }: SpotifyWid
           )}
           <div className="flex-1 min-w-0 flex flex-col justify-center items-start">
             {track.songUrl ? (
-              <a href={track.songUrl} target="_blank" rel="noopener noreferrer" className="hover:underline transition-colors duration-200 ease-out">
-                <p className="text-white text-sm font-semibold leading-tight truncate">{track.title}</p>
+              <a
+                href={track.songUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full min-w-0 max-w-full hover:underline transition-colors duration-200 ease-out"
+              >
+                <ScrollingText className="text-white text-sm font-semibold leading-tight">{track.title}</ScrollingText>
               </a>
             ) : (
-              <p className="text-white text-sm font-semibold leading-tight truncate">{track.title}</p>
+              <ScrollingText className="text-white text-sm font-semibold leading-tight">{track.title}</ScrollingText>
             )}
-            <p className="text-white/60 text-xs truncate mt-0.5 text-left w-full">{artistsLabel}</p>
+            <ScrollingText className="mt-0.5 text-left text-white/60 text-xs">{artistsLabel}</ScrollingText>
             {canShowPlaylistLink && (
               <p className="mt-1">
                 <a

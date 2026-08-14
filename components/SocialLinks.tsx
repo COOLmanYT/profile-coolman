@@ -23,6 +23,36 @@ export default function SocialLinks() {
       ),
     },
     {
+      name: 'X',
+      href: 'https://x.com/coolman_yt1',
+      icon: (
+        <Image
+          src="https://cdn.simpleicons.org/x/ffffff"
+          alt="X"
+          className="w-5 h-5"
+          loading="lazy"
+          width={20}
+          height={20}
+          unoptimized
+        />
+      ),
+    },
+    {
+      name: 'Twitch',
+      href: 'https://www.twitch.tv/coolman_yt1',
+      icon: (
+        <Image
+          src="https://cdn.simpleicons.org/twitch/ffffff"
+          alt="Twitch"
+          className="w-5 h-5"
+          loading="lazy"
+          width={20}
+          height={20}
+          unoptimized
+        />
+      ),
+    },
+    {
       name: 'Spotify',
       href: 'https://open.spotify.com/user/coolmanyt',
       icon: (
