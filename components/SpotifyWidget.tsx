@@ -47,6 +47,7 @@ function isSameTrackState(prev: SpotifyTrack | null, next: SpotifyTrack) {
 
 interface SpotifyWidgetProps {
   showWidget?: boolean
+  showPosition?: boolean
   showEmbed?: boolean
   showPlaylistLink?: boolean
   showHistory?: boolean
@@ -107,7 +108,7 @@ function ScrollingText({ children, className }: { children: ReactNode; className
   )
 }
 
-function SpotifyWidget({ showWidget = true, showEmbed = true, showPlaylistLink = true, showHistory = true }: SpotifyWidgetProps) {
+function SpotifyWidget({ showWidget = true, showPosition = true, showEmbed = true, showPlaylistLink = true, showHistory = true }: SpotifyWidgetProps) {
   const [track, setTrack] = useState<SpotifyTrack | null>(null)
   const [displayProgressMs, setDisplayProgressMs] = useState(0)
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false)
@@ -271,7 +272,7 @@ function SpotifyWidget({ showWidget = true, showEmbed = true, showPlaylistLink =
             </div>
           </div>
 
-          {durationMs > 0 && (
+          {showPosition && durationMs > 0 && (
             <div className="space-y-1">
               <div className="relative h-1.5 rounded-full bg-white/15 overflow-hidden">
                 <div
@@ -310,5 +311,5 @@ function SpotifyWidget({ showWidget = true, showEmbed = true, showPlaylistLink =
 
 export default memo(
   SpotifyWidget,
-  (prev, next) => prev.showWidget === next.showWidget && prev.showEmbed === next.showEmbed && prev.showPlaylistLink === next.showPlaylistLink && prev.showHistory === next.showHistory
+  (prev, next) => prev.showWidget === next.showWidget && prev.showPosition === next.showPosition && prev.showEmbed === next.showEmbed && prev.showPlaylistLink === next.showPlaylistLink && prev.showHistory === next.showHistory
 )

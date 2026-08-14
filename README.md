@@ -25,6 +25,7 @@ A Next.js profile site with advanced Spotify mini-player, rich Discord presence,
 | --- | --- |
 | `NEXTAUTH_URL` | Your site URL |
 | `NEXTAUTH_SECRET` | Random secret for NextAuth |
+| `NEXT_PUBLIC_CONTACT_EMAIL` | Support address shown on legal pages (defaults to `support@coolmanyt.com`) |
 | `DISCORD_CLIENT_ID` | Discord OAuth app client ID |
 | `DISCORD_CLIENT_SECRET` | Discord OAuth app client secret |
 | `DISCORD_USER_ID` | Your Discord user ID (for Lanyard + auth) |
@@ -90,6 +91,7 @@ Recommended toggle IDs include:
 
 - `spotify`
 - `spotify_widget`
+- `spotify_position`
 - `spotify_embed`
 - `spotify_playlist`
 - `spotify_history`
@@ -97,10 +99,12 @@ Recommended toggle IDs include:
 - `twitch_profile`
 - `twitch_stats`
 - `twitch_live`
+- `twitch_schedule`
 - `discord`
 - `discord_profile`
 - `discord_banner`
 - `discord_badges`
+- `discord_decoration`
 - `discord_devices`
 - `discord_music`
 - `discord_video`
@@ -124,6 +128,10 @@ Run `npm run lint`, `npm test`, `npx tsc --noEmit`, and `npm run audit` before d
 ## Seasonal themes
 
 Apply `supabase/migrations/20260814000002_add_site_settings.sql` before using the Dashboard seasonal controls. The profile automatically celebrates Christmas (including an Australia-aware sandman), Halloween, Easter, New Year, and 28 November. Visitors can choose a one-visit or timed override in **Options**; Dashboard controls manage automatic events and a location-scoped global event schedule.
+
+## Security
+
+Apply `supabase/migrations/20260814000003_secure_public_tables.sql` to enable row-level security and remove direct browser-role access to profile data. The site accesses these tables only through server routes using the service-role key.
 
 ## Avatar
 

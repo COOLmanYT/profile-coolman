@@ -54,6 +54,7 @@ interface DiscordWidgetProps {
   showProfile?: boolean
   showBanner?: boolean
   showBadges?: boolean
+  showDecoration?: boolean
   showDevices?: boolean
   showMusic?: boolean
   showVideo?: boolean
@@ -287,6 +288,7 @@ function DiscordWidget({
   showProfile = true,
   showBanner = true,
   showBadges = true,
+  showDecoration = true,
   showDevices = true,
   showMusic = true,
   showVideo = true,
@@ -415,7 +417,7 @@ function DiscordWidget({
               ) : (
                 <span aria-label="Discord avatar placeholder" className="w-full h-full flex items-center justify-center text-[10px] text-white/60">DC</span>
               )}
-              {avatarDecorationUrl && (
+              {showDecoration && avatarDecorationUrl && (
                 <Image src={avatarDecorationUrl} alt="" aria-hidden="true" fill className="object-cover pointer-events-none" unoptimized />
               )}
             </div>
@@ -460,7 +462,7 @@ function DiscordWidget({
                 )}
               </div>
               {showDevices && deviceLabel && <p className="mt-1 text-[10px] text-white/50">Active on: {deviceLabel}</p>}
-              {nameplateUrl && (
+              {showDecoration && nameplateUrl && (
                 <div className="mt-1.5 w-[120px] h-5 relative">
                   <Image src={nameplateUrl} alt="Discord nameplate" fill className="object-contain" unoptimized />
                 </div>
@@ -513,6 +515,7 @@ export default memo(DiscordWidget, (prev, next) =>
   prev.showProfile === next.showProfile
   && prev.showBanner === next.showBanner
   && prev.showBadges === next.showBadges
+  && prev.showDecoration === next.showDecoration
   && prev.showDevices === next.showDevices
   && prev.showMusic === next.showMusic
   && prev.showVideo === next.showVideo

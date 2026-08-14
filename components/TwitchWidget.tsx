@@ -19,6 +19,7 @@ interface TwitchPresence {
   description?: string
   broadcasterType?: string
   channelUrl?: string
+  nextStream?: { title?: string; category?: string; startsAt: string }
 }
 
 const TWITCH_POLL_MS = 30_000
@@ -31,7 +32,7 @@ function formatDuration(startedAt?: string) {
   return hours > 0 ? `${hours}h ${minutes}m live` : `${minutes}m live`
 }
 
-function TwitchWidget({ showProfile = true, showStats = true, showLive = true }: { showProfile?: boolean; showStats?: boolean; showLive?: boolean }) {
+function TwitchWidget({ showProfile = true, showStats = true, showLive = true, showSchedule = true }: { showProfile?: boolean; showStats?: boolean; showLive?: boolean; showSchedule?: boolean }) {
   const [presence, setPresence] = useState<TwitchPresence | null>(null)
   const [loaded, setLoaded] = useState(false)
   const mountedRef = useRef(true)
@@ -100,10 +101,17 @@ function TwitchWidget({ showProfile = true, showStats = true, showLive = true }:
               </div>
             </div>
           )}
+          {showSchedule && !presence?.isLive && presence?.nextStream && (
+            <div className={`${showProfile || showStats ? 'mt-3 ' : ''}rounded-lg border border-[#bf94ff]/20 bg-white/5 px-3 py-2`}>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[#bf94ff]">Next stream</p>
+              <p className="mt-1 truncate text-xs font-semibold text-white">{presence.nextStream.title ?? 'Scheduled stream'}</p>
+              <p className="mt-0.5 text-[10px] text-white/55">{new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(presence.nextStream.startsAt))}{presence.nextStream.category ? ` · ${presence.nextStream.category}` : ''}</p>
+            </div>
+          )}
         </a>
       )}
     </div>
   )
 }
 
-export default memo(TwitchWidget, (prev, next) => prev.showProfile === next.showProfile && prev.showStats === next.showStats && prev.showLive === next.showLive)
+export default memo(TwitchWidget, (prev, next) => prev.showProfile === next.showProfile && prev.showStats === next.showStats && prev.showLive === next.showLive && prev.showSchedule === next.showSchedule)

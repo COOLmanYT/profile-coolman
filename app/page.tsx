@@ -8,6 +8,7 @@ import SeasonalEffects from '@/components/SeasonalEffects'
 import { getSeasonalSettings } from '@/lib/site-settings'
 import Link from 'next/link'
 import ShareCard from '@/components/ShareCard'
+import StatusWidget from '@/components/StatusWidget'
 
 async function getToggles() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -16,6 +17,7 @@ async function getToggles() {
     return {
       spotify: true,
       spotify_widget: true,
+      spotify_position: true,
       spotify_embed: true,
       spotify_playlist: true,
       spotify_history: true,
@@ -23,10 +25,12 @@ async function getToggles() {
       twitch_profile: true,
       twitch_stats: true,
       twitch_live: true,
+      twitch_schedule: true,
       discord: true,
       discord_profile: true,
       discord_banner: true,
       discord_badges: true,
+      discord_decoration: true,
       discord_devices: true,
       discord_music: true,
       discord_video: true,
@@ -44,6 +48,7 @@ async function getToggles() {
     const toggleMap: Record<string, boolean> = {
       spotify: true,
       spotify_widget: true,
+      spotify_position: true,
       spotify_embed: true,
       spotify_playlist: true,
       spotify_history: true,
@@ -51,10 +56,12 @@ async function getToggles() {
       twitch_profile: true,
       twitch_stats: true,
       twitch_live: true,
+      twitch_schedule: true,
       discord: true,
       discord_profile: true,
       discord_banner: true,
       discord_badges: true,
+      discord_decoration: true,
       discord_devices: true,
       discord_music: true,
       discord_video: true,
@@ -75,6 +82,7 @@ async function getToggles() {
     return {
       spotify: true,
       spotify_widget: true,
+      spotify_position: true,
       spotify_embed: true,
       spotify_playlist: true,
       spotify_history: true,
@@ -82,10 +90,12 @@ async function getToggles() {
       twitch_profile: true,
       twitch_stats: true,
       twitch_live: true,
+      twitch_schedule: true,
       discord: true,
       discord_profile: true,
       discord_banner: true,
       discord_badges: true,
+      discord_decoration: true,
       discord_devices: true,
       discord_music: true,
       discord_video: true,
@@ -111,6 +121,7 @@ export default async function Home() {
         <div className="relative w-full max-w-[390px] lg:max-w-[460px]">
           <ProfileCard toggles={toggles} />
           <ViewCounter />
+          <StatusWidget />
         </div>
         <footer className="mt-5 flex flex-wrap items-center justify-center gap-3 text-[11px] text-white/35">
           <Link href="/options" className="transition-colors hover:text-white/80">Options</Link>
@@ -124,6 +135,8 @@ export default async function Home() {
           <Link href="/privacy" className="transition-colors hover:text-white/80">Privacy</Link>
           <span aria-hidden>•</span>
           <Link href="/licence" className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 font-medium text-white/60 transition-all hover:border-white/25 hover:bg-white/10 hover:text-white">⚖ Licence</Link>
+          <span aria-hidden>•</span>
+          <Link href="/changelog" className="transition-colors hover:text-white/80">Changelog</Link>
         </footer>
       </main>
     </SeasonalThemeProvider>

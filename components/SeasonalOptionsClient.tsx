@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { SEASONAL_THEMES, type SeasonalTheme } from '@/lib/seasonal'
 import { useSeasonalTheme } from './SeasonalThemeProvider'
-import { useVisitorPreferences, type PerceivedLocation, type TemporaryModule } from './VisitorPreferencesProvider'
+import { useVisitorPreferences, type PerceivedLocation, type TemporaryFeature, type TemporaryModule } from './VisitorPreferencesProvider'
 
 const LABELS: Record<SeasonalTheme, string> = {
   christmas: 'Christmas',
@@ -15,10 +15,31 @@ const LABELS: Record<SeasonalTheme, string> = {
 }
 
 const LEGAL_SIMPLE_MODE_KEY = 'coolman-legal-simple-mode'
+const TEMPORARY_FEATURES: Array<{ category: string; id: TemporaryFeature; label: string }> = [
+  { category: 'Spotify', id: 'spotify_widget', label: 'Now-playing widget' },
+  { category: 'Spotify', id: 'spotify_position', label: 'Player position and duration' },
+  { category: 'Spotify', id: 'spotify_embed', label: 'Embed player' },
+  { category: 'Spotify', id: 'spotify_playlist', label: 'Playlist link' },
+  { category: 'Spotify', id: 'spotify_history', label: 'Listening history' },
+  { category: 'Twitch', id: 'twitch_profile', label: 'Channel profile and live status' },
+  { category: 'Twitch', id: 'twitch_stats', label: 'Follower and subscriber totals' },
+  { category: 'Twitch', id: 'twitch_live', label: 'Live stream widget' },
+  { category: 'Twitch', id: 'twitch_schedule', label: 'Next scheduled stream' },
+  { category: 'Discord', id: 'discord_profile', label: 'Profile and presence status' },
+  { category: 'Discord', id: 'discord_banner', label: 'Profile banner' },
+  { category: 'Discord', id: 'discord_badges', label: 'Badges' },
+  { category: 'Discord', id: 'discord_decoration', label: 'Avatar decoration and nameplate' },
+  { category: 'Discord', id: 'discord_devices', label: 'Device presence' },
+  { category: 'Discord', id: 'discord_status', label: 'Custom status' },
+  { category: 'Discord', id: 'discord_music', label: 'Music activity' },
+  { category: 'Discord', id: 'discord_video', label: 'Video activity' },
+  { category: 'Discord', id: 'discord_games', label: 'Game activity' },
+  { category: 'Discord', id: 'discord_other', label: 'Other activity' },
+]
 
 export default function SeasonalOptionsClient({ legalSimpleModeDefault }: { legalSimpleModeDefault: boolean }) {
   const { preference, setPreference, activateOnce, clearOnce, timeZone } = useSeasonalTheme()
-  const { simulation, setSimulation, hiddenModules, setModuleHidden } = useVisitorPreferences()
+  const { simulation, setSimulation, hiddenModules, setModuleHidden, hiddenFeatures, setFeatureHidden } = useVisitorPreferences()
   const [theme, setTheme] = useState<SeasonalTheme | ''>(preference.theme ?? 'christmas')
   const [until, setUntil] = useState(preference.until ? preference.until.slice(0, 16) : '')
   const [legalSimpleMode, setLegalSimpleMode] = useState<'default' | 'simple' | 'standard'>('default')
@@ -84,6 +105,15 @@ export default function SeasonalOptionsClient({ legalSimpleModeDefault }: { lega
           <p className="mt-1 text-xs text-white/50">These only affect your browser and clear after refresh.</p>
           {([['spotify', 'Spotify listening'], ['twitch', 'Twitch presence'], ['discord', 'Discord presence']] as [TemporaryModule, string][]).map(([module, label]) => (
             <label key={module} className="mt-3 flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-sm"><span>{label}</span><input type="checkbox" checked={hiddenModules.includes(module)} onChange={(event) => setModuleHidden(module, event.target.checked)} className="h-4 w-4 accent-red-600" /></label>
+          ))}
+        </section>
+        <section className="mt-8 border-t border-white/10 pt-5">
+          <h2 className="text-base font-semibold">Hide module features for this visit</h2>
+          <p className="mt-1 text-xs text-white/50">Fine-tune what you see without changing the Dashboard. These settings clear after refresh.</p>
+          {(['Spotify', 'Twitch', 'Discord'] as const).map((category) => (
+            <div key={category} className="mt-4"><h3 className="text-xs font-semibold uppercase tracking-wider text-white/45">{category}</h3><div className="mt-2 space-y-2">{TEMPORARY_FEATURES.filter((feature) => feature.category === category).map((feature) => (
+              <label key={feature.id} className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-sm"><span>{feature.label}</span><input type="checkbox" checked={hiddenFeatures.includes(feature.id)} onChange={(event) => setFeatureHidden(feature.id, event.target.checked)} className="h-4 w-4 accent-red-600" /></label>
+            ))}</div></div>
           ))}
         </section>
         <section className="mt-8 border-t border-white/10 pt-5">

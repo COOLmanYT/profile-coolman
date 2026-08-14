@@ -25,6 +25,12 @@ type TwitchStream = {
   started_at: string
   tags?: string[]
 }
+type TwitchScheduleSegment = {
+  start_time: string
+  title?: string
+  canceled_until?: string | null
+  category?: { name?: string }
+}
 
 async function twitchFetch<T>(path: string, accessToken: string, clientId: string): Promise<T | null> {
   const response = await fetch(`${TWITCH_API_URL}${path}`, {
@@ -51,12 +57,14 @@ async function getTwitchPresence() {
     const user = users?.data?.[0]
     if (!user) return { isLive: false }
 
-    const [streams, followers, subscriptions] = await Promise.all([
+    const [streams, followers, subscriptions, schedule] = await Promise.all([
       twitchFetch<{ data?: TwitchStream[] }>(`/streams?user_id=${encodeURIComponent(user.id)}`, accessToken, config.clientId),
       twitchFetch<{ total?: number }>(`/channels/followers?broadcaster_id=${encodeURIComponent(user.id)}`, accessToken, config.clientId),
       twitchFetch<{ total?: number }>(`/subscriptions?broadcaster_id=${encodeURIComponent(user.id)}`, accessToken, config.clientId),
+      twitchFetch<{ data?: { segments?: TwitchScheduleSegment[] } }>(`/schedule?broadcaster_id=${encodeURIComponent(user.id)}`, accessToken, config.clientId),
     ])
     const stream = streams?.data?.[0]
+    const nextStream = schedule?.data?.segments?.find((segment) => !segment.canceled_until && Date.parse(segment.start_time) > Date.now())
 
     return {
       isLive: Boolean(stream),
@@ -68,6 +76,7 @@ async function getTwitchPresence() {
       description: user.description,
       broadcasterType: user.broadcaster_type,
       channelUrl: `https://www.twitch.tv/${encodeURIComponent(user.login)}`,
+      ...(nextStream && { nextStream: { title: nextStream.title, category: nextStream.category?.name, startsAt: nextStream.start_time } }),
       ...(stream && {
         title: stream.title,
         game: stream.game_name,
