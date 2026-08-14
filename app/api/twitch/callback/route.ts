@@ -1,7 +1,7 @@
 import { getServerSession } from 'next-auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { authOptions } from '@/lib/auth'
-import { exchangeAuthorizationCode } from '@/lib/twitch'
+import { exchangeAuthorizationCode, getTwitchRedirectUri } from '@/lib/twitch'
 
 const ALLOWED_DISCORD_ID = process.env.DISCORD_USER_ID
 const STATE_COOKIE = 'twitch_oauth_state'
@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid Twitch authorization request' }, { status: 400 })
   }
 
-  const redirectUri = new URL('/api/twitch/callback', req.url).toString()
+  const redirectUri = getTwitchRedirectUri(req.url)
   const token = await exchangeAuthorizationCode(code, redirectUri)
   if (!token) return NextResponse.json({ error: 'Unable to save Twitch authorization' }, { status: 500 })
 

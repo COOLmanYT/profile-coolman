@@ -36,6 +36,7 @@ A Next.js profile site with advanced Spotify mini-player, rich Discord presence,
 | `TWITCH_CLIENT_ID` | Twitch Developer application client ID |
 | `TWITCH_CLIENT_SECRET` | Twitch Developer application client secret |
 | `TWITCH_BROADCASTER_LOGIN` | Twitch channel login (for example, `coolman_yt1`) |
+| `TWITCH_REDIRECT_URI` | Exact public Twitch OAuth callback URL |
 | `TWITCH_REFRESH_TOKEN` | Optional fallback Twitch user refresh token; connect via the dashboard instead when Supabase is configured |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key |
@@ -102,7 +103,7 @@ Recommended toggle IDs include:
 
 ## Connect Twitch
 
-Register both `https://coolmanyt.com/api/twitch/callback` and `http://localhost:3000/api/twitch/callback` as OAuth redirect URLs in your Twitch Developer application. After setting `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET`, and `TWITCH_BROADCASTER_LOGIN`, sign in to the dashboard and select **Connect Twitch**. Approve the `moderator:read:followers` and `channel:read:subscriptions` scopes to display follower and subscriber totals.
+Set `TWITCH_REDIRECT_URI` to the exact public URL of this profile deployment. Register that same URL in your Twitch Developer application, for example `https://profile.coolmanyt.com/api/twitch/callback`, plus `http://localhost:3000/api/twitch/callback` for local development. After setting `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET`, `TWITCH_BROADCASTER_LOGIN`, and `TWITCH_REDIRECT_URI`, sign in to the dashboard and select **Connect Twitch**. Approve the `moderator:read:followers` and `channel:read:subscriptions` scopes to display follower and subscriber totals.
 
 ## Avatar
 

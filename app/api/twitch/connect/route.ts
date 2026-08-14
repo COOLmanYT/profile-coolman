@@ -1,7 +1,7 @@
 import { getServerSession } from 'next-auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { authOptions } from '@/lib/auth'
-import { getTwitchConfig } from '@/lib/twitch'
+import { getTwitchConfig, getTwitchRedirectUri } from '@/lib/twitch'
 
 const ALLOWED_DISCORD_ID = process.env.DISCORD_USER_ID
 const STATE_COOKIE = 'twitch_oauth_state'
@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   if (!config) return NextResponse.json({ error: 'Twitch credentials are not configured' }, { status: 500 })
 
   const state = crypto.randomUUID()
-  const redirectUri = new URL('/api/twitch/callback', req.url).toString()
+  const redirectUri = getTwitchRedirectUri(req.url)
   const authorizationUrl = new URL('https://id.twitch.tv/oauth2/authorize')
   authorizationUrl.search = new URLSearchParams({
     client_id: config.clientId,

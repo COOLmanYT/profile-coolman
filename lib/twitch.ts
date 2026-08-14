@@ -14,6 +14,20 @@ type TwitchConfig = {
   clientSecret: string
 }
 
+export function getTwitchRedirectUri(fallbackOrigin: string) {
+  const configuredUri = process.env.TWITCH_REDIRECT_URI?.trim()
+  if (configuredUri) {
+    try {
+      const url = new URL(configuredUri)
+      if (url.protocol === 'https:' || url.hostname === 'localhost') return url.toString()
+    } catch {
+      // Fall back to the request origin when the configured value is invalid.
+    }
+  }
+
+  return new URL('/api/twitch/callback', fallbackOrigin).toString()
+}
+
 export function getTwitchConfig(): TwitchConfig | null {
   const clientId = process.env.TWITCH_CLIENT_ID
   const clientSecret = process.env.TWITCH_CLIENT_SECRET
