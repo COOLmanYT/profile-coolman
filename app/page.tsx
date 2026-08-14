@@ -112,7 +112,7 @@ export default async function Home() {
           <ProfileCard toggles={toggles} />
           <ViewCounter />
         </div>
-        <footer className="mt-5 flex items-center gap-3 text-[11px] text-white/35">
+        <footer className="mt-5 flex flex-wrap items-center justify-center gap-3 text-[11px] text-white/35">
           <Link href="/options" className="transition-colors hover:text-white/80">Options</Link>
           <span aria-hidden>•</span>
           <Link href="/dashboard" className="transition-colors hover:text-white/80">Dashboard</Link>
@@ -122,6 +122,8 @@ export default async function Home() {
           <Link href="/terms" className="transition-colors hover:text-white/80">Terms</Link>
           <span aria-hidden>•</span>
           <Link href="/privacy" className="transition-colors hover:text-white/80">Privacy</Link>
+          <span aria-hidden>•</span>
+          <Link href="/licence" className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 font-medium text-white/60 transition-all hover:border-white/25 hover:bg-white/10 hover:text-white">⚖ Licence</Link>
         </footer>
       </main>
     </SeasonalThemeProvider>
