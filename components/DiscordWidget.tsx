@@ -8,6 +8,11 @@ interface DiscordActivity {
   type: number
   details?: string
   state?: string
+  emoji?: {
+    id?: string | null
+    name?: string
+    animated?: boolean
+  }
   assets?: {
     large_image?: string
     large_text?: string
@@ -18,6 +23,9 @@ interface DiscordActivity {
 interface DiscordPresence {
   discord_status: 'online' | 'idle' | 'dnd' | 'offline'
   activities: DiscordActivity[]
+  active_on_discord_mobile?: boolean
+  active_on_discord_web?: boolean
+  active_on_discord_desktop?: boolean
   kv?: Record<string, unknown>
   discord_user?: {
     username: string
@@ -48,6 +56,9 @@ interface DiscordWidgetProps {
   showGames?: boolean
   showStatus?: boolean
   showOther?: boolean
+  showMobile?: boolean
+  showWeb?: boolean
+  showDesktop?: boolean
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -186,12 +197,37 @@ function getActivityCategory(activity: DiscordActivity): string {
   return 'other'
 }
 
+function getDeviceLabel(
+  presence: DiscordPresence,
+  { showMobile, showWeb, showDesktop }: Pick<DiscordWidgetProps, 'showMobile' | 'showWeb' | 'showDesktop'>
+) {
+  if (!showMobile && !showWeb && !showDesktop) return null
+
+  const activeDevices = [
+    { name: 'Mobile', active: presence.active_on_discord_mobile, visible: showMobile },
+    { name: 'Web', active: presence.active_on_discord_web, visible: showWeb },
+    { name: 'Desktop', active: presence.active_on_discord_desktop, visible: showDesktop },
+  ]
+  const visibleActiveDevices = activeDevices.filter((device) => device.active && device.visible)
+
+  if (visibleActiveDevices.length === 0) {
+    return activeDevices.some((device) => device.active) ? null : 'None'
+  }
+  if (visibleActiveDevices.length > 1) {
+    return `Multiple (${visibleActiveDevices.map((device) => device.name).join(', ')})`
+  }
+  return visibleActiveDevices[0].name
+}
+
 function DiscordWidget({
   showMusic = true,
   showVideo = true,
   showGames = true,
   showStatus = true,
   showOther = true,
+  showMobile = true,
+  showWeb = true,
+  showDesktop = true,
 }: DiscordWidgetProps) {
   const [presence, setPresence] = useState<DiscordPresence | null>(null)
   const [loading, setLoading] = useState(true)
@@ -277,6 +313,8 @@ function DiscordWidget({
   const specialBadges = getSpecialBadges(presence ?? undefined)
   const serverTag = presence?.discord_user?.primary_guild?.tag ?? presence?.discord_user?.clan?.tag
   const displayName = presence?.discord_user?.username ?? 'coolman_yt'
+  const deviceLabel = presence ? getDeviceLabel(presence, { showMobile, showWeb, showDesktop }) : null
+  const customStatusEmoji = customStatus?.emoji?.id ? undefined : customStatus?.emoji?.name
 
   return (
     <div className="w-full bg-black/25 rounded-2xl p-3 border border-white/10">
@@ -315,7 +353,7 @@ function DiscordWidget({
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-white text-sm font-semibold leading-tight truncate">{displayName}</p>
-              <div className="flex items-center gap-1.5 mt-0.5">
+              <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
                 <StatusIcon status={presence.discord_status} pulse={statusPulse} />
                 <span className="text-white/75 text-[11px]">{STATUS_LABELS[presence.discord_status] || 'Offline'}</span>
                 {serverTag && (
@@ -323,7 +361,33 @@ function DiscordWidget({
                     {serverTag}
                   </span>
                 )}
+                {(badges.length > 0 || specialBadges.length > 0) && (
+                  <div className="flex flex-wrap items-center gap-1">
+                    {badges.map((badge) => (
+                      <Image
+                        key={badge.label}
+                        src={`https://cdn.discordapp.com/badge-icons/${badge.iconHash}.png`}
+                        alt={badge.label}
+                        title={badge.label}
+                        className="w-4 h-4 rounded-sm"
+                        loading="lazy"
+                        width={16}
+                        height={16}
+                        unoptimized
+                      />
+                    ))}
+                    {specialBadges.map((badge) => (
+                      <span
+                        key={badge}
+                        className="text-[10px] text-white/75 border border-white/15 rounded px-1.5 py-[2px] bg-black/20"
+                      >
+                        {badge}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
+              {deviceLabel && <p className="mt-1 text-[10px] text-white/50">Active on: {deviceLabel}</p>}
               {nameplateUrl && (
                 <div className="mt-1.5 w-[120px] h-5 relative">
                   <Image src={nameplateUrl} alt="Discord nameplate" fill className="object-contain" unoptimized />
@@ -332,36 +396,11 @@ function DiscordWidget({
             </div>
           </div>
 
-          {(badges.length > 0 || specialBadges.length > 0) && (
-            <div className="flex flex-wrap gap-1.5">
-              {badges.map((badge) => (
-                <Image
-                  key={badge.label}
-                  src={`https://cdn.discordapp.com/badge-icons/${badge.iconHash}.png`}
-                  alt={badge.label}
-                  title={badge.label}
-                  className="w-4 h-4 rounded-sm"
-                  loading="lazy"
-                  width={16}
-                  height={16}
-                  unoptimized
-                />
-              ))}
-              {specialBadges.map((badge) => (
-                <span
-                  key={badge}
-                  className="text-[10px] text-white/75 border border-white/15 rounded px-1.5 py-[2px] bg-black/20"
-                >
-                  {badge}
-                </span>
-              ))}
-            </div>
-          )}
-
           {/* Custom status row */}
-          {showStatus && customStatus?.state && (
+          {showStatus && customStatus && (customStatus.state || customStatusEmoji) && (
             <div className="flex items-center gap-2">
-              <span className="text-white/40 text-xs truncate">{customStatus.state}</span>
+              {customStatusEmoji && <span className="text-xs" aria-hidden="true">{customStatusEmoji}</span>}
+              {customStatus.state && <span className="min-w-0 text-white/40 text-xs truncate">{customStatus.state}</span>}
             </div>
           )}
 
@@ -404,4 +443,7 @@ export default memo(DiscordWidget, (prev, next) =>
   && prev.showGames === next.showGames
   && prev.showStatus === next.showStatus
   && prev.showOther === next.showOther
+  && prev.showMobile === next.showMobile
+  && prev.showWeb === next.showWeb
+  && prev.showDesktop === next.showDesktop
 )

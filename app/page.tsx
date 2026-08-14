@@ -17,6 +17,9 @@ async function getToggles() {
       discord_games: true,
       discord_status: true,
       discord_other: true,
+      discord_mobile: true,
+      discord_web: true,
+      discord_desktop: true,
     }
   }
   try {
@@ -31,6 +34,9 @@ async function getToggles() {
       discord_games: true,
       discord_status: true,
       discord_other: true,
+      discord_mobile: true,
+      discord_web: true,
+      discord_desktop: true,
     }
     if (data) {
       data.forEach((row: { id: string; value: boolean }) => {
@@ -48,6 +54,9 @@ async function getToggles() {
       discord_games: true,
       discord_status: true,
       discord_other: true,
+      discord_mobile: true,
+      discord_web: true,
+      discord_desktop: true,
     }
   }
 }

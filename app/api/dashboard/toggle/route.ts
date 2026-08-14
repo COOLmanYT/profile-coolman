@@ -28,9 +28,12 @@ export async function POST(req: NextRequest) {
 
   try {
     const supabase = createClient(url, key)
-    await supabase
+    const { error } = await supabase
       .from('toggles')
       .upsert({ id, value, updated_at: new Date().toISOString() }, { onConflict: 'id' })
+    if (error) {
+      return NextResponse.json({ error: 'DB error' }, { status: 500 })
+    }
     return NextResponse.json({ ok: true })
   } catch {
     return NextResponse.json({ error: 'DB error' }, { status: 500 })

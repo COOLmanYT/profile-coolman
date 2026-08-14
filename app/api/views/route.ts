@@ -11,16 +11,20 @@ function getSupabase() {
   return createClient(url, key)
 }
 
+async function getViewCount() {
+  const supabase = getSupabase()
+  if (!supabase) return 0
+  const { data, error } = await supabase
+    .from('views')
+    .select('count')
+    .eq('id', 'profile')
+    .maybeSingle()
+  return error ? 0 : data?.count ?? 0
+}
+
 export async function GET() {
   try {
-    const supabase = getSupabase()
-    if (!supabase) return NextResponse.json({ count: 0 })
-    const { data } = await supabase
-      .from('views')
-      .select('count')
-      .eq('id', 'profile')
-      .single()
-    return NextResponse.json({ count: data?.count ?? 0 })
+    return NextResponse.json({ count: await getViewCount() })
   } catch {
     return NextResponse.json({ count: 0 })
   }
@@ -31,21 +35,14 @@ export async function POST(req: NextRequest) {
     const supabase = getSupabase()
     if (!supabase) return NextResponse.json({ count: 0 })
 
-    const { data: existing } = await supabase
-      .from('views')
-      .select('count')
-      .eq('id', 'profile')
-      .single()
-
     if (req.cookies.get(VIEW_COOKIE_NAME)?.value === '1') {
-      return NextResponse.json({ count: existing?.count ?? 0 })
+      return NextResponse.json({ count: await getViewCount() })
     }
 
-    const newCount = (existing?.count ?? 0) + 1
-
-    await supabase
-      .from('views')
-      .upsert({ id: 'profile', count: newCount })
+    const { data: newCount, error } = await supabase.rpc('increment_profile_views')
+    if (error || typeof newCount !== 'number') {
+      return NextResponse.json({ count: await getViewCount() }, { status: 500 })
+    }
 
     const res = NextResponse.json({ count: newCount })
     res.cookies.set(VIEW_COOKIE_NAME, '1', {

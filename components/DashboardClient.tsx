@@ -17,6 +17,9 @@ const TOGGLE_LABELS: Record<string, string> = {
   discord_games: 'Discord — Games',
   discord_status: 'Discord — Status',
   discord_other: 'Discord — Other',
+  discord_mobile: 'Discord — Mobile Device',
+  discord_web: 'Discord — Web Device',
+  discord_desktop: 'Discord — Desktop Device',
 }
 
 export default function DashboardClient({ initialToggles, signOutOnly }: DashboardClientProps) {
@@ -40,11 +43,12 @@ export default function DashboardClient({ initialToggles, signOutOnly }: Dashboa
     setToggles((prev) => ({ ...prev, [key]: newValue }))
     setSaving(key)
     try {
-      await fetch('/api/dashboard/toggle', {
+      const response = await fetch('/api/dashboard/toggle', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: key, value: newValue }),
       })
+      if (!response.ok) throw new Error('Unable to save toggle')
       setSaved(key)
       setTimeout(() => setSaved(null), 2000)
     } catch {

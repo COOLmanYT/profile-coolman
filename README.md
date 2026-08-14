@@ -45,6 +45,24 @@ create table views (
   count integer default 0
 );
 
+-- Atomic view increment used by /api/views.
+-- This prevents simultaneous visitors from overwriting each other's views.
+create or replace function increment_profile_views()
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  next_count integer;
+begin
+  insert into views (id, count) values ('profile', 1)
+  on conflict (id) do update set count = views.count + 1
+  returning count into next_count;
+  return next_count;
+end;
+$$;
+
 -- Widget toggles
 create table toggles (
   id text primary key,
@@ -62,6 +80,9 @@ Recommended toggle IDs include:
 - `discord_games`
 - `discord_status`
 - `discord_other`
+- `discord_mobile`
+- `discord_web`
+- `discord_desktop`
 
 ## Avatar
 

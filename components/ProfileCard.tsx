@@ -86,6 +86,9 @@ export default function ProfileCard({ toggles }: ProfileCardProps) {
             showGames={toggles.discord_games}
             showStatus={toggles.discord_status}
             showOther={toggles.discord_other}
+            showMobile={toggles.discord_mobile ?? true}
+            showWeb={toggles.discord_web ?? true}
+            showDesktop={toggles.discord_desktop ?? true}
           />
         )}
 
