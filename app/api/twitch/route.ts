@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getTwitchAccessToken, getTwitchConfig } from '@/lib/twitch'
 import { createTtlCache } from '@/lib/ttl-cache.mjs'
+import { monitoredFetch } from '@/lib/provider-monitor.mjs'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,7 +34,7 @@ type TwitchScheduleSegment = {
 }
 
 async function twitchFetch<T>(path: string, accessToken: string, clientId: string): Promise<T | null> {
-  const response = await fetch(`${TWITCH_API_URL}${path}`, {
+  const response = await monitoredFetch('twitch', `${TWITCH_API_URL}${path}`, {
     headers: { Authorization: `Bearer ${accessToken}`, 'Client-Id': clientId },
     cache: 'no-store',
   })

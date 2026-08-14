@@ -3,6 +3,11 @@
 @tailwind utilities;
 
 @layer utilities {
+  :focus-visible {
+    outline: 2px solid rgb(252 165 165);
+    outline-offset: 3px;
+  }
+
   @keyframes fade-in {
     from { opacity: 0; transform: translateY(8px); }
     to   { opacity: 1; transform: translateY(0); }
@@ -28,6 +33,9 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      scroll-behavior: auto !important;
+    }
     .animate-spotify-marquee {
       animation: none;
     }

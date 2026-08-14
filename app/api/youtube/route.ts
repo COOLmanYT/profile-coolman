@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { parseLatestYoutubeVideos, parseYoutubeViewCount } from '@/lib/youtube-feed.mjs'
+import { monitoredFetch } from '@/lib/provider-monitor.mjs'
 
 const CHANNEL_ID = 'UCJr64JsgfMr8SHeUhLA3lKw'
 const FEED_URL = `https://www.youtube.com/feeds/videos.xml?channel_id=${CHANNEL_ID}`
@@ -7,7 +8,7 @@ const FEED_URL = `https://www.youtube.com/feeds/videos.xml?channel_id=${CHANNEL_
 async function withViewCount<T extends { id: string }>(video: T | undefined) {
   if (!video) return undefined
   try {
-    const response = await fetch(`https://www.youtube.com/watch?v=${video.id}`, { next: { revalidate: 900 } })
+    const response = await monitoredFetch('youtube', `https://www.youtube.com/watch?v=${video.id}`, { next: { revalidate: 900 } })
     if (!response.ok) return video
     const views = parseYoutubeViewCount(await response.text())
     return views === undefined ? video : { ...video, views }
@@ -18,7 +19,7 @@ async function withViewCount<T extends { id: string }>(video: T | undefined) {
 
 export async function GET() {
   try {
-    const response = await fetch(FEED_URL, { next: { revalidate: 900 } })
+    const response = await monitoredFetch('youtube', FEED_URL, { next: { revalidate: 900 } })
     if (!response.ok) throw new Error('YouTube feed unavailable')
     const xml = await response.text()
     const { short, longform } = parseLatestYoutubeVideos(xml)

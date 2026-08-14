@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getStatusSettings } from '@/lib/status-settings'
+import { monitoredFetch } from '@/lib/provider-monitor.mjs'
 
 const STATUS_URL = 'https://status.coolmanyt.com/summary.json'
 
@@ -17,7 +18,7 @@ function normaliseState(value?: string) {
 
 export async function GET() {
   try {
-    const response = await fetch(STATUS_URL, { next: { revalidate: 60 } })
+    const response = await monitoredFetch('instatus', STATUS_URL, { next: { revalidate: 60 } })
     if (!response.ok) throw new Error('Status service unavailable')
     const [summary, settings] = await Promise.all([response.json() as Promise<StatusSummary>, getStatusSettings()])
     const rawState = summary.status ?? summary.page?.status

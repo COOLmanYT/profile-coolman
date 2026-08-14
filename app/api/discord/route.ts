@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { monitoredFetch } from '@/lib/provider-monitor.mjs'
 
 const DISCORD_USER_ID = process.env.DISCORD_USER_ID
 const noStore = { headers: { 'Cache-Control': 'no-store' } }
@@ -8,7 +9,7 @@ export async function GET() {
     return NextResponse.json({ discord_status: 'offline', activities: [] }, noStore)
   }
   try {
-    const res = await fetch(
+    const res = await monitoredFetch('discord',
       `https://api.lanyard.rest/v1/users/${DISCORD_USER_ID}`,
       { cache: 'no-store' }
     )

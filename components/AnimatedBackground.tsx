@@ -289,7 +289,9 @@ function AnimatedBackground() {
         drawWaveFill(ctx, W, H, t, layer, false, '#000000', LAYER_ALPHAS[i])
       })
 
-      rafRef.current = requestAnimationFrame(draw)
+      if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        rafRef.current = requestAnimationFrame(draw)
+      }
     }
 
     function onVisibilityChange() {

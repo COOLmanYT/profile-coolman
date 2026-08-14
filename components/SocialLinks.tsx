@@ -1,4 +1,7 @@
+'use client'
+
 import Image from 'next/image'
+import { track } from '@vercel/analytics'
 
 export default function SocialLinks() {
   const links = [
@@ -128,7 +131,9 @@ export default function SocialLinks() {
           href={link.href}
           target="_blank"
           rel="noopener noreferrer"
+          aria-label={`Open COOLman on ${link.name}`}
           title={link.name}
+          onClick={() => track('outbound_link', { destination: link.name })}
           className="w-9 h-9 sm:w-10 sm:h-10 bg-black/25 hover:bg-black/40 border border-white/10 hover:border-white/20 rounded-xl flex items-center justify-center text-white transition-all duration-200 ease-out hover:scale-110 hover:shadow-lg"
         >
           {link.icon}

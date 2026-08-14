@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { monitoredFetch } from '@/lib/provider-monitor.mjs'
 
 // Force this route to always be dynamic so Next.js / Vercel never statically
 // caches the response. Without this, the CDN can serve a stale snapshot to
@@ -55,7 +56,7 @@ async function getAccessToken(): Promise<TokenResult> {
   }
 
   const basic = Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
-  const res = await fetch(SPOTIFY_TOKEN_URL, {
+  const res = await monitoredFetch('spotify', SPOTIFY_TOKEN_URL, {
     method: 'POST',
     headers: {
       Authorization: `Basic ${basic}`,
@@ -87,7 +88,7 @@ async function getAccessToken(): Promise<TokenResult> {
 async function getPlaylistVisibility(accessToken: string, playlistId?: string): Promise<boolean> {
   if (!playlistId) return false
   try {
-    const res = await fetch(
+    const res = await monitoredFetch('spotify',
       `${SPOTIFY_PLAYLIST_URL}/${playlistId}?fields=public`,
       {
         headers: { Authorization: `Bearer ${accessToken}` },
@@ -174,7 +175,7 @@ export async function GET(req: NextRequest) {
     }
 
     if (req.nextUrl.searchParams.get('history') === '1') {
-      const historyRes = await fetch(SPOTIFY_RECENTLY_PLAYED_URL, { headers: { Authorization: `Bearer ${accessToken}` }, cache: 'no-store' })
+      const historyRes = await monitoredFetch('spotify', SPOTIFY_RECENTLY_PLAYED_URL, { headers: { Authorization: `Bearer ${accessToken}` }, cache: 'no-store' })
       if (!historyRes.ok) return NextResponse.json({ items: [] }, noStore)
       const history = await historyRes.json() as SpotifyRecentlyPlayedResponse
       const items = (history.items ?? []).flatMap((item) => item.track?.name ? [{
@@ -188,7 +189,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Primary: /v1/me/player/currently-playing
-    const nowPlayingRes = await fetch(SPOTIFY_NOW_PLAYING_URL, {
+    const nowPlayingRes = await monitoredFetch('spotify', SPOTIFY_NOW_PLAYING_URL, {
       headers: { Authorization: `Bearer ${accessToken}` },
       cache: 'no-store',
     })
@@ -204,7 +205,7 @@ export async function GET(req: NextRequest) {
     // Fallback: /v1/me/player (Get Playback State)
     // Covers cases where currently-playing returns 204 (e.g. certain device contexts
     // or Spotify considers the stream "not current") but playback is actually active.
-    const playbackRes = await fetch(SPOTIFY_PLAYBACK_URL, {
+    const playbackRes = await monitoredFetch('spotify', SPOTIFY_PLAYBACK_URL, {
       headers: { Authorization: `Bearer ${accessToken}` },
       cache: 'no-store',
     })
@@ -235,7 +236,7 @@ export async function GET(req: NextRequest) {
     const discordUserId = process.env.DISCORD_USER_ID
     if (discordUserId && discordUserId !== 'placeholder') {
       try {
-        const lanyardRes = await fetch(
+        const lanyardRes = await monitoredFetch('discord',
           `https://api.lanyard.rest/v1/users/${discordUserId}`,
           { cache: 'no-store' }
         )
