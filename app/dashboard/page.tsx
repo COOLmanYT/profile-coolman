@@ -11,8 +11,6 @@ import SeasonalSettingsClient from '@/components/SeasonalSettingsClient'
 import { getSeasonalSettings } from '@/lib/site-settings'
 import LegalSettingsClient from '@/components/LegalSettingsClient'
 import { getLegalSettings } from '@/lib/legal-settings'
-import StatusSettingsClient from '@/components/StatusSettingsClient'
-import { getStatusSettings } from '@/lib/status-settings'
 import SeasonalPreview from '@/components/SeasonalPreview'
 import SeasonalSimulationControls from '@/components/SeasonalSimulationControls'
 import ProviderHealthClient from '@/components/ProviderHealthClient'
@@ -133,7 +131,7 @@ export default async function DashboardPage() {
     redirect('/auth/signin')
   }
 
-  const [toggles, twitchHealth, seasonalSettings, legalSettings, statusSettings] = await Promise.all([getToggles(), getTwitchHealth(), getSeasonalSettings(), getLegalSettings(), getStatusSettings()])
+  const [toggles, twitchHealth, seasonalSettings, legalSettings] = await Promise.all([getToggles(), getTwitchHealth(), getSeasonalSettings(), getLegalSettings()])
 
   return (
     <div className="min-h-screen bg-[#1a1a1a] p-8">
@@ -153,7 +151,6 @@ export default async function DashboardPage() {
           <SeasonalSimulationControls compact />
           <SeasonalPreview />
           <LegalSettingsClient initialSettings={legalSettings} />
-          <StatusSettingsClient initialSettings={statusSettings} />
           <ProviderHealthClient />
           <TwitchConnectionStatus health={twitchHealth} />
           <a

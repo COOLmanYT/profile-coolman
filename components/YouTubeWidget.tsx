@@ -12,7 +12,10 @@ export default function YouTubeWidget({ showShort, showLongform }: { showShort: 
   useEffect(() => {
     let active = true
     if (!showShort && !showLongform) return () => { active = false }
-    fetch('/api/youtube', { cache: 'no-store' }).then((response) => response.json()).then((data: LatestVideos) => { if (active) setVideos(data) }).catch(() => { if (active) setVideos({ unavailable: true }) })
+    fetch('/api/youtube', { cache: 'no-store' }).then(async (response) => {
+      if (!response.ok) throw new Error(`YouTube request failed (${response.status})`)
+      return response.json() as Promise<LatestVideos>
+    }).then((data) => { if (active) setVideos(data) }).catch(() => { if (active) setVideos({ unavailable: true }) })
     return () => { active = false }
   }, [showLongform, showShort])
 

@@ -11,3 +11,10 @@ test('separates the newest short and long-form YouTube videos', () => {
   assert.equal(parseYoutubeViewCount('<script>{\"interactionCount\":\"12,345\"}</script>'), 12345)
   assert.equal(parseYoutubeViewCount('<script>{\"viewCount\":987}</script>'), 987)
 })
+
+test('accepts YouTube feed links with attributes in any order and falls back to a canonical watch URL', () => {
+  const feed = `<feed><entry><yt:videoId>new-id</yt:videoId><title>Newest video</title><published>2026-01-03T00:00:00Z</published><link href="https://www.youtube.com/watch?v=new-id&amp;feature=share" rel="alternate"/></entry><entry><yt:videoId>fallback-id</yt:videoId><title>Fallback video</title></entry></feed>`
+  const videos = parseLatestYoutubeVideos(feed)
+  assert.equal(videos.longform?.url, 'https://www.youtube.com/watch?v=new-id&feature=share')
+  assert.equal(parseLatestYoutubeVideos(`<feed><entry><yt:videoId>fallback-id</yt:videoId><title>Fallback video</title></entry></feed>`).longform?.url, 'https://www.youtube.com/watch?v=fallback-id')
+})
