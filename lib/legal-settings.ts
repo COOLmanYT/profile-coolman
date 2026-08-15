@@ -1,16 +1,9 @@
-import { createClient } from '@supabase/supabase-js'
+import { getSupabase } from './supabase-server'
 
 export type LegalSettings = { simpleModeDefault: boolean }
 
 const SETTINGS_ID = 'legal'
 export const DEFAULT_LEGAL_SETTINGS: LegalSettings = { simpleModeDefault: true }
-
-function getSupabase() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key || url.includes('placeholder')) return null
-  return createClient(url, key)
-}
 
 function normalise(value: unknown): LegalSettings {
   if (!value || typeof value !== 'object') return DEFAULT_LEGAL_SETTINGS

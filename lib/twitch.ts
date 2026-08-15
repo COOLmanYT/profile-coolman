@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
+import { getSupabase } from './supabase-server'
 
 const TWITCH_TOKEN_URL = 'https://id.twitch.tv/oauth2/token'
 const TOKEN_EXPIRY_SAFETY_MS = 60_000
@@ -41,13 +41,6 @@ export function getTwitchConfig(): TwitchConfig | null {
   return { clientId, clientSecret }
 }
 
-function getSupabase() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key || url.includes('placeholder')) return null
-  return createClient(url, key)
-}
-
 export async function getTwitchHealth(): Promise<TwitchHealth> {
   const missing = [
     !getTwitchConfig() && 'client credentials',
@@ -71,7 +64,7 @@ export async function getTwitchHealth(): Promise<TwitchHealth> {
   const expired = Date.parse(data.expires_at) <= Date.now()
   return {
     state: 'connected',
-    message: expired ? 'Connected — token will refresh when needed' : 'Connected and ready',
+    message: expired ? 'Connected \u2014 token will refresh when needed' : 'Connected and ready',
     expiresAt: data.expires_at,
   }
 }

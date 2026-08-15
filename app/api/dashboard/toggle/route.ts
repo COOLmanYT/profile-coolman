@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabase } from '@/lib/supabase-server'
 
 const ALLOWED_DISCORD_ID = process.env.DISCORD_USER_ID
 
@@ -20,14 +20,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
   }
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key || url.includes('placeholder')) {
+  const supabase = getSupabase()
+  if (!supabase) {
     return NextResponse.json({ ok: true })
   }
 
   try {
-    const supabase = createClient(url, key)
     const { error } = await supabase
       .from('toggles')
       .upsert({ id, value, updated_at: new Date().toISOString() }, { onConflict: 'id' })

@@ -1,14 +1,7 @@
-import { createClient } from '@supabase/supabase-js'
+import { getSupabase } from './supabase-server'
 import { DEFAULT_SEASONAL_SETTINGS, normaliseSeasonalSettings, type SeasonalSettings } from './seasonal'
 
 const SETTINGS_ID = 'seasonal'
-
-function getSupabase() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key || url.includes('placeholder')) return null
-  return createClient(url, key)
-}
 
 export async function getSeasonalSettings(): Promise<SeasonalSettings> {
   const supabase = getSupabase()

@@ -1,7 +1,6 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
-import { createClient } from '@supabase/supabase-js'
 import DashboardClient from '@/components/DashboardClient'
 import DashboardWorkspace from '@/components/DashboardWorkspace'
 import SeasonalThemeProvider from '@/components/SeasonalThemeProvider'
@@ -14,110 +13,9 @@ import { getLegalSettings } from '@/lib/legal-settings'
 import SeasonalPreview from '@/components/SeasonalPreview'
 import SeasonalSimulationControls from '@/components/SeasonalSimulationControls'
 import ProviderHealthClient from '@/components/ProviderHealthClient'
+import { getToggles } from '@/lib/toggles'
 
 const ALLOWED_DISCORD_ID = process.env.DISCORD_USER_ID
-
-async function getToggles() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key || url.includes('placeholder')) {
-    return {
-      spotify: true,
-      spotify_widget: true,
-      spotify_position: true,
-      spotify_embed: true,
-      spotify_playlist: true,
-      spotify_history: true,
-      twitch: true,
-      youtube: true,
-      twitch_profile: true,
-      twitch_stats: true,
-      twitch_live: true,
-      twitch_schedule: true,
-      discord: true,
-      discord_profile: true,
-      discord_banner: true,
-      discord_badges: true,
-      discord_decoration: true,
-      discord_devices: true,
-      discord_music: true,
-      discord_video: true,
-      discord_games: true,
-      discord_status: true,
-      discord_other: true,
-      discord_mobile: true,
-      discord_web: true,
-      discord_desktop: true,
-    }
-  }
-  try {
-    const supabase = createClient(url, key)
-    const { data } = await supabase.from('toggles').select('id, value')
-    const defaults: Record<string, boolean> = {
-      spotify: true,
-      spotify_widget: true,
-      spotify_position: true,
-      spotify_embed: true,
-      spotify_playlist: true,
-      spotify_history: true,
-      twitch: true,
-      youtube: true,
-      twitch_profile: true,
-      twitch_stats: true,
-      twitch_live: true,
-      twitch_schedule: true,
-      discord: true,
-      discord_profile: true,
-      discord_banner: true,
-      discord_badges: true,
-      discord_decoration: true,
-      discord_devices: true,
-      discord_music: true,
-      discord_video: true,
-      discord_games: true,
-      discord_status: true,
-      discord_other: true,
-      discord_mobile: true,
-      discord_web: true,
-      discord_desktop: true,
-    }
-    if (data) {
-      data.forEach((row: { id: string; value: boolean }) => {
-        defaults[row.id] = row.value
-      })
-    }
-    return defaults
-  } catch {
-    return {
-      spotify: true,
-      spotify_widget: true,
-      spotify_position: true,
-      spotify_embed: true,
-      spotify_playlist: true,
-      spotify_history: true,
-      twitch: true,
-      youtube: true,
-      twitch_profile: true,
-      twitch_stats: true,
-      twitch_live: true,
-      twitch_schedule: true,
-      discord: true,
-      discord_profile: true,
-      discord_banner: true,
-      discord_badges: true,
-      discord_decoration: true,
-      discord_devices: true,
-      discord_music: true,
-      discord_video: true,
-      discord_games: true,
-      discord_status: true,
-      discord_other: true,
-      discord_mobile: true,
-      discord_web: true,
-      discord_desktop: true,
-    }
-  }
-}
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions)
