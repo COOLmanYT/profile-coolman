@@ -1,10 +1,13 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { monitoredFetch } from '@/lib/provider-monitor.mjs'
+import { limitPublicRequest } from '@/lib/rate-limit.mjs'
 
 const DISCORD_USER_ID = process.env.DISCORD_USER_ID
 const noStore = { headers: { 'Cache-Control': 'no-store' } }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const rate = limitPublicRequest(req, 'discord')
+  if (!rate.allowed) return NextResponse.json({ error: 'RATE_LIMITED' }, { status: 429, headers: { 'Retry-After': String(rate.retryAfterSeconds) } })
   if (!DISCORD_USER_ID) {
     return NextResponse.json({ discord_status: 'offline', activities: [] }, noStore)
   }

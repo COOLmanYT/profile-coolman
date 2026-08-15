@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { limitPublicRequest } from '@/lib/rate-limit.mjs'
 
 const VIEW_COOKIE_NAME = 'profile_view_counted'
 const VIEW_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 // 24h
@@ -22,7 +23,9 @@ async function getViewCount() {
   return error ? 0 : data?.count ?? 0
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const rate = limitPublicRequest(req, 'views', 120)
+  if (!rate.allowed) return NextResponse.json({ error: 'RATE_LIMITED' }, { status: 429, headers: { 'Retry-After': String(rate.retryAfterSeconds) } })
   try {
     return NextResponse.json({ count: await getViewCount() })
   } catch {
@@ -32,6 +35,8 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
+    const rate = limitPublicRequest(req, 'views', 30)
+    if (!rate.allowed) return NextResponse.json({ error: 'RATE_LIMITED' }, { status: 429, headers: { 'Retry-After': String(rate.retryAfterSeconds) } })
     const supabase = getSupabase()
     if (!supabase) return NextResponse.json({ count: 0 })
 

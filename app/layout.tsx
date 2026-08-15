@@ -4,6 +4,7 @@ import './globals.css'
 import Providers from './providers'
 import { Analytics } from '@vercel/analytics/next'
 import VisitorPreferencesProvider from '@/components/VisitorPreferencesProvider'
+import { ToastProvider } from '@/components/ToastProvider'
 
 const geist = localFont({
   src: './fonts/GeistVF.woff',
@@ -23,7 +24,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geist.className} bg-black min-h-screen`}>
-        <Providers><VisitorPreferencesProvider>{children}</VisitorPreferencesProvider></Providers>
+        <Providers><ToastProvider><VisitorPreferencesProvider>{children}</VisitorPreferencesProvider></ToastProvider></Providers>
         <Analytics />
       </body>
     </html>

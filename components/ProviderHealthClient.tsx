@@ -1,6 +1,7 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useToast } from './ToastProvider'
 
 type HealthState = 'checking' | 'healthy' | 'warning' | 'error'
 type ProviderResult = { name: string; state: HealthState; detail: string; checkedAt?: Date }
@@ -14,8 +15,10 @@ const providers = [
 ]
 
 export default function ProviderHealthClient() {
+  const { showToast } = useToast()
   const [results, setResults] = useState<ProviderResult[]>(providers.map(({ name }) => ({ name, state: 'checking', detail: 'Checking…' })))
   const [refreshing, setRefreshing] = useState(false)
+  const hasCompletedInitialCheck = useRef(false)
 
   const refresh = useCallback(async () => {
     setRefreshing(true)
@@ -32,7 +35,13 @@ export default function ProviderHealthClient() {
     }))
     setResults(results)
     setRefreshing(false)
-  }, [])
+    if (hasCompletedInitialCheck.current) {
+      const problemCount = results.filter((result) => result.state === 'error' || result.state === 'warning').length
+      showToast(problemCount ? { variant: 'error', title: 'Provider health check completed with issues', code: `${problemCount}_PROVIDER_${problemCount === 1 ? 'ISSUE' : 'ISSUES'}` } : { variant: 'success', title: 'All provider health checks passed' })
+    } else {
+      hasCompletedInitialCheck.current = true
+    }
+  }, [showToast])
 
   useEffect(() => { void refresh() }, [refresh])
 

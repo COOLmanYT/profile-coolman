@@ -1,7 +1,8 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getTwitchAccessToken, getTwitchConfig } from '@/lib/twitch'
 import { createTtlCache } from '@/lib/ttl-cache.mjs'
 import { monitoredFetch } from '@/lib/provider-monitor.mjs'
+import { limitPublicRequest } from '@/lib/rate-limit.mjs'
 
 export const dynamic = 'force-dynamic'
 
@@ -42,7 +43,9 @@ async function twitchFetch<T>(path: string, accessToken: string, clientId: strin
   return response.json() as Promise<T>
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const rate = limitPublicRequest(req, 'twitch')
+  if (!rate.allowed) return NextResponse.json({ error: 'RATE_LIMITED' }, { status: 429, headers: { 'Retry-After': String(rate.retryAfterSeconds) } })
   const presence = await twitchPresenceCache.get(getTwitchPresence)
   return NextResponse.json(presence, cacheHeaders)
 }

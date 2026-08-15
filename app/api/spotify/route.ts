@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { monitoredFetch } from '@/lib/provider-monitor.mjs'
+import { limitPublicRequest } from '@/lib/rate-limit.mjs'
 
 // Force this route to always be dynamic so Next.js / Vercel never statically
 // caches the response. Without this, the CDN can serve a stale snapshot to
@@ -159,6 +160,8 @@ type SpotifyRecentlyPlayedResponse = {
 export async function GET(req: NextRequest) {
   // Prevent CDN / Vercel edge caches from serving stale playback state.
   const noStore = { headers: { 'Cache-Control': 'no-store' } }
+  const rate = limitPublicRequest(req, 'spotify')
+  if (!rate.allowed) return NextResponse.json({ error: 'RATE_LIMITED' }, { status: 429, headers: { 'Retry-After': String(rate.retryAfterSeconds) } })
 
   try {
     const tokenResult = await getAccessToken()

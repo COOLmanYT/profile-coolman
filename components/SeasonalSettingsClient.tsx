@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { SEASONAL_THEMES, type SeasonalSettings, type SeasonalTheme, type ThemeLocation } from '@/lib/seasonal'
+import { responseErrorCode, useToast } from './ToastProvider'
 
 const LABELS: Record<SeasonalTheme, string> = { christmas: 'Christmas', halloween: 'Halloween', easter: 'Easter', 'new-year': 'New Year', birthday: 'Birthday' }
 
@@ -10,6 +11,7 @@ function toInputValue(value: string | null) {
 }
 
 export default function SeasonalSettingsClient({ initialSettings }: { initialSettings: SeasonalSettings }) {
+  const { showToast } = useToast()
   const [settings, setSettings] = useState(initialSettings)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
@@ -20,10 +22,12 @@ export default function SeasonalSettingsClient({ initialSettings }: { initialSet
     setMessage(null)
     try {
       const response = await fetch('/api/dashboard/seasons', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(settings) })
-      if (!response.ok) throw new Error()
+      if (!response.ok) throw new Error(await responseErrorCode(response))
       setMessage('Saved')
-    } catch {
+      showToast({ variant: 'success', title: 'Seasonal theme settings saved' })
+    } catch (error) {
       setMessage('Could not save settings')
+      showToast({ variant: 'error', title: 'Could not save seasonal themes', code: error instanceof Error ? error.message : 'NETWORK_ERROR' })
     } finally {
       setSaving(false)
     }

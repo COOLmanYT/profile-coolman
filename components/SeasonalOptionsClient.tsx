@@ -7,6 +7,7 @@ import { useSeasonalTheme } from './SeasonalThemeProvider'
 import { useVisitorPreferences, type TemporaryFeature, type TemporaryModule } from './VisitorPreferencesProvider'
 import SeasonalPreview from './SeasonalPreview'
 import SeasonalSimulationControls from './SeasonalSimulationControls'
+import { useToast } from './ToastProvider'
 
 const LABELS: Record<SeasonalTheme, string> = {
   christmas: 'Christmas',
@@ -40,6 +41,7 @@ const TEMPORARY_FEATURES: Array<{ category: string; id: TemporaryFeature; label:
 ]
 
 export default function SeasonalOptionsClient({ legalSimpleModeDefault }: { legalSimpleModeDefault: boolean }) {
+  const { showToast } = useToast()
   const { preference, setPreference, activateOnce, clearOnce, timeZone } = useSeasonalTheme()
   const { hiddenModules, setModuleHidden, hiddenFeatures, setFeatureHidden, mediaPreferences, setMediaPreferences } = useVisitorPreferences()
   const [theme, setTheme] = useState<SeasonalTheme | ''>(preference.theme ?? 'christmas')
@@ -55,12 +57,17 @@ export default function SeasonalOptionsClient({ legalSimpleModeDefault }: { lega
   const saveUntil = () => {
     if (!until || !theme) return
     setPreference({ theme, until: new Date(until).toISOString() })
+    showToast({ variant: 'success', title: 'Timed theme saved' })
   }
   const updateLegalSimpleMode = (value: 'default' | 'simple' | 'standard') => {
     setLegalSimpleMode(value)
     if (value === 'default') window.localStorage.removeItem(LEGAL_SIMPLE_MODE_KEY)
     else window.localStorage.setItem(LEGAL_SIMPLE_MODE_KEY, String(value === 'simple'))
+    showToast({ variant: 'success', title: 'Legal reading preference saved' })
   }
+  const updateModule = (module: TemporaryModule, hidden: boolean) => { setModuleHidden(module, hidden); showToast({ variant: 'success', title: `${module} ${hidden ? 'hidden' : 'shown'} for this visit` }) }
+  const updateFeature = (feature: TemporaryFeature, hidden: boolean) => { setFeatureHidden(feature, hidden); showToast({ variant: 'success', title: `${feature.replaceAll('_', ' ')} ${hidden ? 'hidden' : 'shown'} for this visit` }) }
+  const updateMedia = (next: typeof mediaPreferences, title: string) => { setMediaPreferences(next); showToast({ variant: 'success', title }) }
 
   return (
     <div className="min-h-screen bg-[#151515] px-5 py-10 text-white">
@@ -74,14 +81,14 @@ export default function SeasonalOptionsClient({ legalSimpleModeDefault }: { lega
           {SEASONAL_THEMES.map((item) => <option key={item} value={item}>{LABELS[item]}</option>)}
         </select>
         <div className="mt-4 grid gap-2">
-          <button onClick={() => theme ? activateOnce(theme) : clearOnce()} className="rounded-lg bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/15">{theme ? 'Turn on once for this visit' : 'Turn off one-visit theme'}</button>
-          <button onClick={clearOnce} className="text-sm text-white/60 hover:text-white">Turn off one-visit theme / select None</button>
+          <button onClick={() => { if (theme) { activateOnce(theme); showToast({ variant: 'success', title: `${LABELS[theme]} enabled for this visit` }) } else { clearOnce(); showToast({ variant: 'success', title: 'One-visit theme turned off' }) } }} className="rounded-lg bg-white/10 px-3 py-2 text-sm font-semibold hover:bg-white/15">{theme ? 'Turn on once for this visit' : 'Turn off one-visit theme'}</button>
+          <button onClick={() => { clearOnce(); showToast({ variant: 'success', title: 'One-visit theme turned off' }) }} className="text-sm text-white/60 hover:text-white">Turn off one-visit theme / select None</button>
           <label className="rounded-lg border border-white/10 p-3 text-sm">
             Turn on until a date and time
             <input type="datetime-local" value={until} onChange={(event) => setUntil(event.target.value)} className="mt-2 w-full rounded bg-black/25 px-2 py-1.5 text-white" />
           </label>
           <button onClick={saveUntil} disabled={!until || !theme} className="rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold enabled:hover:bg-red-500 disabled:opacity-40">Save timed theme</button>
-          <button onClick={() => { setPreference({ theme: null, until: null }); setUntil('') }} className="text-sm text-white/60 hover:text-white">Use automatic settings</button>
+          <button onClick={() => { setPreference({ theme: null, until: null }); setUntil(''); showToast({ variant: 'success', title: 'Automatic theme settings restored' }) }} className="text-sm text-white/60 hover:text-white">Use automatic settings</button>
         </div>
         <SeasonalSimulationControls />
         <SeasonalPreview />
@@ -89,22 +96,22 @@ export default function SeasonalOptionsClient({ legalSimpleModeDefault }: { lega
           <h2 className="text-base font-semibold">Hide modules for this visit</h2>
           <p className="mt-1 text-xs text-white/50">These only affect your browser and clear after refresh.</p>
           {([['spotify', 'Spotify listening'], ['twitch', 'Twitch presence'], ['discord', 'Discord presence']] as [TemporaryModule, string][]).map(([module, label]) => (
-            <label key={module} className="mt-3 flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-sm"><span>{label}</span><input type="checkbox" checked={hiddenModules.includes(module)} onChange={(event) => setModuleHidden(module, event.target.checked)} className="h-4 w-4 accent-red-600" /></label>
+            <label key={module} className="mt-3 flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-sm"><span>{label}</span><input type="checkbox" checked={hiddenModules.includes(module)} onChange={(event) => updateModule(module, event.target.checked)} className="h-4 w-4 accent-red-600" /></label>
           ))}
         </section>
         <section className="mt-8 border-t border-white/10 pt-5">
           <h2 className="text-base font-semibold">Media preferences</h2>
           <p className="mt-1 text-xs text-white/50">Saved only in this browser. Latest YouTube content is off by default.</p>
-          <label className="mt-4 flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-sm"><span>Show latest YouTube Short</span><input type="checkbox" checked={mediaPreferences.showLatestShort} onChange={(event) => setMediaPreferences({ ...mediaPreferences, showLatestShort: event.target.checked })} className="h-4 w-4 accent-red-600" /></label>
-          <label className="mt-2 flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-sm"><span>Show latest YouTube long-form video</span><input type="checkbox" checked={mediaPreferences.showLatestLongform} onChange={(event) => setMediaPreferences({ ...mediaPreferences, showLatestLongform: event.target.checked })} className="h-4 w-4 accent-red-600" /></label>
-          <label className="mt-4 block text-xs text-white/60">Twitch schedule time zone<select value={mediaPreferences.scheduleTimeZone ?? ''} onChange={(event) => setMediaPreferences({ ...mediaPreferences, scheduleTimeZone: event.target.value || null })} className="mt-1 w-full rounded bg-black/25 px-2 py-2 text-sm text-white"><option value="">Use your local time zone</option><option value="Australia/Sydney">Australia/Sydney</option><option value="UTC">UTC</option><option value="America/Los_Angeles">America/Los Angeles</option><option value="America/New_York">America/New York</option><option value="Europe/London">Europe/London</option></select></label>
+          <label className="mt-4 flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-sm"><span>Show latest YouTube Short</span><input type="checkbox" checked={mediaPreferences.showLatestShort} onChange={(event) => updateMedia({ ...mediaPreferences, showLatestShort: event.target.checked }, `Latest YouTube Short ${event.target.checked ? 'shown' : 'hidden'}`)} className="h-4 w-4 accent-red-600" /></label>
+          <label className="mt-2 flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-sm"><span>Show latest YouTube long-form video</span><input type="checkbox" checked={mediaPreferences.showLatestLongform} onChange={(event) => updateMedia({ ...mediaPreferences, showLatestLongform: event.target.checked }, `Latest long-form video ${event.target.checked ? 'shown' : 'hidden'}`)} className="h-4 w-4 accent-red-600" /></label>
+          <label className="mt-4 block text-xs text-white/60">Twitch schedule time zone<select value={mediaPreferences.scheduleTimeZone ?? ''} onChange={(event) => updateMedia({ ...mediaPreferences, scheduleTimeZone: event.target.value || null }, 'Twitch schedule time zone saved')} className="mt-1 w-full rounded bg-black/25 px-2 py-2 text-sm text-white"><option value="">Use your local time zone</option><option value="Australia/Sydney">Australia/Sydney</option><option value="UTC">UTC</option><option value="America/Los_Angeles">America/Los Angeles</option><option value="America/New_York">America/New York</option><option value="Europe/London">Europe/London</option></select></label>
         </section>
         <section className="mt-8 border-t border-white/10 pt-5">
           <h2 className="text-base font-semibold">Hide module features for this visit</h2>
           <p className="mt-1 text-xs text-white/50">Fine-tune what you see without changing the Dashboard. These settings clear after refresh.</p>
           {(['Spotify', 'Twitch', 'Discord'] as const).map((category) => (
             <div key={category} className="mt-4"><h3 className="text-xs font-semibold uppercase tracking-wider text-white/45">{category}</h3><div className="mt-2 space-y-2">{TEMPORARY_FEATURES.filter((feature) => feature.category === category).map((feature) => (
-              <label key={feature.id} className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-sm"><span>{feature.label}</span><input type="checkbox" checked={hiddenFeatures.includes(feature.id)} onChange={(event) => setFeatureHidden(feature.id, event.target.checked)} className="h-4 w-4 accent-red-600" /></label>
+              <label key={feature.id} className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-sm"><span>{feature.label}</span><input type="checkbox" checked={hiddenFeatures.includes(feature.id)} onChange={(event) => updateFeature(feature.id, event.target.checked)} className="h-4 w-4 accent-red-600" /></label>
             ))}</div></div>
           ))}
         </section>

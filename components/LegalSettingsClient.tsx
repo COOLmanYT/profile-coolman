@@ -2,8 +2,10 @@
 
 import { useState } from 'react'
 import type { LegalSettings } from '@/lib/legal-settings'
+import { responseErrorCode, useToast } from './ToastProvider'
 
 export default function LegalSettingsClient({ initialSettings }: { initialSettings: LegalSettings }) {
+  const { showToast } = useToast()
   const [simpleModeDefault, setSimpleModeDefault] = useState(initialSettings.simpleModeDefault)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
@@ -15,10 +17,12 @@ export default function LegalSettingsClient({ initialSettings }: { initialSettin
       const response = await fetch('/api/dashboard/legal', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ simpleModeDefault }),
       })
-      if (!response.ok) throw new Error()
+      if (!response.ok) throw new Error(await responseErrorCode(response))
       setMessage('Saved')
-    } catch {
+      showToast({ variant: 'success', title: 'Legal page settings saved' })
+    } catch (error) {
       setMessage('Could not save settings')
+      showToast({ variant: 'error', title: 'Could not save legal settings', code: error instanceof Error ? error.message : 'NETWORK_ERROR' })
     } finally {
       setSaving(false)
     }

@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { parseLatestYoutubeVideos, parseYoutubeViewCount } from '@/lib/youtube-feed.mjs'
 import { monitoredFetch } from '@/lib/provider-monitor.mjs'
+import { limitPublicRequest } from '@/lib/rate-limit.mjs'
 
 const CHANNEL_ID = 'UCJr64JsgfMr8SHeUhLA3lKw'
 const FEED_URL = `https://www.youtube.com/feeds/videos.xml?channel_id=${CHANNEL_ID}`
@@ -17,7 +18,9 @@ async function withViewCount<T extends { id: string }>(video: T | undefined) {
   }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const rate = limitPublicRequest(req, 'youtube')
+  if (!rate.allowed) return NextResponse.json({ error: 'RATE_LIMITED' }, { status: 429, headers: { 'Retry-After': String(rate.retryAfterSeconds) } })
   try {
     const response = await monitoredFetch('youtube', FEED_URL, { next: { revalidate: 900 } })
     if (!response.ok) throw new Error('YouTube feed unavailable')

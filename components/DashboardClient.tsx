@@ -2,6 +2,7 @@
 
 import { signOut } from 'next-auth/react'
 import { useState } from 'react'
+import { responseErrorCode, useToast } from './ToastProvider'
 
 interface DashboardClientProps {
   initialToggles: Record<string, boolean>
@@ -48,6 +49,7 @@ const TOGGLE_GROUPS = [
 ]
 
 export default function DashboardClient({ initialToggles, signOutOnly, onTogglesChange }: DashboardClientProps) {
+  const { showToast } = useToast()
   const [toggles, setToggles] = useState(initialToggles)
   const [saving, setSaving] = useState<string | null>(null)
   const [saved, setSaved] = useState<string | null>(null)
@@ -77,15 +79,17 @@ export default function DashboardClient({ initialToggles, signOutOnly, onToggles
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: key, value: newValue }),
       })
-      if (!response.ok) throw new Error('Unable to save toggle')
+      if (!response.ok) throw new Error(await responseErrorCode(response))
       setSaved(key)
       setTimeout(() => setSaved(null), 2000)
-    } catch {
+      showToast({ variant: 'success', title: `${labelFor(key)} ${newValue ? 'enabled' : 'disabled'}` })
+    } catch (error) {
       setToggles((prev) => {
         const next = { ...prev, [key]: !newValue }
         onTogglesChange?.(next)
         return next
       })
+      showToast({ variant: 'error', title: 'Could not save profile setting', code: error instanceof Error ? error.message : 'NETWORK_ERROR' })
     } finally {
       setSaving(null)
     }
@@ -133,4 +137,8 @@ export default function DashboardClient({ initialToggles, signOutOnly, onToggles
       ))}
     </div>
   )
+}
+
+function labelFor(key: string) {
+  return TOGGLE_LABELS[key] ?? 'Setting'
 }

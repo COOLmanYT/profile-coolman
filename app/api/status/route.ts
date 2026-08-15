@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getStatusSettings } from '@/lib/status-settings'
 import { monitoredFetch } from '@/lib/provider-monitor.mjs'
+import { limitPublicRequest } from '@/lib/rate-limit.mjs'
 
 const STATUS_URL = 'https://status.coolmanyt.com/summary.json'
 
@@ -16,7 +17,9 @@ function normaliseState(value?: string) {
   return 'unknown' as const
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const rate = limitPublicRequest(req, 'status')
+  if (!rate.allowed) return NextResponse.json({ error: 'RATE_LIMITED' }, { status: 429, headers: { 'Retry-After': String(rate.retryAfterSeconds) } })
   try {
     const response = await monitoredFetch('instatus', STATUS_URL, { next: { revalidate: 60 } })
     if (!response.ok) throw new Error('Status service unavailable')
