@@ -33,7 +33,8 @@ export async function getToggles(): Promise<Record<string, boolean>> {
   const supabase = getSupabase()
   if (!supabase) return { ...DEFAULT_TOGGLES }
   try {
-    const { data } = await supabase.from('toggles').select('id, value')
+    const { data, error } = await supabase.from('toggles').select('id, value')
+    if (error) return { ...DEFAULT_TOGGLES }
     const toggles: Record<string, boolean> = { ...DEFAULT_TOGGLES }
     if (data) {
       for (const row of data as Array<{ id: string; value: boolean }>) {

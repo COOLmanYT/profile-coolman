@@ -62,7 +62,8 @@ function TwitchWidget({ showProfile = true, showStats = true, showLive = true, s
       const response = await fetch('/api/twitch', { cache: 'no-store', signal })
       const data = await response.json() as TwitchPresence
       if (mountedRef.current) setPresence(data)
-    } catch {
+    } catch (error) {
+      if (!mountedRef.current || signal.aborted || (error instanceof DOMException && error.name === 'AbortError')) return
       if (mountedRef.current) setPresence(null)
     } finally {
       if (mountedRef.current) setLoaded(true)

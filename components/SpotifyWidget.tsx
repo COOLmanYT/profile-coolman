@@ -183,7 +183,8 @@ function SpotifyWidget({ showWidget = true, showPosition = true, showEmbed = tru
         setHistory(data.items ?? [])
         setHistoryLoaded(true)
       }
-    } catch {
+    } catch (error) {
+      if (!mountedRef.current || signal.aborted || (error instanceof DOMException && error.name === 'AbortError')) return
       if (mountedRef.current) {
         setHistory([])
         setHistoryLoaded(true)

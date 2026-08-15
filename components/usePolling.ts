@@ -47,7 +47,7 @@ export function usePolling(
       if (timer) return
       run()
       timer = setInterval(() => {
-        if (!pauseWhenHidden && typeof document !== 'undefined' && document.visibilityState !== 'visible') return
+        if (pauseWhenHidden && typeof document !== 'undefined' && document.visibilityState !== 'visible') return
         run()
       }, intervalMs)
     }
