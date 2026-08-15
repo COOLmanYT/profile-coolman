@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import { usePolling } from './usePolling'
 
 type HealthState = 'operational' | 'maintenance' | 'degraded' | 'outage' | 'unknown'
 type StatusData = { services: Array<{ name: string; state: HealthState; label: string }>; summary?: Array<{ name: string; state: HealthState; label: string }> }
@@ -13,22 +14,16 @@ const STATE_STYLE: Record<HealthState, string> = {
 export default function StatusWidget() {
   const [status, setStatus] = useState<StatusData | null>(null)
 
-  useEffect(() => {
-    let active = true
-    const load = async () => {
-      try {
-        const response = await fetch('/api/status', { cache: 'no-store' })
-        if (!response.ok) throw new Error()
-        const data = await response.json() as StatusData
-        if (active) setStatus(data)
-      } catch {
-        if (active) setStatus({ services: [], summary: [{ name: 'Profile page', state: 'unknown', label: 'Status temporarily unavailable' }, { name: 'COOLman brand', state: 'unknown', label: 'Status temporarily unavailable' }] })
-      }
+  usePolling(async () => {
+    try {
+      const response = await fetch('/api/status', { cache: 'no-store' })
+      if (!response.ok) throw new Error()
+      const data = await response.json() as StatusData
+      setStatus(data)
+    } catch {
+      setStatus({ services: [], summary: [{ name: 'Profile page', state: 'unknown', label: 'Status temporarily unavailable' }, { name: 'COOLman brand', state: 'unknown', label: 'Status temporarily unavailable' }] })
     }
-    load()
-    const interval = setInterval(load, 60_000)
-    return () => { active = false; clearInterval(interval) }
-  }, [])
+  }, { intervalMs: 60_000 })
 
   const services = status?.summary ?? [{ name: 'Profile page', state: 'unknown' as const, label: 'Checking status…' }, { name: 'COOLman brand', state: 'unknown' as const, label: 'Checking status…' }]
   return (

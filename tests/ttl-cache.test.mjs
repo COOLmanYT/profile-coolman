@@ -26,3 +26,25 @@ test('deduplicates concurrent cache misses', async () => {
   assert.deepEqual(await Promise.all([cache.get(load), cache.get(load)]), ['presence', 'presence'])
   assert.equal(calls, 1)
 })
+
+test('serves a stale value while the loader errors after the TTL expires', async () => {
+  let time = 1_000
+  let fail = false
+  const cache = createTtlCache({ ttlMs: 100, now: () => time })
+  const load = async () => {
+    if (fail) throw new Error('upstream down')
+    return 'presence'
+  }
+
+  assert.equal(await cache.get(load), 'presence')
+  time += 101
+  fail = true
+  // The previous snapshot is served instead of rejecting.
+  assert.equal(await cache.get(load), 'presence')
+})
+
+test('rejects when the loader errors and no stale value exists', async () => {
+  const cache = createTtlCache({ ttlMs: 100 })
+  const load = async () => { throw new Error('upstream down') }
+  await assert.rejects(() => cache.get(load), /upstream down/)
+})

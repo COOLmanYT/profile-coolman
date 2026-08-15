@@ -1,6 +1,7 @@
 'use client'
 
 import { memo, useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { usePolling } from './usePolling'
 import Image from 'next/image'
 
 interface SpotifyTrack {
@@ -132,8 +133,6 @@ function SpotifyWidget({ showWidget = true, showPosition = true, showEmbed = tru
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false)
   const [history, setHistory] = useState<SpotifyHistoryItem[]>([])
   const [historyLoaded, setHistoryLoaded] = useState(false)
-  const requestInFlightRef = useRef(false)
-  const abortRef = useRef<AbortController | null>(null)
   const mountedRef = useRef(true)
 
   const formatDuration = (ms: number) => {
@@ -146,65 +145,52 @@ function SpotifyWidget({ showWidget = true, showPosition = true, showEmbed = tru
 
   useEffect(() => {
     mountedRef.current = true
-
-    const fetchTrack = async () => {
-      if (requestInFlightRef.current) return
-      requestInFlightRef.current = true
-      const controller = new AbortController()
-      abortRef.current = controller
-
-      try {
-        const res = await fetch('/api/spotify', { signal: controller.signal })
-        const data = await res.json().catch(() => ({ isPlaying: false }))
-        if (!mountedRef.current) return
-        setTrack((prev) => {
-          const next = data as SpotifyTrack
-          if (isSameTrackState(prev, next)) {
-            return prev
-          }
-          return next
-        })
-        setDisplayProgressMs(Math.max(0, data.progressMs ?? 0))
-      } catch {
-        if (!mountedRef.current || controller.signal.aborted) return
-        setTrack({ isPlaying: false })
-      } finally {
-        requestInFlightRef.current = false
-        if (mountedRef.current) setHasLoadedOnce(true)
-      }
-    }
-
-    fetchTrack()
-    const interval = setInterval(fetchTrack, SPOTIFY_POLL_MS)
-    return () => {
-      mountedRef.current = false
-      clearInterval(interval)
-      abortRef.current?.abort()
-    }
+    return () => { mountedRef.current = false }
   }, [])
 
+  usePolling(async (signal) => {
+    try {
+      const res = await fetch('/api/spotify', { signal })
+      const data = await res.json().catch(() => ({ isPlaying: false }))
+      if (!mountedRef.current) return
+      setTrack((prev) => {
+        const next = data as SpotifyTrack
+        if (isSameTrackState(prev, next)) {
+          return prev
+        }
+        return next
+      })
+      setDisplayProgressMs(Math.max(0, data.progressMs ?? 0))
+    } catch {
+      if (!mountedRef.current || signal.aborted) return
+      setTrack({ isPlaying: false })
+    } finally {
+      if (mountedRef.current) setHasLoadedOnce(true)
+    }
+  }, { intervalMs: SPOTIFY_POLL_MS })
+
+  const showHistoryRef = useRef(showHistory)
   useEffect(() => {
-    if (!showHistory) return
-    let active = true
-    const fetchHistory = async () => {
-      try {
-        const response = await fetch('/api/spotify?history=1', { cache: 'no-store' })
-        const data = await response.json() as { items?: SpotifyHistoryItem[] }
-        if (active) {
-          setHistory(data.items ?? [])
-          setHistoryLoaded(true)
-        }
-      } catch {
-        if (active) {
-          setHistory([])
-          setHistoryLoaded(true)
-        }
+    showHistoryRef.current = showHistory
+  }, [showHistory])
+
+  usePolling(async (signal) => {
+    if (!showHistoryRef.current) return
+    try {
+      const response = await fetch('/api/spotify?history=1', { cache: 'no-store', signal })
+      const data = await response.json() as { items?: SpotifyHistoryItem[] }
+      if (mountedRef.current) {
+        setHistory(data.items ?? [])
+        setHistoryLoaded(true)
+      }
+    } catch (error) {
+      if (!mountedRef.current || signal.aborted || (error instanceof DOMException && error.name === 'AbortError')) return
+      if (mountedRef.current) {
+        setHistory([])
+        setHistoryLoaded(true)
       }
     }
-    fetchHistory()
-    const interval = setInterval(fetchHistory, 120_000)
-    return () => { active = false; clearInterval(interval) }
-  }, [showHistory])
+  }, { intervalMs: 120_000 })
 
   useEffect(() => {
     if (track?.durationMs === undefined || track?.durationMs === null) return

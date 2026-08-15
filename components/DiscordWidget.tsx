@@ -1,6 +1,7 @@
 'use client'
 
 import { memo, useEffect, useRef, useState, type ReactNode } from 'react'
+import { usePolling } from './usePolling'
 import Image from 'next/image'
 
 interface DiscordActivity {
@@ -303,8 +304,6 @@ function DiscordWidget({
   const [loading, setLoading] = useState(true)
   const [isUnavailable, setIsUnavailable] = useState(false)
   const [statusPulse, setStatusPulse] = useState(false)
-  const requestInFlightRef = useRef(false)
-  const abortRef = useRef<AbortController | null>(null)
   const mountedRef = useRef(true)
   const presenceRef = useRef<DiscordPresence | null>(null)
   const previousStatusRef = useRef<DiscordPresence['discord_status'] | null>(null)
@@ -315,40 +314,28 @@ function DiscordWidget({
 
   useEffect(() => {
     mountedRef.current = true
-
-    const fetchPresence = async () => {
-      if (requestInFlightRef.current) return
-      requestInFlightRef.current = true
-      const controller = new AbortController()
-      abortRef.current = controller
-
-      try {
-        const res = await fetch('/api/discord', { signal: controller.signal })
-        if (res.ok) {
-          const data = await res.json()
-          if (!mountedRef.current) return
-          setPresence(data)
-          setIsUnavailable(false)
-        } else {
-          setIsUnavailable(true)
-        }
-      } catch {
-        if (!mountedRef.current || controller.signal.aborted) return
-        if (!presenceRef.current) setPresence(null)
-        setIsUnavailable(true)
-      } finally {
-        requestInFlightRef.current = false
-        if (mountedRef.current) setLoading(false)
-      }
-    }
-    fetchPresence()
-    const interval = setInterval(fetchPresence, DISCORD_POLL_MS)
-    return () => {
-      mountedRef.current = false
-      clearInterval(interval)
-      abortRef.current?.abort()
-    }
+    return () => { mountedRef.current = false }
   }, [])
+
+  usePolling(async (signal) => {
+    try {
+      const res = await fetch('/api/discord', { signal })
+      if (res.ok) {
+        const data = await res.json()
+        if (!mountedRef.current) return
+        setPresence(data)
+        setIsUnavailable(false)
+      } else {
+        if (mountedRef.current) setIsUnavailable(true)
+      }
+    } catch {
+      if (!mountedRef.current || signal.aborted) return
+      if (!presenceRef.current) setPresence(null)
+      setIsUnavailable(true)
+    } finally {
+      if (mountedRef.current) setLoading(false)
+    }
+  }, { intervalMs: DISCORD_POLL_MS })
 
   useEffect(() => {
     const currentStatus = presence?.discord_status

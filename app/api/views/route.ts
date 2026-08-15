@@ -1,16 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabase } from '@/lib/supabase-server'
 import { limitPublicRequest } from '@/lib/rate-limit.mjs'
 
 const VIEW_COOKIE_NAME = 'profile_view_counted'
 const VIEW_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 // 24h
-
-function getSupabase() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key || url.includes('placeholder')) return null
-  return createClient(url, key)
-}
 
 async function getViewCount() {
   const supabase = getSupabase()

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { monitoredFetch } from '@/lib/provider-monitor.mjs'
 import { limitPublicRequest } from '@/lib/rate-limit.mjs'
+import { createTtlCache } from '@/lib/ttl-cache.mjs'
 
 // Force this route to always be dynamic so Next.js / Vercel never statically
 // caches the response. Without this, the CDN can serve a stale snapshot to
@@ -16,6 +17,18 @@ const SPOTIFY_RECENTLY_PLAYED_URL = 'https://api.spotify.com/v1/me/player/recent
 // Set SPOTIFY_DEBUG=true in your environment to include upstream status codes and
 // limited error text in API responses. Never enable this in production long-term.
 const DEBUG = process.env.SPOTIFY_DEBUG === 'true'
+
+// Spotify access tokens last 60 minutes. Cache the refreshed token for slightly
+// less so concurrent profile polls share one refresh instead of each request
+// exchanging a new token.
+const SPOTIFY_TOKEN_CACHE_TTL_MS = 50 * 60 * 1000
+const spotifyTokenCache = createTtlCache({ ttlMs: SPOTIFY_TOKEN_CACHE_TTL_MS })
+
+// Playlist public/private state changes rarely and only gates the "Open
+// Playlist" link. Cache it per playlist id for a few minutes to avoid an extra
+// round-trip on every playback poll.
+const PLAYLIST_VISIBILITY_TTL_MS = 5 * 60 * 1000
+const playlistVisibilityCaches = new Map<string, ReturnType<typeof createTtlCache>>()
 
 type TokenResult =
   | { accessToken: string; error?: never }
@@ -42,68 +55,89 @@ type SpotifyPlaybackResponse = {
 }
 
 async function getAccessToken(): Promise<TokenResult> {
-  const clientId = process.env.SPOTIFY_CLIENT_ID
-  const clientSecret = process.env.SPOTIFY_CLIENT_SECRET
-  const refreshToken = process.env.SPOTIFY_REFRESH_TOKEN
+  // The cache only stores resolved values, so throw on failure to avoid
+  // caching a transient refresh error for the full token TTL. Successful
+  // tokens are shared across concurrent requests.
+  try {
+    const accessToken = await spotifyTokenCache.get(async () => {
+      const clientId = process.env.SPOTIFY_CLIENT_ID
+      const clientSecret = process.env.SPOTIFY_CLIENT_SECRET
+      const refreshToken = process.env.SPOTIFY_REFRESH_TOKEN
 
-  if (!clientId || clientId === 'placeholder') {
-    return { error: 'missing_SPOTIFY_CLIENT_ID' }
-  }
-  if (!clientSecret || clientSecret === 'placeholder') {
-    return { error: 'missing_SPOTIFY_CLIENT_SECRET' }
-  }
-  if (!refreshToken || refreshToken === 'placeholder') {
-    return { error: 'missing_SPOTIFY_REFRESH_TOKEN' }
-  }
+      if (!clientId || clientId === 'placeholder') {
+        throw new Error('missing_SPOTIFY_CLIENT_ID')
+      }
+      if (!clientSecret || clientSecret === 'placeholder') {
+        throw new Error('missing_SPOTIFY_CLIENT_SECRET')
+      }
+      if (!refreshToken || refreshToken === 'placeholder') {
+        throw new Error('missing_SPOTIFY_REFRESH_TOKEN')
+      }
 
-  const basic = Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
-  const res = await monitoredFetch('spotify', SPOTIFY_TOKEN_URL, {
-    method: 'POST',
-    headers: {
-      Authorization: `Basic ${basic}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: new URLSearchParams({
-      grant_type: 'refresh_token',
-      refresh_token: refreshToken,
-    }),
-    cache: 'no-store',
+      const basic = Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
+      const res = await monitoredFetch('spotify', SPOTIFY_TOKEN_URL, {
+        method: 'POST',
+        headers: {
+          Authorization: `Basic ${basic}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          grant_type: 'refresh_token',
+          refresh_token: refreshToken,
+        }),
+        cache: 'no-store',
+      })
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => '')
+        throw new Error(`token_refresh_failed:${res.status}:${text.slice(0, 200)}`)
+      }
+
+      const data = await res.json()
+      if (!data.access_token) {
+        throw new Error('no_access_token_in_response')
+      }
+      // Spotify may return a new refresh token (token rotation). We cannot persist it
+      // server-side without storage, so the existing token remains in effect for this
+      // request. If you see auth errors over time, re-generate and update
+      // SPOTIFY_REFRESH_TOKEN in your deployment environment.
+      return data.access_token as string
+    })
+    return { accessToken }
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'token_refresh_failed' }
+  }
+}
+
+async function fetchPlaylistVisibility(accessToken: string, playlistId: string): Promise<boolean> {
+  let cache = playlistVisibilityCaches.get(playlistId)
+  if (!cache) {
+    cache = createTtlCache({ ttlMs: PLAYLIST_VISIBILITY_TTL_MS })
+    playlistVisibilityCaches.set(playlistId, cache)
+  }
+  return cache.get(async () => {
+    try {
+      const res = await monitoredFetch('spotify',
+        `${SPOTIFY_PLAYLIST_URL}/${playlistId}?fields=public`,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          cache: 'no-store',
+        }
+      )
+      if (!res.ok) return false
+      const playlistJson: unknown = await res.json().catch(() => null)
+      if (!playlistJson || typeof playlistJson !== 'object') return false
+      const playlistPublic = (playlistJson as { public?: unknown }).public
+      return playlistPublic === true
+    } catch {
+      return false
+    }
   })
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => '')
-    return { error: `token_refresh_failed:${res.status}:${text.slice(0, 200)}` }
-  }
-
-  const data = await res.json()
-  if (!data.access_token) {
-    return { error: 'no_access_token_in_response' }
-  }
-  // Spotify may return a new refresh token (token rotation). We cannot persist it
-  // server-side without storage, so the existing token remains in effect for this
-  // request. If you see auth errors over time, re-generate and update
-  // SPOTIFY_REFRESH_TOKEN in your deployment environment.
-  return { accessToken: data.access_token as string }
 }
 
 async function getPlaylistVisibility(accessToken: string, playlistId?: string): Promise<boolean> {
   if (!playlistId) return false
-  try {
-    const res = await monitoredFetch('spotify',
-      `${SPOTIFY_PLAYLIST_URL}/${playlistId}?fields=public`,
-      {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        cache: 'no-store',
-      }
-    )
-    if (!res.ok) return false
-    const playlistJson: unknown = await res.json().catch(() => null)
-    if (!playlistJson || typeof playlistJson !== 'object') return false
-    const playlistPublic = (playlistJson as { public?: unknown }).public
-    return playlistPublic === true
-  } catch {
-    return false
-  }
+  return fetchPlaylistVisibility(accessToken, playlistId)
 }
 
 async function mapTrackData(data: SpotifyPlaybackResponse, accessToken: string) {

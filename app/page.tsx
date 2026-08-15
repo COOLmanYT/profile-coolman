@@ -1,4 +1,3 @@
-import { createClient } from '@supabase/supabase-js'
 import EasterEgg from '@/components/EasterEgg'
 import ViewCounter from '@/components/ViewCounter'
 import ProfileCard from '@/components/ProfileCard'
@@ -6,111 +5,10 @@ import AnimatedBackground from '@/components/AnimatedBackground'
 import SeasonalThemeProvider from '@/components/SeasonalThemeProvider'
 import SeasonalEffects from '@/components/SeasonalEffects'
 import { getSeasonalSettings } from '@/lib/site-settings'
+import { getToggles } from '@/lib/toggles'
 import Link from 'next/link'
 import ShareCard from '@/components/ShareCard'
 import StatusWidget from '@/components/StatusWidget'
-
-async function getToggles() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!supabaseUrl || !supabaseKey || supabaseUrl.includes('placeholder')) {
-    return {
-      spotify: true,
-      spotify_widget: true,
-      spotify_position: true,
-      spotify_embed: true,
-      spotify_playlist: true,
-      spotify_history: true,
-      twitch: true,
-      youtube: true,
-      twitch_profile: true,
-      twitch_stats: true,
-      twitch_live: true,
-      twitch_schedule: true,
-      discord: true,
-      discord_profile: true,
-      discord_banner: true,
-      discord_badges: true,
-      discord_decoration: true,
-      discord_devices: true,
-      discord_music: true,
-      discord_video: true,
-      discord_games: true,
-      discord_status: true,
-      discord_other: true,
-      discord_mobile: true,
-      discord_web: true,
-      discord_desktop: true,
-    }
-  }
-  try {
-    const supabase = createClient(supabaseUrl, supabaseKey)
-    const { data } = await supabase.from('toggles').select('id, value')
-    const toggleMap: Record<string, boolean> = {
-      spotify: true,
-      spotify_widget: true,
-      spotify_position: true,
-      spotify_embed: true,
-      spotify_playlist: true,
-      spotify_history: true,
-      twitch: true,
-      youtube: true,
-      twitch_profile: true,
-      twitch_stats: true,
-      twitch_live: true,
-      twitch_schedule: true,
-      discord: true,
-      discord_profile: true,
-      discord_banner: true,
-      discord_badges: true,
-      discord_decoration: true,
-      discord_devices: true,
-      discord_music: true,
-      discord_video: true,
-      discord_games: true,
-      discord_status: true,
-      discord_other: true,
-      discord_mobile: true,
-      discord_web: true,
-      discord_desktop: true,
-    }
-    if (data) {
-      data.forEach((row: { id: string; value: boolean }) => {
-        toggleMap[row.id] = row.value
-      })
-    }
-    return toggleMap
-  } catch {
-    return {
-      spotify: true,
-      spotify_widget: true,
-      spotify_position: true,
-      spotify_embed: true,
-      spotify_playlist: true,
-      spotify_history: true,
-      twitch: true,
-      youtube: true,
-      twitch_profile: true,
-      twitch_stats: true,
-      twitch_live: true,
-      twitch_schedule: true,
-      discord: true,
-      discord_profile: true,
-      discord_banner: true,
-      discord_badges: true,
-      discord_decoration: true,
-      discord_devices: true,
-      discord_music: true,
-      discord_video: true,
-      discord_games: true,
-      discord_status: true,
-      discord_other: true,
-      discord_mobile: true,
-      discord_web: true,
-      discord_desktop: true,
-    }
-  }
-}
 
 export default async function Home() {
   const [toggles, seasonalSettings] = await Promise.all([getToggles(), getSeasonalSettings()])

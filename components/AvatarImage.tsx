@@ -22,7 +22,6 @@ export default function AvatarImage() {
       alt="COOLman"
       fill
       className="rounded-full object-cover"
-      unoptimized
       onError={() => setFailed(true)}
     />
   )

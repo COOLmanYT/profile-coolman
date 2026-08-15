@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import { memo, useEffect, useRef, useState } from 'react'
+import { usePolling } from './usePolling'
 
 interface TwitchPresence {
   isLive: boolean
@@ -53,25 +54,21 @@ function TwitchWidget({ showProfile = true, showStats = true, showLive = true, s
 
   useEffect(() => {
     mountedRef.current = true
-    const fetchPresence = async () => {
-      try {
-        const response = await fetch('/api/twitch', { cache: 'no-store' })
-        const data = await response.json() as TwitchPresence
-        if (mountedRef.current) setPresence(data)
-      } catch {
-        if (mountedRef.current) setPresence(null)
-      } finally {
-        if (mountedRef.current) setLoaded(true)
-      }
-    }
-
-    fetchPresence()
-    const interval = setInterval(fetchPresence, TWITCH_POLL_MS)
-    return () => {
-      mountedRef.current = false
-      clearInterval(interval)
-    }
+    return () => { mountedRef.current = false }
   }, [])
+
+  usePolling(async (signal) => {
+    try {
+      const response = await fetch('/api/twitch', { cache: 'no-store', signal })
+      const data = await response.json() as TwitchPresence
+      if (mountedRef.current) setPresence(data)
+    } catch (error) {
+      if (!mountedRef.current || signal.aborted || (error instanceof DOMException && error.name === 'AbortError')) return
+      if (mountedRef.current) setPresence(null)
+    } finally {
+      if (mountedRef.current) setLoaded(true)
+    }
+  }, { intervalMs: TWITCH_POLL_MS })
 
   return (
     <div className="w-full rounded-2xl border border-[#9146ff]/35 bg-[#170b29]/75 p-3 shadow-lg shadow-[#9146ff]/10">
