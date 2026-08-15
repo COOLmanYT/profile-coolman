@@ -16,7 +16,7 @@ function withTwitchEnv(overrides, run) {
     if (value === undefined) delete process.env[key]
     else process.env[key] = value
   }
-  return Promise.resolve(run()).finally(() => {
+  return Promise.resolve().then(run).finally(() => {
     for (const key of ENV_KEYS) {
       if (saved[key] === undefined) delete process.env[key]
       else process.env[key] = saved[key]
