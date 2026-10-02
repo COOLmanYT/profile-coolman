@@ -136,3 +136,18 @@ Apply `supabase/migrations/20260814000003_secure_public_tables.sql` to enable ro
 ## Avatar
 
 Place your `avatar.png` in the `public/` folder.
+
+
+### Settings and provider reliability
+
+Successful dashboard saves invalidate the homepage (and other affected settings pages) for the next visit. Missing database configuration returns a failed save. Toggle defaults and loading are shared between the homepage and dashboard.
+
+Spotify, Twitch, and Discord endpoints report `providerStatus`: `healthy`, `degraded` (partial data or fallback), or `unavailable`. Unavailable integrations return HTTP 503 with `Cache-Control: no-store`; genuine idle/offline activity remains HTTP 200. Twitch's optional stats can be degraded when OAuth scopes are missing. A missing Twitch schedule (404) is normal.
+
+Activity polling pauses when the tab is hidden, aborts in-flight requests on hiding/unmounting, and retries with exponential backoff capped at five minutes. Requests time out after 15 seconds.
+
+The in-memory rate limiter cleans expired entries on requests and caps storage at 10,000 identities per process, rejecting new identities at capacity. This is best-effort protection per server instance, not a global quota. Keep it for this profile's public read endpoints; use hosting edge/firewall rate limits if fleet-wide enforcement or stronger abuse protection is needed. No shared storage service is required or provisioned by this change.
+
+Set `NEXT_PUBLIC_SITE_URL` to the deployment's public origin for social image URLs; it defaults to `https://profile.coolmanyt.com`.
+
+Pull requests run tests, lint, TypeScript, and a production build via GitHub Actions without production credentials. Run the same checks locally with `npm test`, `npm run lint`, `npm run typecheck`, and `npm run build`.

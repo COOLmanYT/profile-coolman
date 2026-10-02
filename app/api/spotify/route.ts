@@ -15,14 +15,14 @@ const SPOTIFY_PLAYLIST_URL = 'https://api.spotify.com/v1/playlists'
 const SPOTIFY_RECENTLY_PLAYED_URL = 'https://api.spotify.com/v1/me/player/recently-played?limit=5'
 
 // Set SPOTIFY_DEBUG=true in your environment to include upstream status codes and
-// limited error text in API responses. Never enable this in production long-term.
+// playback diagnostics in API responses. Never enable this in production long-term.
 const DEBUG = process.env.SPOTIFY_DEBUG === 'true'
 
 // Spotify access tokens last 60 minutes. Cache the refreshed token for slightly
 // less so concurrent profile polls share one refresh instead of each request
 // exchanging a new token.
 const SPOTIFY_TOKEN_CACHE_TTL_MS = 50 * 60 * 1000
-const spotifyTokenCache = createTtlCache({ ttlMs: SPOTIFY_TOKEN_CACHE_TTL_MS })
+const spotifyTokenCache = createTtlCache({ ttlMs: SPOTIFY_TOKEN_CACHE_TTL_MS, staleOnError: false })
 
 // Playlist public/private state changes rarely and only gates the "Open
 // Playlist" link. Cache it per playlist id for a few minutes to avoid an extra
@@ -199,30 +199,25 @@ export async function GET(req: NextRequest) {
 
   try {
     const tokenResult = await getAccessToken()
-    if (tokenResult.error) {
-      return NextResponse.json({
-        isPlaying: false,
-        ...(DEBUG ? { debug: { stage: 'no_access_token', reason: tokenResult.error } } : {}),
-      }, noStore)
+    if (tokenResult.error || !tokenResult.accessToken) {
+      return NextResponse.json({ providerStatus: 'unavailable', error: 'Spotify authentication unavailable' }, { ...noStore, status: 503 })
     }
 
     const accessToken = tokenResult.accessToken
-    if (!accessToken) {
-      return NextResponse.json({ isPlaying: false }, noStore)
-    }
 
     if (req.nextUrl.searchParams.get('history') === '1') {
       const historyRes = await monitoredFetch('spotify', SPOTIFY_RECENTLY_PLAYED_URL, { headers: { Authorization: `Bearer ${accessToken}` }, cache: 'no-store' })
-      if (!historyRes.ok) return NextResponse.json({ items: [] }, noStore)
+      if (!historyRes.ok) return NextResponse.json({ providerStatus: 'unavailable', error: 'Spotify history unavailable' }, { ...noStore, status: 503 })
       const history = await historyRes.json() as SpotifyRecentlyPlayedResponse
-      const items = (history.items ?? []).flatMap((item) => item.track?.name ? [{
+      if (!Array.isArray(history.items)) throw new Error('Invalid Spotify history')
+      const items = history.items.flatMap((item) => item.track?.name ? [{
         title: item.track.name,
         artist: (item.track.artists ?? []).map((artist) => artist.name).filter(Boolean).join(', '),
         albumArt: item.track.album?.images?.[0]?.url,
         songUrl: item.track.external_urls?.spotify,
         playedAt: item.played_at,
       }] : [])
-      return NextResponse.json({ items }, noStore)
+      return NextResponse.json({ providerStatus: 'healthy', items }, noStore)
     }
 
     // Primary: /v1/me/player/currently-playing
@@ -235,7 +230,7 @@ export async function GET(req: NextRequest) {
       const data = (await nowPlayingRes.json()) as SpotifyPlaybackResponse
       if (data.item) {
         const track = await mapTrackData(data, accessToken)
-        if (track) return NextResponse.json(track, noStore)
+        if (track) return NextResponse.json({ ...track, providerStatus: 'healthy' }, noStore)
       }
     }
 
@@ -251,9 +246,10 @@ export async function GET(req: NextRequest) {
       const data = (await playbackRes.json()) as SpotifyPlaybackResponse
       if (data.item) {
         const track = await mapTrackData(data, accessToken)
-        if (track) return NextResponse.json(track, noStore)
+        if (track) return NextResponse.json({ ...track, providerStatus: nowPlayingRes.ok ? 'healthy' : 'degraded' }, noStore)
       }
       return NextResponse.json({
+        providerStatus: nowPlayingRes.ok ? 'healthy' : 'degraded',
         isPlaying: false,
         ...(DEBUG
           ? {
@@ -300,6 +296,7 @@ export async function GET(req: NextRequest) {
                   : undefined
 
                 return NextResponse.json({
+                  providerStatus: 'degraded',
                   isPlaying: true,
                   title,
                   artist,
@@ -322,23 +319,11 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const playbackBodyText = DEBUG ? await playbackRes.text().catch(() => '') : ''
-    return NextResponse.json({
-      isPlaying: false,
-      ...(DEBUG
-        ? {
-            debug: {
-              nowPlayingStatus: nowPlayingRes.status,
-              playbackStatus: playbackRes.status,
-              playbackBody: playbackBodyText.slice(0, 500),
-            },
-          }
-        : {}),
-    }, noStore)
-  } catch (err) {
-    return NextResponse.json({
-      isPlaying: false,
-      ...(DEBUG ? { debug: { error: String(err) } } : {}),
-    }, noStore)
+    if (nowPlayingRes.ok && playbackRes.ok) {
+      return NextResponse.json({ providerStatus: 'healthy', isPlaying: false }, noStore)
+    }
+    return NextResponse.json({ providerStatus: 'unavailable', error: 'Spotify playback unavailable' }, { ...noStore, status: 503 })
+  } catch {
+    return NextResponse.json({ providerStatus: 'unavailable', error: 'Spotify playback unavailable' }, { ...noStore, status: 503 })
   }
 }

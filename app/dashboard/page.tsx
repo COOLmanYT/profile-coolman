@@ -1,6 +1,7 @@
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
+import { getToggles } from '@/lib/toggles'
 import DashboardClient from '@/components/DashboardClient'
 import DashboardWorkspace from '@/components/DashboardWorkspace'
 import SeasonalThemeProvider from '@/components/SeasonalThemeProvider'
@@ -13,7 +14,6 @@ import { getLegalSettings } from '@/lib/legal-settings'
 import SeasonalPreview from '@/components/SeasonalPreview'
 import SeasonalSimulationControls from '@/components/SeasonalSimulationControls'
 import ProviderHealthClient from '@/components/ProviderHealthClient'
-import { getToggles } from '@/lib/toggles'
 
 const ALLOWED_DISCORD_ID = process.env.DISCORD_USER_ID
 

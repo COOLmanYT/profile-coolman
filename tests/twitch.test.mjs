@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { getTwitchConfig, getTwitchRedirectUri } from '../lib/twitch.ts'
+import { loadTypescript } from './load-typescript.mjs'
+const { getTwitchConfig, getTwitchRedirectUri } = loadTypescript('lib/twitch.ts', { './supabase-server': { getSupabase: () => null } })
 
 // These functions read process.env, so each test snapshots and restores the
 // relevant variables to stay isolated from one another.

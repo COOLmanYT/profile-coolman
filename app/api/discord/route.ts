@@ -8,8 +8,8 @@ const noStore = { headers: { 'Cache-Control': 'no-store' } }
 export async function GET(req: NextRequest) {
   const rate = limitPublicRequest(req, 'discord')
   if (!rate.allowed) return NextResponse.json({ error: 'RATE_LIMITED' }, { status: 429, headers: { 'Retry-After': String(rate.retryAfterSeconds) } })
-  if (!DISCORD_USER_ID) {
-    return NextResponse.json({ discord_status: 'offline', activities: [] }, noStore)
+  if (!DISCORD_USER_ID || DISCORD_USER_ID === 'placeholder') {
+    return NextResponse.json({ providerStatus: 'unavailable', error: 'Discord presence unavailable' }, { ...noStore, status: 503 })
   }
   try {
     const res = await monitoredFetch('discord',
@@ -17,14 +17,15 @@ export async function GET(req: NextRequest) {
       { cache: 'no-store' }
     )
     if (!res.ok) {
-      return NextResponse.json({ discord_status: 'offline', activities: [] }, noStore)
+      return NextResponse.json({ providerStatus: 'unavailable', error: 'Discord presence unavailable' }, { ...noStore, status: 503 })
     }
     const json = await res.json()
-    if (!json.success) {
-      return NextResponse.json({ discord_status: 'offline', activities: [] }, noStore)
+    if (!json.success || !['online', 'idle', 'dnd', 'offline'].includes(json.data?.discord_status)) {
+      return NextResponse.json({ providerStatus: 'unavailable', error: 'Discord presence unavailable' }, { ...noStore, status: 503 })
     }
     const data = json.data
     return NextResponse.json({
+      providerStatus: 'healthy',
       discord_status: data.discord_status,
       activities: data.activities ?? [],
       discord_user: data.discord_user,
@@ -34,6 +35,6 @@ export async function GET(req: NextRequest) {
       active_on_discord_desktop: data.active_on_discord_desktop ?? false,
     }, noStore)
   } catch {
-    return NextResponse.json({ discord_status: 'offline', activities: [] }, noStore)
+    return NextResponse.json({ providerStatus: 'unavailable', error: 'Discord presence unavailable' }, { ...noStore, status: 503 })
   }
 }

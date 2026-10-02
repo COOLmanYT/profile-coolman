@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic'
 const TWITCH_API_URL = 'https://api.twitch.tv/helix'
 const CACHE_SECONDS = 25
 const cacheHeaders = { headers: { 'Cache-Control': `public, s-maxage=${CACHE_SECONDS}, stale-while-revalidate=40` } }
-const twitchPresenceCache = createTtlCache({ ttlMs: CACHE_SECONDS * 1000 })
+const twitchPresenceCache = createTtlCache({ ttlMs: CACHE_SECONDS * 1000, staleOnError: false })
 
 type TwitchUser = {
   id: string
@@ -35,31 +35,40 @@ type TwitchScheduleSegment = {
 }
 
 async function twitchFetch<T>(path: string, accessToken: string, clientId: string): Promise<T | null> {
-  const response = await monitoredFetch('twitch', `${TWITCH_API_URL}${path}`, {
-    headers: { Authorization: `Bearer ${accessToken}`, 'Client-Id': clientId },
-    cache: 'no-store',
-  })
-  if (!response.ok) return null
-  return response.json() as Promise<T>
+  try {
+    const response = await monitoredFetch('twitch', `${TWITCH_API_URL}${path}`, {
+      headers: { Authorization: `Bearer ${accessToken}`, 'Client-Id': clientId },
+      cache: 'no-store',
+    })
+    if (response.status === 404 && path.startsWith('/schedule?')) return { data: { segments: [] } } as T
+    if (!response.ok) return null
+    return await response.json() as T
+  } catch {
+    return null
+  }
 }
 
 export async function GET(req: NextRequest) {
   const rate = limitPublicRequest(req, 'twitch')
   if (!rate.allowed) return NextResponse.json({ error: 'RATE_LIMITED' }, { status: 429, headers: { 'Retry-After': String(rate.retryAfterSeconds) } })
-  const presence = await twitchPresenceCache.get(getTwitchPresence)
-  return NextResponse.json(presence, cacheHeaders)
+  try {
+    const presence = await twitchPresenceCache.get(getTwitchPresence)
+    return NextResponse.json(presence, cacheHeaders)
+  } catch {
+    return NextResponse.json({ providerStatus: 'unavailable', error: 'Twitch presence unavailable' }, { status: 503, headers: { 'Cache-Control': 'no-store' } })
+  }
 }
 
 async function getTwitchPresence() {
   const config = getTwitchConfig()
   const accessToken = await getTwitchAccessToken()
   const login = process.env.TWITCH_BROADCASTER_LOGIN
-  if (!config || !accessToken || !login) return { isLive: false }
+  if (!config || !accessToken || !login || login === 'placeholder') throw new Error('Twitch unavailable')
 
   try {
     const users = await twitchFetch<{ data?: TwitchUser[] }>(`/users?login=${encodeURIComponent(login)}`, accessToken, config.clientId)
     const user = users?.data?.[0]
-    if (!user) return { isLive: false }
+    if (!user) throw new Error('Twitch user unavailable')
 
     const [streams, followers, subscriptions, schedule] = await Promise.all([
       twitchFetch<{ data?: TwitchStream[] }>(`/streams?user_id=${encodeURIComponent(user.id)}`, accessToken, config.clientId),
@@ -67,10 +76,12 @@ async function getTwitchPresence() {
       twitchFetch<{ total?: number }>(`/subscriptions?broadcaster_id=${encodeURIComponent(user.id)}`, accessToken, config.clientId),
       twitchFetch<{ data?: { segments?: TwitchScheduleSegment[] } }>(`/schedule?broadcaster_id=${encodeURIComponent(user.id)}`, accessToken, config.clientId),
     ])
-    const stream = streams?.data?.[0]
+    if (!Array.isArray(streams?.data)) throw new Error('Twitch streams unavailable')
+    const stream = streams.data[0]
     const nextStream = schedule?.data?.segments?.find((segment) => !segment.canceled_until && Date.parse(segment.start_time) > Date.now())
 
     return {
+      providerStatus: typeof followers?.total === 'number' && typeof subscriptions?.total === 'number' && Array.isArray(schedule?.data?.segments) ? 'healthy' : 'degraded',
       isLive: Boolean(stream),
       followers: followers?.total ?? null,
       subscribers: subscriptions?.total ?? null,
@@ -91,6 +102,6 @@ async function getTwitchPresence() {
       }),
     }
   } catch {
-    return { isLive: false }
+    throw new Error('Twitch presence unavailable')
   }
 }

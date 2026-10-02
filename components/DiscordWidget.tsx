@@ -1,7 +1,7 @@
 'use client'
 
+import { startPolling, fetchWidgetJson } from '@/lib/widget-polling.mjs'
 import { memo, useEffect, useRef, useState, type ReactNode } from 'react'
-import { usePolling } from './usePolling'
 import Image from 'next/image'
 
 interface DiscordActivity {
@@ -304,38 +304,19 @@ function DiscordWidget({
   const [loading, setLoading] = useState(true)
   const [isUnavailable, setIsUnavailable] = useState(false)
   const [statusPulse, setStatusPulse] = useState(false)
-  const mountedRef = useRef(true)
-  const presenceRef = useRef<DiscordPresence | null>(null)
   const previousStatusRef = useRef<DiscordPresence['discord_status'] | null>(null)
 
-  useEffect(() => {
-    presenceRef.current = presence
-  }, [presence])
-
-  useEffect(() => {
-    mountedRef.current = true
-    return () => { mountedRef.current = false }
-  }, [])
-
-  usePolling(async (signal) => {
-    try {
-      const res = await fetch('/api/discord', { signal })
-      if (res.ok) {
-        const data = await res.json()
-        if (!mountedRef.current) return
-        setPresence(data)
-        setIsUnavailable(false)
-      } else {
-        if (mountedRef.current) setIsUnavailable(true)
-      }
-    } catch {
-      if (!mountedRef.current || signal.aborted) return
-      if (!presenceRef.current) setPresence(null)
-      setIsUnavailable(true)
-    } finally {
-      if (mountedRef.current) setLoading(false)
-    }
-  }, { intervalMs: DISCORD_POLL_MS })
+  useEffect(() => startPolling({
+    intervalMs: DISCORD_POLL_MS,
+    poll: async (signal: AbortSignal) => {
+      const data = await fetchWidgetJson('/api/discord', signal) as DiscordPresence
+      if (signal.aborted) return
+      setPresence(data)
+      setIsUnavailable(false)
+      setLoading(false)
+    },
+    onError: () => { setIsUnavailable(true); setLoading(false) },
+  }), [])
 
   useEffect(() => {
     const currentStatus = presence?.discord_status

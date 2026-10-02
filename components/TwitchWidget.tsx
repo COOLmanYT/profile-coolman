@@ -1,8 +1,8 @@
 'use client'
 
 import Image from 'next/image'
-import { memo, useEffect, useRef, useState } from 'react'
-import { usePolling } from './usePolling'
+import { startPolling, fetchWidgetJson } from '@/lib/widget-polling.mjs'
+import { memo, useEffect, useState } from 'react'
 
 interface TwitchPresence {
   isLive: boolean
@@ -50,28 +50,23 @@ function downloadCalendarEvent(stream: NonNullable<TwitchPresence['nextStream']>
 function TwitchWidget({ showProfile = true, showStats = true, showLive = true, showSchedule = true, scheduleTimeZone }: { showProfile?: boolean; showStats?: boolean; showLive?: boolean; showSchedule?: boolean; scheduleTimeZone?: string }) {
   const [presence, setPresence] = useState<TwitchPresence | null>(null)
   const [loaded, setLoaded] = useState(false)
-  const mountedRef = useRef(true)
+  const [isUnavailable, setIsUnavailable] = useState(false)
 
-  useEffect(() => {
-    mountedRef.current = true
-    return () => { mountedRef.current = false }
-  }, [])
-
-  usePolling(async (signal) => {
-    try {
-      const response = await fetch('/api/twitch', { cache: 'no-store', signal })
-      const data = await response.json() as TwitchPresence
-      if (mountedRef.current) setPresence(data)
-    } catch (error) {
-      if (!mountedRef.current || signal.aborted || (error instanceof DOMException && error.name === 'AbortError')) return
-      if (mountedRef.current) setPresence(null)
-    } finally {
-      if (mountedRef.current) setLoaded(true)
-    }
-  }, { intervalMs: TWITCH_POLL_MS })
+  useEffect(() => startPolling({
+    intervalMs: TWITCH_POLL_MS,
+    poll: async (signal: AbortSignal) => {
+      const data = await fetchWidgetJson('/api/twitch', signal) as TwitchPresence
+      if (signal.aborted) return
+      setPresence(data)
+      setIsUnavailable(false)
+      setLoaded(true)
+    },
+    onError: () => { setIsUnavailable(true); setLoaded(true) },
+  }), [])
 
   return (
     <div className="w-full rounded-2xl border border-[#9146ff]/35 bg-[#170b29]/75 p-3 shadow-lg shadow-[#9146ff]/10">
+      {isUnavailable && <p role="status" className="mb-2 text-xs text-white/55">Twitch temporarily unavailable</p>}
       {!loaded ? (
         <div className="h-24 animate-pulse rounded-xl bg-white/10" />
       ) : (
@@ -84,8 +79,8 @@ function TwitchWidget({ showProfile = true, showStats = true, showLive = true, s
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
                 <p className="truncate text-sm font-semibold leading-tight text-white">{presence?.channelName ?? 'COOLmanYT'}</p>
-                <span className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${presence?.isLive ? 'bg-red-500 animate-pulse' : 'bg-white/35'}`} aria-hidden="true" />
-                <span className={`text-[9px] font-bold uppercase tracking-wider ${presence?.isLive ? 'text-red-300' : 'text-white/45'}`}>{presence?.isLive ? 'Live' : 'Offline'}</span>
+                <span className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${!isUnavailable && presence?.isLive ? 'bg-red-500 animate-pulse' : 'bg-white/35'}`} aria-hidden="true" />
+                <span className={`text-[9px] font-bold uppercase tracking-wider ${!isUnavailable && presence?.isLive ? 'text-red-300' : 'text-white/45'}`}>{isUnavailable ? 'Unavailable' : presence?.isLive ? 'Live' : 'Offline'}</span>
               </div>
               <p className="truncate text-[11px] text-[#bf94ff]">{presence?.channelLogin ? `twitch.tv/${presence.channelLogin}` : 'twitch.tv/coolman_yt1'}</p>
             </div>
@@ -94,7 +89,7 @@ function TwitchWidget({ showProfile = true, showStats = true, showLive = true, s
             <div className="rounded-lg bg-white/5 px-2 py-1.5 text-white/75"><span className="block text-sm font-semibold text-white">{presence?.followers?.toLocaleString() ?? '—'}</span>Followers</div>
             <div className="rounded-lg bg-white/5 px-2 py-1.5 text-white/75"><span className="block text-sm font-semibold text-white">{presence?.subscribers?.toLocaleString() ?? '—'}</span>Subscribers</div>
           </div>}
-          {showLive && presence?.isLive && (
+          {showLive && !isUnavailable && presence?.isLive && (
             <div className={`${showProfile || showStats ? 'mt-3' : ''}`}>
               <div className="mb-1.5 flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" aria-hidden="true" />

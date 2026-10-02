@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { usePolling } from './usePolling'
+import { useEffect, useState } from 'react'
+import { startPolling, fetchWidgetJson } from '@/lib/widget-polling.mjs'
 
 type HealthState = 'operational' | 'maintenance' | 'degraded' | 'outage' | 'unknown'
 type StatusData = { services: Array<{ name: string; state: HealthState; label: string }>; summary?: Array<{ name: string; state: HealthState; label: string }> }
@@ -14,16 +14,14 @@ const STATE_STYLE: Record<HealthState, string> = {
 export default function StatusWidget() {
   const [status, setStatus] = useState<StatusData | null>(null)
 
-  usePolling(async () => {
-    try {
-      const response = await fetch('/api/status', { cache: 'no-store' })
-      if (!response.ok) throw new Error()
-      const data = await response.json() as StatusData
-      setStatus(data)
-    } catch {
-      setStatus({ services: [], summary: [{ name: 'Profile page', state: 'unknown', label: 'Status temporarily unavailable' }, { name: 'COOLman brand', state: 'unknown', label: 'Status temporarily unavailable' }] })
-    }
-  }, { intervalMs: 60_000 })
+  useEffect(() => startPolling({
+    intervalMs: 60_000,
+    poll: async (signal: AbortSignal) => {
+      const data = await fetchWidgetJson('/api/status', signal) as StatusData
+      if (!signal.aborted) setStatus(data)
+    },
+    onError: () => setStatus({ services: [], summary: [{ name: 'Profile page', state: 'unknown', label: 'Status temporarily unavailable' }, { name: 'COOLman brand', state: 'unknown', label: 'Status temporarily unavailable' }] }),
+  }), [])
 
   const services = status?.summary ?? [{ name: 'Profile page', state: 'unknown' as const, label: 'Checking status…' }, { name: 'COOLman brand', state: 'unknown' as const, label: 'Checking status…' }]
   return (

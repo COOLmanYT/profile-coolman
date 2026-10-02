@@ -28,7 +28,9 @@ export default function ProviderHealthClient() {
         const response = await fetch(provider.endpoint, { cache: 'no-store' })
         if (!response.ok) return { name: provider.name, state: 'error', detail: `Endpoint returned ${response.status}`, checkedAt: new Date() }
         const data = await response.json()
-        return { name: provider.name, state: provider.warning?.(data) ? 'warning' : 'healthy', detail: provider.detail(data), checkedAt: new Date() }
+        if (data.providerStatus === 'unavailable') return { name: provider.name, state: 'error', detail: 'Provider unavailable', checkedAt: new Date() }
+        const degraded = data.providerStatus === 'degraded'
+        return { name: provider.name, state: degraded || provider.warning?.(data) ? 'warning' : 'healthy', detail: degraded ? 'Partial data or fallback active' : provider.detail(data), checkedAt: new Date() }
       } catch {
         return { name: provider.name, state: 'error', detail: 'Could not reach endpoint', checkedAt: new Date() }
       }

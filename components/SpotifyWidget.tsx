@@ -1,7 +1,7 @@
 'use client'
 
+import { startPolling, fetchWidgetJson } from '@/lib/widget-polling.mjs'
 import { memo, useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { usePolling } from './usePolling'
 import Image from 'next/image'
 
 interface SpotifyTrack {
@@ -133,7 +133,8 @@ function SpotifyWidget({ showWidget = true, showPosition = true, showEmbed = tru
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false)
   const [history, setHistory] = useState<SpotifyHistoryItem[]>([])
   const [historyLoaded, setHistoryLoaded] = useState(false)
-  const mountedRef = useRef(true)
+  const [historyUnavailable, setHistoryUnavailable] = useState(false)
+  const [isUnavailable, setIsUnavailable] = useState(false)
 
   const formatDuration = (ms: number) => {
     if (!Number.isFinite(ms) || ms <= 0) return '0:00'
@@ -143,54 +144,33 @@ function SpotifyWidget({ showWidget = true, showPosition = true, showEmbed = tru
     return `${minutes}:${String(seconds).padStart(2, '0')}`
   }
 
-  useEffect(() => {
-    mountedRef.current = true
-    return () => { mountedRef.current = false }
-  }, [])
-
-  usePolling(async (signal) => {
-    try {
-      const res = await fetch('/api/spotify', { signal })
-      const data = await res.json().catch(() => ({ isPlaying: false }))
-      if (!mountedRef.current) return
-      setTrack((prev) => {
-        const next = data as SpotifyTrack
-        if (isSameTrackState(prev, next)) {
-          return prev
-        }
-        return next
-      })
+  useEffect(() => startPolling({
+    intervalMs: SPOTIFY_POLL_MS,
+    poll: async (signal: AbortSignal) => {
+      const data = await fetchWidgetJson('/api/spotify', signal) as SpotifyTrack
+      if (signal.aborted) return
+      setTrack((prev) => isSameTrackState(prev, data) ? prev : data)
       setDisplayProgressMs(Math.max(0, data.progressMs ?? 0))
-    } catch {
-      if (!mountedRef.current || signal.aborted) return
-      setTrack({ isPlaying: false })
-    } finally {
-      if (mountedRef.current) setHasLoadedOnce(true)
-    }
-  }, { intervalMs: SPOTIFY_POLL_MS })
+      setIsUnavailable(false)
+      setHasLoadedOnce(true)
+    },
+    onError: () => { setIsUnavailable(true); setHasLoadedOnce(true) },
+  }), [])
 
-  const showHistoryRef = useRef(showHistory)
   useEffect(() => {
-    showHistoryRef.current = showHistory
-  }, [showHistory])
-
-  usePolling(async (signal) => {
-    if (!showHistoryRef.current) return
-    try {
-      const response = await fetch('/api/spotify?history=1', { cache: 'no-store', signal })
-      const data = await response.json() as { items?: SpotifyHistoryItem[] }
-      if (mountedRef.current) {
+    if (!showHistory) return
+    return startPolling({
+      intervalMs: 120_000,
+      poll: async (signal: AbortSignal) => {
+        const data = await fetchWidgetJson('/api/spotify?history=1', signal) as { items?: SpotifyHistoryItem[] }
+        if (signal.aborted) return
         setHistory(data.items ?? [])
+        setHistoryUnavailable(false)
         setHistoryLoaded(true)
-      }
-    } catch (error) {
-      if (!mountedRef.current || signal.aborted || (error instanceof DOMException && error.name === 'AbortError')) return
-      if (mountedRef.current) {
-        setHistory([])
-        setHistoryLoaded(true)
-      }
-    }
-  }, { intervalMs: 120_000 })
+      },
+      onError: () => { setHistoryUnavailable(true); setHistoryLoaded(true) },
+    })
+  }, [showHistory])
 
   useEffect(() => {
     if (track?.durationMs === undefined || track?.durationMs === null) return
@@ -198,13 +178,13 @@ function SpotifyWidget({ showWidget = true, showPosition = true, showEmbed = tru
   }, [track?.songUrl, track?.progressMs, track?.durationMs])
 
   useEffect(() => {
-    if (!track?.isPlaying || track.durationMs === undefined || track.durationMs === null) return
+    if (isUnavailable || !track?.isPlaying || track.durationMs === undefined || track.durationMs === null) return
     const durationMs = track.durationMs
     const tick = setInterval(() => {
       setDisplayProgressMs((prev) => Math.min(prev + PROGRESS_TICK_MS, durationMs))
     }, PROGRESS_TICK_MS)
     return () => clearInterval(tick)
-  }, [track?.isPlaying, track?.durationMs])
+  }, [isUnavailable, track?.isPlaying, track?.durationMs])
 
   const artistsLabel = track?.artists?.join(', ') ?? track?.artist ?? ''
   const durationMs = Math.max(0, track?.durationMs ?? 0)
@@ -225,6 +205,7 @@ function SpotifyWidget({ showWidget = true, showPosition = true, showEmbed = tru
         </svg>
         <span className="text-[#1DB954] text-[10px] font-bold tracking-widest uppercase">Listening on Spotify</span>
       </div>
+      {showWidget && isUnavailable && <p role="status" className="mb-2 text-xs text-white/55">Spotify temporarily unavailable</p>}
       {showWidget && (!hasLoadedOnce ? (
         <div className="flex items-center gap-2.5">
           <div className="w-10 h-10 bg-white/10 rounded-lg animate-pulse flex-shrink-0" />
@@ -233,7 +214,7 @@ function SpotifyWidget({ showWidget = true, showPosition = true, showEmbed = tru
             <div className="h-2.5 bg-white/10 rounded animate-pulse w-1/2" />
           </div>
         </div>
-      ) : hasPlayback ? (
+      ) : isUnavailable ? null : hasPlayback ? (
         <div className="space-y-2.5">
           <div className="flex items-center gap-2.5">
           {track.albumArt && (
@@ -315,7 +296,7 @@ function SpotifyWidget({ showWidget = true, showPosition = true, showEmbed = tru
       ) : (
         <p className="text-white/40 text-xs">Not listening right now</p>
       ))}
-      {showHistory && <RecentHistory items={history} isLoading={!historyLoaded} />}
+      {showHistory && (historyUnavailable ? <p role="status" className="text-xs text-white/55">Spotify history temporarily unavailable</p> : <RecentHistory items={history} isLoading={!historyLoaded} />)}
     </div>
   )
 }

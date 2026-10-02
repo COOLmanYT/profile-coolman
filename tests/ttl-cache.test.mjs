@@ -1,5 +1,13 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
+
+test('health-sensitive caches reject refresh failures instead of returning stale success', async () => {
+  let now = 0
+  const cache = createTtlCache({ ttlMs: 10, now: () => now, staleOnError: false })
+  assert.equal(await cache.get(async () => 'healthy'), 'healthy')
+  now = 11
+  await assert.rejects(cache.get(async () => { throw new Error('unavailable') }), /unavailable/)
+})
 import { createTtlCache } from '../lib/ttl-cache.mjs'
 
 test('returns the cached value until the TTL expires', async () => {

@@ -1,3 +1,4 @@
+import { revalidatePath } from 'next/cache'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
@@ -16,6 +17,8 @@ export async function POST(req: NextRequest) {
   try {
     const settings = normaliseSeasonalSettings(await req.json())
     if (!(await saveSeasonalSettings(settings))) return NextResponse.json({ error: 'Unable to save settings' }, { status: 500 })
+    revalidatePath('/')
+    revalidatePath('/options')
     return NextResponse.json({ ok: true, settings })
   } catch {
     return NextResponse.json({ error: 'Invalid seasonal settings' }, { status: 400 })

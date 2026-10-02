@@ -12,6 +12,7 @@ const geist = localFont({
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://profile.coolmanyt.com'),
   title: 'COOLman',
   description: 'just a cool dude making content',
 }
