@@ -37,6 +37,17 @@ test('toggle saves persist the value before invalidating the homepage', async ()
   assert.deepEqual(route.invalidations, ['/'])
 })
 
+test('YouTube module and section controls persist independently through owner settings', async () => {
+  for (const id of ['youtube', 'youtube_stats', 'youtube_latest', 'youtube_live']) {
+    assert.equal(DEFAULT_TOGGLES[id], true)
+    const route = toggleRoute()
+    assert.equal((await route.POST(request({ id, value: false }))).status, 200)
+    assert.equal(route.writes[0].id, id)
+    assert.equal(route.writes[0].value, false)
+    assert.deepEqual(route.invalidations, ['/'])
+  }
+})
+
 test('toggle save rejects missing database configuration without success or invalidation', async () => {
   for (const key of keys.slice(1)) {
     const value = process.env[key]

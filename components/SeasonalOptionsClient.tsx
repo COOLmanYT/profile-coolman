@@ -95,15 +95,19 @@ export default function SeasonalOptionsClient({ legalSimpleModeDefault }: { lega
         <section className="mt-8 border-t border-white/10 pt-5">
           <h2 className="text-base font-semibold">Hide modules for this visit</h2>
           <p className="mt-1 text-xs text-white/50">These only affect your browser and clear after refresh.</p>
-          {([['spotify', 'Spotify listening'], ['twitch', 'Twitch presence'], ['discord', 'Discord presence']] as [TemporaryModule, string][]).map(([module, label]) => (
+          {([['spotify', 'Spotify listening'], ['twitch', 'Twitch presence'], ['youtube', 'YouTube channel'], ['discord', 'Discord presence']] as [TemporaryModule, string][]).map(([module, label]) => (
             <label key={module} className="mt-3 flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-sm"><span>{label}</span><input type="checkbox" checked={hiddenModules.includes(module)} onChange={(event) => updateModule(module, event.target.checked)} className="h-4 w-4 accent-red-600" /></label>
           ))}
         </section>
         <section className="mt-8 border-t border-white/10 pt-5">
           <h2 className="text-base font-semibold">Media preferences</h2>
-          <p className="mt-1 text-xs text-white/50">Saved only in this browser. Latest YouTube content is off by default.</p>
-          <label className="mt-4 flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-sm"><span>Show latest YouTube Short</span><input type="checkbox" checked={mediaPreferences.showLatestShort} onChange={(event) => updateMedia({ ...mediaPreferences, showLatestShort: event.target.checked }, `Latest YouTube Short ${event.target.checked ? 'shown' : 'hidden'}`)} className="h-4 w-4 accent-red-600" /></label>
-          <label className="mt-2 flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-sm"><span>Show latest YouTube long-form video</span><input type="checkbox" checked={mediaPreferences.showLatestLongform} onChange={(event) => updateMedia({ ...mediaPreferences, showLatestLongform: event.target.checked }, `Latest long-form video ${event.target.checked ? 'shown' : 'hidden'}`)} className="h-4 w-4 accent-red-600" /></label>
+          <p className="mt-1 text-xs text-white/50">Saved only in this browser. Global Dashboard settings take priority.</p>
+          {([
+            ['showYoutube', 'Show YouTube widget'],
+            ['showYoutubeStats', 'Show channel stats and last upload date'],
+            ['showLatestUpload', 'Show latest upload (Shorts, videos and streams)'],
+            ['showYoutubeLive', 'Show YouTube live status'],
+          ] as const).map(([key, label]) => <label key={key} className="mt-3 flex items-center justify-between gap-3 rounded-lg bg-white/5 px-3 py-2 text-sm"><span>{label}</span><input type="checkbox" checked={mediaPreferences[key]} onChange={(event) => updateMedia({ ...mediaPreferences, [key]: event.target.checked }, `${label}: ${event.target.checked ? 'on' : 'off'}`)} className="h-4 w-4 shrink-0 accent-red-600" /></label>)}
           <label className="mt-4 block text-xs text-white/60">Twitch schedule time zone<select value={mediaPreferences.scheduleTimeZone ?? ''} onChange={(event) => updateMedia({ ...mediaPreferences, scheduleTimeZone: event.target.value || null }, 'Twitch schedule time zone saved')} className="mt-1 w-full rounded bg-black/25 px-2 py-2 text-sm text-white"><option value="">Use your local time zone</option><option value="Australia/Sydney">Australia/Sydney</option><option value="UTC">UTC</option><option value="America/Los_Angeles">America/Los Angeles</option><option value="America/New_York">America/New York</option><option value="Europe/London">Europe/London</option></select></label>
         </section>
         <section className="mt-8 border-t border-white/10 pt-5">

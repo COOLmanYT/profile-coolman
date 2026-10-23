@@ -9,13 +9,13 @@ export type VisitorSimulation = {
   dateTime: string | null
   dateTimeSetAt: number | null
 }
-export type TemporaryModule = 'spotify' | 'twitch' | 'discord'
+export type TemporaryModule = 'spotify' | 'twitch' | 'discord' | 'youtube'
 export type TemporaryFeature =
   | 'spotify_widget' | 'spotify_position' | 'spotify_embed' | 'spotify_playlist' | 'spotify_history'
   | 'twitch_profile' | 'twitch_stats' | 'twitch_live' | 'twitch_schedule'
   | 'discord_profile' | 'discord_banner' | 'discord_badges' | 'discord_decoration' | 'discord_devices'
   | 'discord_status' | 'discord_music' | 'discord_video' | 'discord_games' | 'discord_other'
-export type MediaPreferences = { showLatestShort: boolean; showLatestLongform: boolean; scheduleTimeZone: string | null }
+export type MediaPreferences = { showYoutube: boolean; showYoutubeStats: boolean; showLatestUpload: boolean; showYoutubeLive: boolean; scheduleTimeZone: string | null }
 
 type VisitorPreferencesValue = {
   simulation: VisitorSimulation
@@ -29,7 +29,7 @@ type VisitorPreferencesValue = {
 }
 
 const DEFAULT_SIMULATION: VisitorSimulation = { timeZone: null, location: 'auto', dateTime: null, dateTimeSetAt: null }
-const DEFAULT_MEDIA_PREFERENCES: MediaPreferences = { showLatestShort: false, showLatestLongform: false, scheduleTimeZone: null }
+const DEFAULT_MEDIA_PREFERENCES: MediaPreferences = { showYoutube: true, showYoutubeStats: true, showLatestUpload: true, showYoutubeLive: true, scheduleTimeZone: null }
 const MEDIA_PREFERENCES_KEY = 'coolman-media-preferences'
 const VisitorPreferencesContext = createContext<VisitorPreferencesValue | null>(null)
 
@@ -41,7 +41,7 @@ export default function VisitorPreferencesProvider({ children }: { children: Rea
   useEffect(() => {
     try {
       const stored = JSON.parse(localStorage.getItem(MEDIA_PREFERENCES_KEY) ?? '{}') as Partial<MediaPreferences>
-      setMediaPreferencesState({ showLatestShort: stored.showLatestShort === true, showLatestLongform: stored.showLatestLongform === true, scheduleTimeZone: typeof stored.scheduleTimeZone === 'string' ? stored.scheduleTimeZone : null })
+      setMediaPreferencesState({ showYoutube: stored.showYoutube !== false, showYoutubeStats: stored.showYoutubeStats !== false, showLatestUpload: stored.showLatestUpload !== false, showYoutubeLive: stored.showYoutubeLive !== false, scheduleTimeZone: typeof stored.scheduleTimeZone === 'string' ? stored.scheduleTimeZone : null })
     } catch { /* Storage is optional. */ }
   }, [])
   const setModuleHidden = (module: TemporaryModule, hidden: boolean) => {

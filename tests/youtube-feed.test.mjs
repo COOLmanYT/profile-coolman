@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { parseLatestYoutubeVideos, parseYoutubeViewCount } from '../lib/youtube-feed.mjs'
+import { parseLatestYoutubeVideos, parseYoutubeChannel, parseYoutubeLive, parseYoutubeViewCount } from '../lib/youtube-feed.mjs'
+import { loadTypescript, nextServer } from './load-typescript.mjs'
+import * as parsers from '../lib/youtube-feed.mjs'
 
 test('separates the newest short and long-form YouTube videos', () => {
   const feed = `<feed><entry><yt:videoId>short-id</yt:videoId><title>Short &amp; sweet</title><published>2026-01-02T00:00:00Z</published><link rel="alternate" href="https://www.youtube.com/shorts/short-id"/></entry><entry><yt:videoId>long-id</yt:videoId><title>Long video</title><published>2026-01-01T00:00:00Z</published><link rel="alternate" href="https://www.youtube.com/watch?v=long-id"/></entry></feed>`
@@ -8,8 +10,95 @@ test('separates the newest short and long-form YouTube videos', () => {
   assert.equal(videos.short?.title, 'Short & sweet')
   assert.equal(videos.longform?.url, 'https://www.youtube.com/watch?v=long-id')
   assert.equal(videos.short?.id, 'short-id')
+  assert.equal(videos.latest?.id, 'short-id')
   assert.equal(parseYoutubeViewCount('<script>{\"interactionCount\":\"12,345\"}</script>'), 12345)
   assert.equal(parseYoutubeViewCount('<script>{\"viewCount\":987}</script>'), 987)
+})
+
+test('latest upload sorts all formats by publication date and preserves zero feed views', () => {
+  const entry = (id, date, url) => `<entry><yt:videoId>${id}</yt:videoId><title>${id}</title><published>${date}</published><link href="${url}"/><media:statistics views="0"/></entry>`
+  const videos = parseLatestYoutubeVideos(`<feed>${entry('old-short', '2026-01-01', 'https://www.youtube.com/shorts/old-short')}${entry('new-stream', '2026-01-03', 'https://www.youtube.com/watch?v=new-stream')}${entry('middle', '2026-01-02', 'https://www.youtube.com/watch?v=middle')}</feed>`)
+  assert.equal(videos.latest.id, 'new-stream')
+  assert.equal(videos.latest.views, 0)
+  assert.equal(parseLatestYoutubeVideos('<feed/>').latest, undefined)
+})
+
+test('channel stats read structured public counts and tolerate unavailable data', () => {
+  const data = { metadata: { channelMetadataRenderer: { title: 'Channel } \\" name' } }, contents: { aboutChannelViewModel: { subscriberCountText: '1.2K subscribers', viewCountText: { simpleText: '23,456 views' }, videoCountText: { runs: [{ text: '42 videos' }] } } } }
+  assert.deepEqual(parseYoutubeChannel(`var ytInitialData = ${JSON.stringify(data)};</script>`), { title: 'Channel } \\" name', subscribers: '1.2K subscribers', totalViews: '23,456 views', videoCount: '42 videos' })
+  assert.deepEqual(parseYoutubeChannel('Consent required'), {})
+  assert.equal(parseYoutubeChannel(`window["ytInitialData"] = ${JSON.stringify(data)};`).totalViews, '23,456 views')
+  assert.deepEqual(parseYoutubeChannel('ytInitialData = {bad}'), {})
+})
+
+test('live detection rejects ended, upcoming, unrelated and unavailable players', () => {
+  const player = (channelId, live) => `var ytInitialPlayerResponse = ${JSON.stringify({ videoDetails: { channelId, videoId: 'stream', title: 'Live now' }, microformat: { playerMicroformatRenderer: { liveBroadcastDetails: { isLiveNow: live } } } })};`
+  assert.equal(parseYoutubeLive(player('channel', true), 'channel').status, 'live')
+  assert.equal(parseYoutubeLive(player('other', true), 'channel').status, 'unknown')
+  assert.equal(parseYoutubeLive(player('channel', false), 'channel').status, 'unknown')
+  assert.equal(parseYoutubeLive('Consent required', 'channel').status, 'unknown')
+  assert.equal(parseYoutubeLive(`var ytInitialData = {"metadata":{"channelMetadataRenderer":{"externalId":"channel"}}};`, 'channel').status, 'offline')
+})
+
+test('YouTube route keeps uploads when channel stats and live data fail, and rate limits before fetching', async () => {
+  const original = process.env.YOUTUBE_API_KEY
+  delete process.env.YOUTUBE_API_KEY
+  try {
+    const calls = []
+    let allowed = true
+    const { GET } = loadTypescript('app/api/youtube/route.ts', {
+      'next/server': nextServer,
+      '@/lib/youtube-feed.mjs': parsers,
+      '@/lib/rate-limit.mjs': { limitPublicRequest: () => ({ allowed, retryAfterSeconds: 30 }) },
+      '@/lib/provider-monitor.mjs': { monitoredFetch: async (_provider, url) => {
+        calls.push(url)
+        if (url.includes('/feeds/')) return new Response('<feed><entry><yt:videoId>latest</yt:videoId><title>New Short</title><published>2026-01-04</published><media:statistics views="17"/></entry></feed>')
+        throw new Error('unavailable')
+      } },
+    })
+    const data = await (await GET({})).json()
+    assert.equal(data.latest.id, 'latest')
+    assert.equal(data.latest.views, 17)
+    assert.equal(data.live.status, 'unknown')
+    assert.equal(data.uploadsUnavailable, false)
+    assert.equal(calls.length, 3)
+    allowed = false
+    const limited = await GET({})
+    assert.equal(limited.status, 429)
+    assert.equal(limited.headers.get('Retry-After'), '30')
+    assert.equal(calls.length, 3)
+  } finally {
+    if (original === undefined) delete process.env.YOUTUBE_API_KEY
+    else process.env.YOUTUBE_API_KEY = original
+  }
+})
+
+test('official channel stats preserve zero counts, hide private subscribers and fall back on API failures', async () => {
+  const original = process.env.YOUTUBE_API_KEY
+  process.env.YOUTUBE_API_KEY = 'test-only-key'
+  try {
+    for (const apiFails of [false, true]) {
+      const { GET } = loadTypescript('app/api/youtube/route.ts', {
+        'next/server': nextServer,
+        '@/lib/youtube-feed.mjs': parsers,
+        '@/lib/rate-limit.mjs': { limitPublicRequest: () => ({ allowed: true }) },
+        '@/lib/provider-monitor.mjs': { monitoredFetch: async (_provider, url) => {
+          if (url.includes('googleapis.com')) return apiFails ? new Response('', { status: 403 }) : Response.json({ items: [{ snippet: { title: 'Official channel' }, statistics: { viewCount: '0', videoCount: '0', subscriberCount: '123', hiddenSubscriberCount: true } }] })
+          if (url.includes('/about')) return new Response('var ytInitialData = {"contents":{"aboutChannelViewModel":{"viewCountText":"12 views"}}};')
+          return new Response('Consent required')
+        } },
+      })
+      const data = await (await GET({})).json()
+      assert.equal(data.channel.totalViews, apiFails ? '12 views' : '0')
+      assert.equal(data.channel.subscribers, undefined)
+      assert.equal(data.uploadsUnavailable, true)
+      assert.equal(data.live.status, 'unknown')
+      assert.equal(JSON.stringify(data).includes('test-only-key'), false)
+    }
+  } finally {
+    if (original === undefined) delete process.env.YOUTUBE_API_KEY
+    else process.env.YOUTUBE_API_KEY = original
+  }
 })
 
 test('accepts YouTube feed links with attributes in any order and falls back to a canonical watch URL', () => {

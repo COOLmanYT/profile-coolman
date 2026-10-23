@@ -112,7 +112,11 @@ export default function ProfileCard({ toggles, preview = false }: ProfileCardPro
           />
         )}
 
-        {toggles.youtube !== false && <YouTubeWidget showShort={mediaPreferences.showLatestShort} showLongform={mediaPreferences.showLatestLongform} />}
+        {toggles.youtube !== false && (preview || (mediaPreferences.showYoutube && !hiddenModules.includes('youtube'))) && <YouTubeWidget
+          showStats={(toggles.youtube_stats ?? true) && (preview || mediaPreferences.showYoutubeStats)}
+          showLatest={(toggles.youtube_latest ?? true) && (preview || mediaPreferences.showLatestUpload)}
+          showLive={(toggles.youtube_live ?? true) && (preview || mediaPreferences.showYoutubeLive)}
+        />}
 
         {/* Social Links */}
         <SocialLinks />

@@ -115,6 +115,14 @@ Recommended toggle IDs include:
 - `discord_web`
 - `discord_desktop`
 
+## YouTube widget
+
+The YouTube section shows the newest public upload from the channel feed across all formats, including Shorts, regular videos and stream uploads. It includes the thumbnail, title, publication date and view count, plus subscribers, total channel views, public video count, last upload date and live status. Uploads and totals refresh from YouTube at most every 15 minutes; live status refreshes every minute while the page is visible. Failed or unrecognized responses display unavailable data rather than zero counts or a guessed offline status.
+
+The Dashboard controls the entire `youtube` module and its `youtube_stats`, `youtube_latest` and `youtube_live` sections. Visitor **Options → Media preferences** offers the same controls saved in that browser, and **Hide modules for this visit** provides a temporary override. Global settings always take priority. The latest-upload control replaces the old separate Short/long-form preferences and defaults on.
+
+Public YouTube pages supply channel totals by default. Optionally set the server-only `YOUTUBE_API_KEY` with YouTube Data API v3 enabled for [official channel statistics](https://developers.google.com/youtube/v3/docs/channels/); public pages remain the fallback. Subscriber counts can be rounded or hidden by YouTube. No API key is sent to the browser. YouTube page changes or consent screens may make individual fields unavailable while the rest of the widget continues to work.
+
 ## Connect Twitch
 
 Set `TWITCH_REDIRECT_URI` to the exact public URL of this profile deployment. Register that same URL in your Twitch Developer application, for example `https://profile.coolmanyt.com/api/twitch/callback`, plus `http://localhost:3000/api/twitch/callback` for local development. In Vercel, set `TWITCH_BROADCASTER_LOGIN=coolman_yt1` as well as the Twitch client credentials and redirect URI. After setting these values, sign in to the dashboard and select **Connect Twitch**. Approve the `moderator:read:followers` and `channel:read:subscriptions` scopes to display follower and subscriber totals.
