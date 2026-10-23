@@ -3,7 +3,7 @@
 import { startPolling, fetchWidgetJson } from '@/lib/widget-polling.mjs'
 import { memo, useEffect, useRef, useState, type ReactNode } from 'react'
 import Image from 'next/image'
-import { DISCORD_BADGE_DEFAULTS, getDiscordAchievementBadges } from '@/lib/discord-achievements'
+import { DISCORD_BADGE_DEFAULTS, getDiscordAchievementBadges, orderDiscordBadges, type DiscordActivityEstimate } from '@/lib/discord-achievements'
 
 interface DiscordActivity {
   name: string
@@ -29,6 +29,7 @@ interface DiscordPresence {
   active_on_discord_web?: boolean
   active_on_discord_desktop?: boolean
   kv?: Record<string, unknown>
+  activity_estimate?: DiscordActivityEstimate | null
   discord_user?: {
     username: string
     global_name?: string
@@ -219,17 +220,17 @@ function getSpecialBadges(presence?: DiscordPresence) {
     { key: 'quest', label: 'Completed a Quest', details: 'Completed a Discord Quest', iconUrl: `${BADGE_ASSET_BASE}/quest.png` },
     { key: 'orbs', label: 'Orbs Apprentice', details: 'Earned the Orbs Apprentice badge', iconUrl: `${BADGE_ASSET_BASE}/orb.svg` },
     { key: 'legend-gifting', label: 'Legend Gifting', details: 'Earned the Legend Gifting badge', iconUrl: `${BADGE_ASSET_BASE}/gifting/legend.png` },
-    ...getDiscordAchievementBadges(user?.id, { ...DISCORD_BADGE_DEFAULTS, ...presence?.kv }),
+    ...getDiscordAchievementBadges(user?.id, { ...DISCORD_BADGE_DEFAULTS, ...presence?.kv }, undefined, presence?.activity_estimate),
   ] satisfies SpecialBadge[]
 }
 
 function BadgeTooltip({ label, details, children }: { label: string; details: string; children: ReactNode }) {
   return (
-    <span className="group/badge relative inline-flex" tabIndex={0} aria-label={`${label}. ${details}`}>
+    <span role="listitem" className="group/badge inline-flex min-w-0 items-center justify-center rounded-md p-0.5 transition-colors hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#5865f2]" tabIndex={0} aria-label={`${label}. ${details}`}>
       {children}
       <span
         role="tooltip"
-        className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 hidden w-max max-w-[190px] -translate-x-1/2 rounded-md border border-white/15 bg-[#151515] px-2 py-1.5 text-left shadow-xl group-hover/badge:flex group-focus/badge:flex flex-col"
+        className="pointer-events-none absolute bottom-full left-0 z-20 mb-2 hidden w-full break-words rounded-md border border-white/15 bg-[#151515] px-2 py-1.5 text-left shadow-xl group-hover/badge:flex group-focus/badge:flex flex-col"
       >
         <strong className="text-[10px] leading-tight text-white">{label}</strong>
         <span className="mt-0.5 text-[9px] leading-tight text-white/65">{details}</span>
@@ -349,8 +350,13 @@ function DiscordWidget({
   const avatarDecorationUrl = getAvatarDecorationUrl(presence?.discord_user)
   const nameplateUrl = getNameplateUrl(presence?.discord_user)
   const bannerUrl = getDiscordBannerUrl(presence?.discord_user)
-  const badges = getBadges(presence?.discord_user?.public_flags)
-  const specialBadges = getSpecialBadges(presence ?? undefined)
+  const badges = orderDiscordBadges([
+    ...getSpecialBadges(presence ?? undefined),
+    ...getBadges(presence?.discord_user?.public_flags).map(badge => ({
+      key: badge.label.toLowerCase().replaceAll(' ', '-'), label: badge.label,
+      details: 'Discord profile badge', iconUrl: `https://cdn.discordapp.com/badge-icons/${badge.iconHash}.png`,
+    })),
+  ])
   const serverTag = presence?.discord_user?.primary_guild?.tag ?? presence?.discord_user?.clan?.tag
   const displayName = presence?.discord_user?.username ?? 'coolman_yt'
   const deviceLabel = presence ? getDeviceLabel(presence, { showMobile, showWeb, showDesktop }) : null
@@ -380,7 +386,7 @@ function DiscordWidget({
               <Image src={bannerUrl} alt="Discord banner" fill className="object-cover" unoptimized />
             </div>
           )}
-          {showProfile && <div className="flex items-center gap-2.5">
+          {showProfile && <div className="flex items-start gap-2.5">
             <div className="relative w-9 h-9 rounded-full overflow-hidden border border-white/15 bg-white/10 flex-shrink-0">
               {avatarUrl ? (
                 <Image src={avatarUrl} alt="Discord avatar" fill className="object-cover" unoptimized />
@@ -401,36 +407,16 @@ function DiscordWidget({
                     {serverTag}
                   </span>
                 )}
-                {showBadges && (badges.length > 0 || specialBadges.length > 0) && (
-                  <div className="flex flex-wrap items-center gap-1">
-                    {badges.map((badge) => (
-                      <BadgeTooltip key={badge.label} label={badge.label} details="Discord profile badge">
-                        <Image
-                          src={`https://cdn.discordapp.com/badge-icons/${badge.iconHash}.png`}
-                          alt=""
-                          className="w-4 h-4 rounded-sm"
-                          loading="lazy"
-                          width={16}
-                          height={16}
-                          unoptimized
-                        />
-                      </BadgeTooltip>
-                    ))}
-                    {specialBadges.map((badge) => (
-                      <BadgeTooltip key={badge.key} label={badge.label} details={badge.details}>
-                        <Image
-                          src={badge.iconUrl}
-                          alt=""
-                          className="w-4 h-4 object-contain"
-                          width={16}
-                          height={16}
-                          unoptimized
-                        />
-                      </BadgeTooltip>
-                    ))}
-                  </div>
-                )}
               </div>
+              {showBadges && badges.length > 0 && (
+                <div role="list" aria-label="Discord profile badges" className="relative mt-1.5 grid w-[152px] max-w-full grid-cols-6 gap-1">
+                  {badges.map((badge) => (
+                    <BadgeTooltip key={badge.key} label={badge.label} details={badge.details}>
+                      <Image src={badge.iconUrl} alt="" className="h-[18px] w-[18px] object-contain" width={18} height={18} unoptimized />
+                    </BadgeTooltip>
+                  ))}
+                </div>
+              )}
               {showDevices && deviceLabel && <p className="mt-1 text-[10px] text-white/50">Active on: {deviceLabel}</p>}
               {showDecoration && nameplateUrl && (
                 <div className="mt-1.5 w-[120px] h-5 relative">

@@ -119,7 +119,15 @@ Recommended toggle IDs include:
 
 The Discord widget supports all ten tiers of the new **Account Age**, **Game Time**, **Game Variety**, and **Streaming** badges, using Discord-hosted artwork. Existing Nitro, Server Booster, Quest, Orbs, and Gifting badges remain visible.
 
-Update the `DISCORD_BADGE_DEFAULTS` variables near the top of [`lib/discord-achievements.ts`](lib/discord-achievements.ts) for manual updates without a database or Lanyard setup. Set `discord_game_time_hours`, `discord_games_played`, and `discord_streaming_hours` to your totals from Discord's Badge Directory. `null` keeps an unknown total hidden; `0` means no unlocked badge. Changes take effect after deploying the updated code. There is no reliable basis to estimate historical totals from the current live activity, so no activity totals are guessed.
+Update the `DISCORD_BADGE_DEFAULTS` variables near the top of [`lib/discord-achievements.ts`](lib/discord-achievements.ts) for manual updates without a database or Lanyard setup. Set `discord_game_time_hours`, `discord_games_played`, and `discord_streaming_hours` to your totals from Discord's Badge Directory. `null` allows observed game estimates when available; `0` hides that badge. Changes take effect after deploying the updated code.
+
+Game Time and Game Variety can also use **estimates from observed Playing activities**. The server saves aggregate playing time and distinct application IDs in the existing, private `site_settings` table under `discord_activity_estimates:<DISCORD_USER_ID>`. No schema migration is required. A revision check prevents concurrent visitors/server instances from counting the same time twice, and requests are coalesced for 15 seconds per server instance. Storage failures leave presence available and fall back to manual values.
+
+An ongoing game's start timestamp can backfill up to 24 hours; later observations add only time beyond the shared watermark. Concurrent games count as one interval of wall time. Without a valid timestamp, only observations of the same game at most 90 seconds apart add time. Offline presence never adds playing time. Tracking runs when the profile is visited/polled, so finished sessions between visits are missed. Playing activities can also represent non-game applications; these totals are estimates of observed activity, not Discord's official counters. Application IDs deduplicate different experiences within platforms such as Roblox. Tooltips label automatically selected tiers **Estimated**.
+
+Set `discord_game_time_baseline_hours` to an optional known historical total if you want to add subsequent observed time to it; it defaults to `0`. Set the manual total to `null` to use this baseline plus the automatic counter. A non-null manual total or Lanyard KV override takes precedence, including `0` to hide a badge. Streaming remains manual because Discord's live Streaming activity can describe a Twitch broadcast and does not prove screen sharing to another person.
+
+`DISCORD_BADGE_ORDER` follows the supplied profile screenshot: Nitro, Gifting, Quest, Booster, HypeSquad Brilliance, Account Age, Streaming, Game Variety (controller), Game Time (sword), Last Meadow Online, Orbs. Unavailable badges are omitted and other public-flag badges follow afterward. The Last Meadow badge is enabled from the screenshot; set `discord_last_meadow_badge` to `false` to hide it. Badges form compact rows of six below the name/status and support hover or keyboard-focus tooltips.
 
 The profile's creation date is configured as **8 November 2025** (`2025-11-08`). Account Age advances on its UTC anniversary, starting at one year on **8 November 2026**. Without a valid configured date, the widget falls back to the Discord account ID's timestamp. This is an age-based display, not confirmation that Discord has enabled or displayed the badge for the account. Set the Lanyard KV key `discord_account_age_badge` to `false` to hide it.
 
@@ -131,9 +139,11 @@ For updates without redeploying, these optional [Lanyard KV keys](https://github
 | `discord_games_played` | Whole number of different games Discord has counted |
 | `discord_streaming_hours` | Total hours Discord has counted toward Streaming |
 | `discord_account_created_at` | Creation date override in `YYYY-MM-DD` format |
+| `discord_game_time_baseline_hours` | Known hours to add to automatic estimates |
+| `discord_last_meadow_badge` | `true` or `false` to show/hide the event badge |
 | `discord_account_age_badge` | `false` to hide the calculated Account Age badge |
 
-For example, `.set discord_game_time_hours 75` sent to the Lanyard bot displays the Committed tier after the next widget refresh. Missing, invalid, or below-unlock totals leave that badge hidden. These are owner-maintained totals; the widget does not accumulate time from current presence or assume that a live stream represents historical streaming progress. To hide an activity badge, set its KV key to `0` or its local default to `null` when there is no KV override. Deleting a KV key restores the local default. The Dashboard's existing Badges toggle hides the complete badge row.
+For example, `.set discord_game_time_hours 75` sent to the Lanyard bot displays the Committed tier after the next widget refresh. Invalid or below-unlock totals leave that badge hidden. To hide an activity badge, set its manual total or KV key to `0`. Deleting a KV key restores the local default (and allows estimates when that default is `null`). The Dashboard's existing Badges toggle hides the complete badge row.
 
 Badge meanings are documented in [Discord's profile badge guide](https://support.discord.com/hc/en-us/articles/44369363856663-Discord-Profile-Badges-What-Each-Badge-Means). Tier names, milestones, and Discord CDN artwork URLs are catalogued by [mezotv/discord-badges](https://github.com/mezotv/discord-badges#account-age-badges). Activity totals can lag behind recent activity in Discord.
 

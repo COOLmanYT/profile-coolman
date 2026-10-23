@@ -12,6 +12,28 @@ export const DISCORD_BADGE_DEFAULTS = {
   discord_game_time_hours: null as number | null,
   discord_games_played: null as number | null,
   discord_streaming_hours: null as number | null,
+  discord_game_time_baseline_hours: 0, // Optional known past hours, added to automatic estimates.
+  discord_last_meadow_badge: true, // Present in the supplied profile screenshot.
+}
+
+// Left-to-right, then top-to-bottom in the supplied Discord profile screenshot.
+export const DISCORD_BADGE_ORDER = [
+  'nitro', 'legend-gifting', 'quest', 'booster', 'hypesquad-brilliance', 'account-age',
+  'streaming', 'game-variety', 'game-time', 'last-meadow', 'orbs',
+]
+
+export function orderDiscordBadges<T extends { key: string }>(badges: T[]): T[] {
+  const position = (key: string) => {
+    const index = DISCORD_BADGE_ORDER.indexOf(key)
+    return index < 0 ? DISCORD_BADGE_ORDER.length : index
+  }
+  return [...badges].sort((a, b) => position(a.key) - position(b.key))
+}
+
+export interface DiscordActivityEstimate {
+  game_time_hours: number
+  games_played: number
+  tracked_since: string
 }
 
 // Badge families: https://support.discord.com/hc/en-us/articles/44369363856663
@@ -110,7 +132,7 @@ function accountAgeBadge(id: string | undefined, now: number, configuredDate: un
 }
 
 /** Lanyard does not provide historical activity totals. Only use explicitly supplied progress. */
-export function getDiscordAchievementBadges(id?: string, kv: Record<string, unknown> = {}, now = Date.now()): DiscordAchievementBadge[] {
+export function getDiscordAchievementBadges(id?: string, kv: Record<string, unknown> = {}, now = Date.now(), estimate?: DiscordActivityEstimate | null): DiscordAchievementBadge[] {
   const badges: DiscordAchievementBadge[] = []
   const age = accountAgeBadge(id, now, kv.discord_account_created_at)
   // Match Discord's profile badge visibility without changing presence/activity visibility.
@@ -121,12 +143,18 @@ export function getDiscordAchievementBadges(id?: string, kv: Record<string, unkn
     { key: 'streaming', name: 'Streaming', value: kv.discord_streaming_hours, tiers: STREAMING, milestones: HOUR_MILESTONES, unit: 'hours streamed' },
   ]
   for (const family of families) {
-    const progress = readProgress(family.value)
+    const automatic = family.key === 'game-time' ? estimate?.game_time_hours : family.key === 'game-variety' ? estimate?.games_played : undefined
+    const isEstimated = family.value == null && automatic !== undefined
+    let progress = family.value == null ? readProgress(automatic) : readProgress(family.value)
+    if (progress !== undefined && isEstimated && family.key === 'game-time') progress += readProgress(kv.discord_game_time_baseline_hours) ?? 0
     if (progress === undefined || (family.key === 'game-variety' && !Number.isInteger(progress))) continue
     let level = -1
     family.milestones.forEach((milestone, index) => { if (progress >= milestone) level = index })
     const unit = progress === 1 ? family.unit.replace('hours', 'hour') : family.unit
-    if (level >= 0) badges.push(makeBadge(family.key, family.name, family.tiers[level], `${progress.toLocaleString('en')} ${unit}`))
+    if (level >= 0) badges.push(makeBadge(family.key, family.name, family.tiers[level], `${isEstimated ? 'Estimated · ' : ''}${progress.toLocaleString('en', { maximumFractionDigits: 1 })} ${unit}`))
+  }
+  if (kv.discord_last_meadow_badge === true || kv.discord_last_meadow_badge === 'true') {
+    badges.push({ key: 'last-meadow', label: 'Last Meadow Online', details: 'Last Meadow Online event badge', iconUrl: '/discord-badges/last-meadow.png' })
   }
   return badges
 }
