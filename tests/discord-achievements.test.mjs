@@ -1,11 +1,35 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { getDiscordAchievementBadges } from '../lib/discord-achievements.ts'
+import { DISCORD_BADGE_DEFAULTS, getDiscordAchievementBadges } from '../lib/discord-achievements.ts'
 
 const snowflakeAt = (date) => String(BigInt(Date.parse(date) - 1420070400000) << 22n)
 const createdAt = '2020-06-15T12:30:00.000Z'
 const id = snowflakeAt(createdAt)
 const now = Date.parse('2026-10-23T00:00:00.000Z')
+
+test('the configured 8 November 2025 creation date takes precedence over a different account ID', () => {
+  assert.deepEqual(getDiscordAchievementBadges(id, DISCORD_BADGE_DEFAULTS, now), [])
+  assert.deepEqual(getDiscordAchievementBadges(id, DISCORD_BADGE_DEFAULTS, Date.parse('2026-11-07T23:59:59.999Z')), [])
+  const badges = getDiscordAchievementBadges(id, DISCORD_BADGE_DEFAULTS, Date.parse('2026-11-08T00:00:00.000Z'))
+  assert.equal(badges[0].label, 'Account Age: Seed')
+  assert.equal(badges[0].details, '1 year on Discord')
+})
+
+test('manual totals work without Lanyard setup and live KV can override or hide them', () => {
+  const manual = { ...DISCORD_BADGE_DEFAULTS, discord_game_time_hours: 75, discord_games_played: 10, discord_streaming_hours: 5 }
+  assert.deepEqual(getDiscordAchievementBadges(id, manual, now).map((badge) => badge.label), [
+    'Game Time: Committed', 'Game Variety: Enthusiast', 'Streaming: Fledgling',
+  ])
+  const liveKv = { discord_game_time_hours: '300', discord_games_played: '0', discord_streaming_hours: 'invalid' }
+  assert.deepEqual(getDiscordAchievementBadges(id, { ...manual, ...liveKv }, now).map((badge) => badge.label), ['Game Time: Devoted'])
+})
+
+test('invalid configured creation dates fall back to the account ID, and future dates stay locked', () => {
+  for (const date of ['2025-02-30', '2025-13-01', '08/11/2025', '2025-11-08junk', '', null]) {
+    assert.equal(getDiscordAchievementBadges(id, { discord_account_created_at: date }, now)[0].label, 'Account Age: Redwood')
+  }
+  assert.deepEqual(getDiscordAchievementBadges(id, { discord_account_created_at: '2030-11-08' }, now), [])
+})
 
 test('Account Age advances on the UTC anniversary and caps its artwork at ten years', () => {
   assert.equal(getDiscordAchievementBadges(id, {}, Date.parse('2021-06-15T12:29:59.999Z')).length, 0)

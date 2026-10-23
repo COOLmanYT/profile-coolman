@@ -3,7 +3,7 @@
 import { startPolling, fetchWidgetJson } from '@/lib/widget-polling.mjs'
 import { memo, useEffect, useRef, useState, type ReactNode } from 'react'
 import Image from 'next/image'
-import { getDiscordAchievementBadges } from '@/lib/discord-achievements'
+import { DISCORD_BADGE_DEFAULTS, getDiscordAchievementBadges } from '@/lib/discord-achievements'
 
 interface DiscordActivity {
   name: string
@@ -219,7 +219,7 @@ function getSpecialBadges(presence?: DiscordPresence) {
     { key: 'quest', label: 'Completed a Quest', details: 'Completed a Discord Quest', iconUrl: `${BADGE_ASSET_BASE}/quest.png` },
     { key: 'orbs', label: 'Orbs Apprentice', details: 'Earned the Orbs Apprentice badge', iconUrl: `${BADGE_ASSET_BASE}/orb.svg` },
     { key: 'legend-gifting', label: 'Legend Gifting', details: 'Earned the Legend Gifting badge', iconUrl: `${BADGE_ASSET_BASE}/gifting/legend.png` },
-    ...getDiscordAchievementBadges(user?.id, presence?.kv),
+    ...getDiscordAchievementBadges(user?.id, { ...DISCORD_BADGE_DEFAULTS, ...presence?.kv }),
   ] satisfies SpecialBadge[]
 }
 

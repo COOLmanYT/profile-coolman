@@ -5,6 +5,15 @@ export interface DiscordAchievementBadge {
   iconUrl: string
 }
 
+// Edit these owner-maintained values to update the profile's achievement badges.
+// null means unknown/hidden; 0 means no unlocked badge. Lanyard KV overrides these defaults.
+export const DISCORD_BADGE_DEFAULTS = {
+  discord_account_created_at: '2025-11-08', // 8 November 2025, in YYYY-MM-DD format.
+  discord_game_time_hours: null as number | null,
+  discord_games_played: null as number | null,
+  discord_streaming_hours: null as number | null,
+}
+
 // Badge families: https://support.discord.com/hc/en-us/articles/44369363856663
 // Tier names, milestones and Discord-hosted artwork:
 // https://github.com/mezotv/discord-badges#account-age-badges
@@ -75,11 +84,21 @@ function readProgress(value: unknown): number | undefined {
   return Number.isFinite(progress) && progress >= 0 ? progress : undefined
 }
 
-function accountAgeBadge(id: string | undefined, now: number) {
+function getAccountCreatedAt(id: string | undefined, configuredDate: unknown) {
+  if (typeof configuredDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(configuredDate)) {
+    const date = new Date(`${configuredDate}T00:00:00.000Z`)
+    // Reject calendar rollovers such as 2025-02-30 instead of silently changing the date.
+    if (Number.isFinite(date.getTime()) && date.getTime() >= 1420070400000 && date.toISOString().slice(0, 10) === configuredDate) return date
+  }
   if (!id || !/^\d{17,20}$/.test(id)) return undefined
   const snowflake = BigInt(id)
   if (snowflake > BigInt('18446744073709551615')) return undefined
-  const created = new Date(Number(snowflake >> BigInt(22)) + 1420070400000)
+  return new Date(Number(snowflake >> BigInt(22)) + 1420070400000)
+}
+
+function accountAgeBadge(id: string | undefined, now: number, configuredDate: unknown) {
+  const created = getAccountCreatedAt(id, configuredDate)
+  if (!created) return undefined
   const today = new Date(now)
   if (!Number.isFinite(today.getTime()) || created.getTime() > now) return undefined
   let years = today.getUTCFullYear() - created.getUTCFullYear()
@@ -93,7 +112,7 @@ function accountAgeBadge(id: string | undefined, now: number) {
 /** Lanyard does not provide historical activity totals. Only use explicitly supplied progress. */
 export function getDiscordAchievementBadges(id?: string, kv: Record<string, unknown> = {}, now = Date.now()): DiscordAchievementBadge[] {
   const badges: DiscordAchievementBadge[] = []
-  const age = accountAgeBadge(id, now)
+  const age = accountAgeBadge(id, now, kv.discord_account_created_at)
   // Match Discord's profile badge visibility without changing presence/activity visibility.
   if (age && kv.discord_account_age_badge !== 'false' && kv.discord_account_age_badge !== false) badges.push(age)
   const families = [
