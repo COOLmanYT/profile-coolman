@@ -3,7 +3,7 @@
 import { startPolling, fetchWidgetJson } from '@/lib/widget-polling.mjs'
 import { memo, useEffect, useRef, useState, type ReactNode } from 'react'
 import Image from 'next/image'
-import { DISCORD_BADGE_DEFAULTS, getDiscordAchievementBadges, orderDiscordBadges, type DiscordActivityEstimate } from '@/lib/discord-achievements'
+import { DISCORD_BADGE_DEFAULTS, getDiscordAchievementBadges, getDiscordMembershipBadges, orderDiscordBadges, type DiscordActivityEstimate } from '@/lib/discord-achievements'
 
 interface DiscordActivity {
   name: string
@@ -143,10 +143,7 @@ const BADGE_MAP: Array<{ bit: number; label: string; iconHash: string }> = [
   { bit: 1 << 9, label: 'Early Supporter', iconHash: '7060786766c9c840eb3019e725d2b358' },
   { bit: 1 << 17, label: 'Early Verified Bot Developer', iconHash: '6bdc42827a38498929a4920da12695d9' },
 ]
-const NITRO_STARTED_AT = '2025-01-26T00:00:00.000Z'
-const BOOSTER_STARTED_AT = '2025-01-27T00:00:00.000Z'
 const BADGE_ASSET_BASE = '/discord-badges'
-const ONE_YEAR_MS = 365.25 * 24 * 60 * 60 * 1000
 const DISCORD_POLL_MS = 20000
 const STATUS_PULSE_DURATION_MS = 260
 
@@ -162,65 +159,14 @@ function getBadges(flags?: number) {
   return BADGE_MAP.filter((badge) => (flags & badge.bit) === badge.bit)
 }
 
-function getMembershipYears(startedAt: string) {
-  const start = Date.parse(startedAt)
-  if (!Number.isFinite(start)) return 1
-  return Math.max(1, Math.floor((Date.now() - start) / ONE_YEAR_MS))
-}
-
-function formatBadgeDate(startedAt: string) {
-  const date = new Date(startedAt)
-  if (Number.isNaN(date.getTime())) return 'Unknown start date'
-  return new Intl.DateTimeFormat('en', { day: 'numeric', month: 'long', year: 'numeric' }).format(date)
-}
-
-function getMonthsSince(startedAt: string) {
-  const start = Date.parse(startedAt)
-  if (!Number.isFinite(start)) return 1
-  return Math.max(1, Math.floor((Date.now() - start) / (ONE_YEAR_MS / 12)))
-}
-
-function getNitroBadgeUrl(startedAt: string) {
-  const months = getMonthsSince(startedAt)
-  const tier = months >= 72 ? 'opal'
-    : months >= 60 ? 'ruby'
-      : months >= 36 ? 'emerald'
-        : months >= 24 ? 'diamond'
-          : months >= 12 ? 'platinum'
-            : months >= 6 ? 'gold'
-              : months >= 3 ? 'silver'
-                : 'bronze'
-  return `${BADGE_ASSET_BASE}/subscriptions/${tier}.svg`
-}
-
-function getBoosterBadgeUrl(startedAt: string) {
-  const months = getMonthsSince(startedAt)
-  const tier = months >= 24 ? 9
-    : months >= 18 ? 8
-      : months >= 15 ? 7
-        : months >= 12 ? 6
-          : months >= 9 ? 5
-            : months >= 6 ? 4
-              : months >= 3 ? 3
-                : months >= 2 ? 2
-                  : 1
-  return `${BADGE_ASSET_BASE}/boosts/discord-boost-${tier}.svg`
-}
-
-function getSpecialBadges(presence?: DiscordPresence) {
+function getSpecialBadges(presence: DiscordPresence | undefined, now: number) {
   const user = presence?.discord_user
-  const nitroStartedAt = user?.premium_since ?? NITRO_STARTED_AT
-  const boosterStartedAt = user?.premium_guild_since ?? BOOSTER_STARTED_AT
-  const nitroYears = getMembershipYears(nitroStartedAt)
-  const boosterYears = getMembershipYears(boosterStartedAt)
-
   return [
-    { key: 'nitro', label: `Nitro ${nitroYears} Year${nitroYears === 1 ? '' : 's'}`, details: `Subscription started ${formatBadgeDate(nitroStartedAt)}`, iconUrl: getNitroBadgeUrl(nitroStartedAt) },
-    { key: 'booster', label: `Server Booster ${boosterYears} Year${boosterYears === 1 ? '' : 's'}`, details: `Boosting started ${formatBadgeDate(boosterStartedAt)}`, iconUrl: getBoosterBadgeUrl(boosterStartedAt) },
+    ...getDiscordMembershipBadges(user, presence?.kv, now),
     { key: 'quest', label: 'Completed a Quest', details: 'Completed a Discord Quest', iconUrl: `${BADGE_ASSET_BASE}/quest.png` },
     { key: 'orbs', label: 'Orbs Apprentice', details: 'Earned the Orbs Apprentice badge', iconUrl: `${BADGE_ASSET_BASE}/orb.svg` },
     { key: 'legend-gifting', label: 'Legend Gifting', details: 'Earned the Legend Gifting badge', iconUrl: `${BADGE_ASSET_BASE}/gifting/legend.png` },
-    ...getDiscordAchievementBadges(user?.id, { ...DISCORD_BADGE_DEFAULTS, ...presence?.kv }, undefined, presence?.activity_estimate),
+    ...getDiscordAchievementBadges(user?.id, { ...DISCORD_BADGE_DEFAULTS, ...presence?.kv }, now, presence?.activity_estimate),
   ] satisfies SpecialBadge[]
 }
 
@@ -303,11 +249,20 @@ function DiscordWidget({
   showWeb = true,
   showDesktop = true,
 }: DiscordWidgetProps) {
+  const [badgeNow, setBadgeNow] = useState(() => Date.now())
   const [presence, setPresence] = useState<DiscordPresence | null>(null)
   const [loading, setLoading] = useState(true)
   const [isUnavailable, setIsUnavailable] = useState(false)
   const [statusPulse, setStatusPulse] = useState(false)
   const previousStatusRef = useRef<DiscordPresence['discord_status'] | null>(null)
+
+  // A separate clock keeps anniversary badges evolving even during provider outages.
+  // Hidden tabs pause and recalculate immediately when brought back into view.
+  useEffect(() => startPolling({
+    intervalMs: 60_000,
+    poll: async () => { setBadgeNow(Date.now()) },
+    onError: () => {},
+  }), [])
 
   useEffect(() => startPolling({
     intervalMs: DISCORD_POLL_MS,
@@ -351,7 +306,7 @@ function DiscordWidget({
   const nameplateUrl = getNameplateUrl(presence?.discord_user)
   const bannerUrl = getDiscordBannerUrl(presence?.discord_user)
   const badges = orderDiscordBadges([
-    ...getSpecialBadges(presence ?? undefined),
+    ...getSpecialBadges(presence ?? undefined, badgeNow),
     ...getBadges(presence?.discord_user?.public_flags).map(badge => ({
       key: badge.label.toLowerCase().replaceAll(' ', '-'), label: badge.label,
       details: 'Discord profile badge', iconUrl: `https://cdn.discordapp.com/badge-icons/${badge.iconHash}.png`,

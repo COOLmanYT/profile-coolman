@@ -6,8 +6,12 @@ export interface DiscordAchievementBadge {
 }
 
 // Edit these owner-maintained values to update the profile's achievement badges.
-// null means unknown/hidden; 0 means no unlocked badge. Lanyard KV overrides these defaults.
+// null allows observed estimates; 0 means no unlocked badge. Lanyard KV overrides these defaults.
 export const DISCORD_BADGE_DEFAULTS = {
+  discord_nitro_started_at: '2025-01-26T00:00:00.000Z',
+  discord_booster_started_at: '2025-01-27T00:00:00.000Z',
+  discord_nitro_badge: true,
+  discord_booster_badge: true,
   discord_account_created_at: '2025-11-08', // 8 November 2025, in YYYY-MM-DD format.
   discord_game_time_hours: null as number | null,
   discord_games_played: null as number | null,
@@ -131,7 +135,7 @@ function accountAgeBadge(id: string | undefined, now: number, configuredDate: un
   return makeBadge('account-age', 'Account Age', ACCOUNT_AGE[Math.min(years, 10) - 1], `${years} year${years === 1 ? '' : 's'} on Discord`)
 }
 
-/** Lanyard does not provide historical activity totals. Only use explicitly supplied progress. */
+/** Recalculate tiers from the latest manual totals or persisted activity estimates. */
 export function getDiscordAchievementBadges(id?: string, kv: Record<string, unknown> = {}, now = Date.now(), estimate?: DiscordActivityEstimate | null): DiscordAchievementBadge[] {
   const badges: DiscordAchievementBadge[] = []
   const age = accountAgeBadge(id, now, kv.discord_account_created_at)
@@ -157,4 +161,41 @@ export function getDiscordAchievementBadges(id?: string, kv: Record<string, unkn
     badges.push({ key: 'last-meadow', label: 'Last Meadow Online', details: 'Last Meadow Online event badge', iconUrl: '/discord-badges/last-meadow.png' })
   }
   return badges
+}
+
+// Use calendar anniversaries, clamping month-end dates (e.g. Jan 31 -> Feb 28).
+// Dividing elapsed milliseconds by an average month can upgrade a badge a day early.
+export function getDiscordMembershipMonths(startedAt: string, now = Date.now()): number | undefined {
+  const start = new Date(startedAt)
+  const today = new Date(now)
+  if (!Number.isFinite(start.getTime()) || !Number.isFinite(now) || start.getTime() > now) return undefined
+  let months = (today.getUTCFullYear() - start.getUTCFullYear()) * 12 + today.getUTCMonth() - start.getUTCMonth()
+  const anniversary = new Date(start)
+  anniversary.setUTCDate(1)
+  anniversary.setUTCFullYear(today.getUTCFullYear(), today.getUTCMonth())
+  const daysInMonth = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + 1, 0)).getUTCDate()
+  anniversary.setUTCDate(Math.min(start.getUTCDate(), daysInMonth))
+  if (today < anniversary) months -= 1
+  return Math.max(0, months)
+}
+
+export function getDiscordMembershipBadges(user: { premium_since?: string; premium_guild_since?: string } = {}, kv: Record<string, unknown> = {}, now = Date.now()): DiscordAchievementBadge[] {
+  const settings: Record<string, unknown> = { ...DISCORD_BADGE_DEFAULTS, ...kv }
+  const families = [
+    { key: 'nitro', name: 'Nitro', start: user.premium_since ?? settings.discord_nitro_started_at, visible: settings.discord_nitro_badge,
+      tiers: [[0, 'bronze'], [3, 'silver'], [6, 'gold'], [12, 'platinum'], [24, 'diamond'], [36, 'emerald'], [60, 'ruby'], [72, 'opal']] as const },
+    { key: 'booster', name: 'Server Booster', start: user.premium_guild_since ?? settings.discord_booster_started_at, visible: settings.discord_booster_badge,
+      tiers: [[0, '1'], [2, '2'], [3, '3'], [6, '4'], [9, '5'], [12, '6'], [15, '7'], [18, '8'], [24, '9']] as const },
+  ]
+  return families.flatMap(family => {
+    if (family.visible === false || family.visible === 'false' || typeof family.start !== 'string') return []
+    const months = getDiscordMembershipMonths(family.start, now)
+    if (months === undefined) return []
+    const tier = [...family.tiers].reverse().find(([milestone]) => months >= milestone)![1]
+    const years = Math.floor(months / 12)
+    const duration = years ? years + ' Year' + (years === 1 ? '' : 's') : months + ' Month' + (months === 1 ? '' : 's')
+    return [{ key: family.key, label: family.name + ' ' + duration,
+      details: (family.key === 'nitro' ? 'Subscription' : 'Boosting') + ' started ' + new Intl.DateTimeFormat('en', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(family.start)),
+      iconUrl: family.key === 'nitro' ? '/discord-badges/subscriptions/' + tier + '.svg' : '/discord-badges/boosts/discord-boost-' + tier + '.svg' }]
+  })
 }

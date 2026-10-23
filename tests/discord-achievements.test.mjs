@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { DISCORD_BADGE_DEFAULTS, DISCORD_BADGE_ORDER, getDiscordAchievementBadges, orderDiscordBadges } from '../lib/discord-achievements.ts'
+import { DISCORD_BADGE_DEFAULTS, DISCORD_BADGE_ORDER, getDiscordAchievementBadges, getDiscordMembershipBadges, getDiscordMembershipMonths, orderDiscordBadges } from '../lib/discord-achievements.ts'
+
+import { observeDiscordGames, gameEstimateTotals } from '../lib/discord-activity-estimates.mjs'
 
 const snowflakeAt = (date) => String(BigInt(Date.parse(date) - 1420070400000) << 22n)
 const createdAt = '2020-06-15T12:30:00.000Z'
@@ -108,4 +110,58 @@ test('invalid progress is omitted independently and game counts must be whole nu
     discord_game_time_hours: '75.5', discord_games_played: '2.5', discord_streaming_hours: 'bad',
   }, now)
   assert.deepEqual(badges.map((badge) => badge.label), ['Game Time: Committed'])
+})
+
+
+test('Nitro and Booster artwork evolves exactly at every calendar milestone', () => {
+  const start = '2025-01-26T12:30:00.000Z'
+  for (const [key, milestones] of [
+    ['nitro', [3, 6, 12, 24, 36, 60, 72]],
+    ['booster', [2, 3, 6, 9, 12, 15, 18, 24]],
+  ]) {
+    let previousIcon = getDiscordMembershipBadges({ premium_since: start, premium_guild_since: start }, {}, Date.parse(start)).find(b => b.key === key).iconUrl
+    for (const months of milestones) {
+      const boundary = new Date(start)
+      boundary.setUTCMonth(boundary.getUTCMonth() + months)
+      const before = getDiscordMembershipBadges({ premium_since: start, premium_guild_since: start }, {}, boundary.getTime() - 1).find(b => b.key === key)
+      const after = getDiscordMembershipBadges({ premium_since: start, premium_guild_since: start }, {}, boundary.getTime()).find(b => b.key === key)
+      assert.equal(before.iconUrl, previousIcon)
+      assert.notEqual(after.iconUrl, before.iconUrl)
+      previousIcon = after.iconUrl
+    }
+  }
+  const firstYear = getDiscordMembershipBadges({ premium_since: start }, {}, Date.parse('2026-01-26T12:30:00Z'))[0]
+  assert.equal(firstYear.label, 'Nitro 1 Year')
+  assert.match(firstYear.iconUrl, /platinum.svg$/)
+})
+
+test('calendar progression handles short months, leap days, invalid dates, and manual streak resets', () => {
+  assert.equal(getDiscordMembershipMonths('2025-01-31T12:00:00Z', Date.parse('2025-02-28T11:59:59.999Z')), 0)
+  assert.equal(getDiscordMembershipMonths('2025-01-31T12:00:00Z', Date.parse('2025-02-28T12:00:00Z')), 1)
+  assert.equal(getDiscordMembershipMonths('2024-02-29T12:00:00Z', Date.parse('2025-02-28T12:00:00Z')), 12)
+  assert.equal(getDiscordMembershipMonths('bad', now), undefined)
+  assert.equal(getDiscordMembershipMonths('2030-01-01', now), undefined)
+  assert.deepEqual(getDiscordMembershipBadges({}, { discord_nitro_badge: 'false', discord_booster_badge: false }, now), [])
+  const reset = getDiscordMembershipBadges({}, { discord_nitro_started_at: '2026-10-23T00:00:00Z' }, now)[0]
+  assert.match(reset.iconUrl, /bronze.svg$/)
+  assert.equal(reset.label, 'Nitro 0 Months')
+  const upstream = getDiscordMembershipBadges({ premium_since: '2025-10-23T00:00:00Z' }, { discord_nitro_started_at: '2026-10-23T00:00:00Z' }, now)[0]
+  assert.match(upstream.iconUrl, /platinum.svg$/)
+})
+
+test('an observed session crossing a playtime milestone changes the badge icon without losing profile order', () => {
+  const activity = [{ type: 0, name: 'Game A', application_id: '123', timestamps: { start: now - 3_600_000 + 1 } }]
+  const beforeState = observeDiscordGames(null, activity, now)
+  const afterState = observeDiscordGames(beforeState, activity, now + 1)
+  const before = getDiscordAchievementBadges(undefined, {}, now, gameEstimateTotals(beforeState))
+  const after = getDiscordAchievementBadges(undefined, {}, now + 1, gameEstimateTotals(afterState))
+  assert.equal(before.length, 0)
+  assert.equal(after[0].label, 'Game Time: Casual')
+  const upgradedState = observeDiscordGames(afterState, activity, now + 4 * 3_600_000 + 1)
+  const upgraded = getDiscordAchievementBadges(undefined, {}, now, gameEstimateTotals(upgradedState))
+  assert.equal(upgraded[0].label, 'Game Time: Recreational')
+  assert.notEqual(upgraded[0].iconUrl, after[0].iconUrl)
+  const nextGame = observeDiscordGames(upgradedState, [{ type: 0, name: 'Game B', application_id: '456' }], now + 4 * 3_600_000 + 2)
+  const ordered = orderDiscordBadges(getDiscordAchievementBadges(undefined, {}, now, gameEstimateTotals(nextGame)))
+  assert.deepEqual(ordered.map(b => b.key), ['game-variety', 'game-time'])
 })
