@@ -83,7 +83,7 @@ test('official channel stats preserve zero counts, hide private subscribers and 
         '@/lib/youtube-feed.mjs': parsers,
         '@/lib/rate-limit.mjs': { limitPublicRequest: () => ({ allowed: true }) },
         '@/lib/provider-monitor.mjs': { monitoredFetch: async (_provider, url) => {
-          if (url.includes('googleapis.com')) return apiFails ? new Response('', { status: 403 }) : Response.json({ items: [{ snippet: { title: 'Official channel' }, statistics: { viewCount: '0', videoCount: '0', subscriberCount: '123', hiddenSubscriberCount: true } }] })
+          if (new URL(url).hostname === 'www.googleapis.com') return apiFails ? new Response('', { status: 403 }) : Response.json({ items: [{ snippet: { title: 'Official channel' }, statistics: { viewCount: '0', videoCount: '0', subscriberCount: '123', hiddenSubscriberCount: true } }] })
           if (url.includes('/about')) return new Response('var ytInitialData = {"contents":{"aboutChannelViewModel":{"viewCountText":"12 views"}}};')
           return new Response('Consent required')
         } },
