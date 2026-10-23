@@ -12,11 +12,14 @@ export const DISCORD_BADGE_DEFAULTS = {
   discord_booster_started_at: '2025-01-27T00:00:00.000Z',
   discord_nitro_badge: true,
   discord_booster_badge: true,
-  discord_account_created_at: '2025-11-08', // 8 November 2025, in YYYY-MM-DD format.
+  discord_account_created_at: '2025-11-08', // 8 November 2025, confirmed by the owner.
+  discord_account_age_minimum_years: 1, // Seed is already displayed in the supplied screenshots.
   discord_game_time_hours: null as number | null,
   discord_games_played: null as number | null,
-  discord_streaming_hours: null as number | null,
-  discord_game_time_baseline_hours: 0, // Optional known past hours, added to automatic estimates.
+  discord_streaming_hours: 23 as number | null,
+  discord_game_time_baseline_hours: 5, // Confirmed in the supplied Badge Directory screenshot.
+  discord_game_time_baseline_at: '2026-10-23T09:54:43.000Z', // Count only new observed time after this snapshot.
+  discord_games_played_minimum: 8, // Known total; historical game identities are unavailable.
   discord_last_meadow_badge: true, // Present in the supplied profile screenshot.
 }
 
@@ -122,7 +125,7 @@ function getAccountCreatedAt(id: string | undefined, configuredDate: unknown) {
   return new Date(Number(snowflake >> BigInt(22)) + 1420070400000)
 }
 
-function accountAgeBadge(id: string | undefined, now: number, configuredDate: unknown) {
+function accountAgeBadge(id: string | undefined, now: number, configuredDate: unknown, minimumYears: unknown) {
   const created = getAccountCreatedAt(id, configuredDate)
   if (!created) return undefined
   const today = new Date(now)
@@ -131,14 +134,18 @@ function accountAgeBadge(id: string | undefined, now: number, configuredDate: un
   const anniversary = new Date(created)
   anniversary.setUTCFullYear(today.getUTCFullYear())
   if (today < anniversary) years -= 1
+  const minimum = readProgress(minimumYears)
+  const confirmedLevel = minimum !== undefined && Number.isInteger(minimum) && minimum >= 1 && minimum <= 10 ? minimum : 0
+  const isConfirmed = confirmedLevel > years
+  years = Math.max(years, confirmedLevel)
   if (years < 1) return undefined
-  return makeBadge('account-age', 'Account Age', ACCOUNT_AGE[Math.min(years, 10) - 1], `${years} year${years === 1 ? '' : 's'} on Discord`)
+  return makeBadge('account-age', 'Account Age', ACCOUNT_AGE[Math.min(years, 10) - 1], isConfirmed ? 'Level confirmed on Discord' : `${years} year${years === 1 ? '' : 's'} on Discord`)
 }
 
 /** Recalculate tiers from the latest manual totals or persisted activity estimates. */
 export function getDiscordAchievementBadges(id?: string, kv: Record<string, unknown> = {}, now = Date.now(), estimate?: DiscordActivityEstimate | null): DiscordAchievementBadge[] {
   const badges: DiscordAchievementBadge[] = []
-  const age = accountAgeBadge(id, now, kv.discord_account_created_at)
+  const age = accountAgeBadge(id, now, kv.discord_account_created_at, kv.discord_account_age_minimum_years)
   // Match Discord's profile badge visibility without changing presence/activity visibility.
   if (age && kv.discord_account_age_badge !== 'false' && kv.discord_account_age_badge !== false) badges.push(age)
   const families = [
@@ -148,9 +155,15 @@ export function getDiscordAchievementBadges(id?: string, kv: Record<string, unkn
   ]
   for (const family of families) {
     const automatic = family.key === 'game-time' ? estimate?.game_time_hours : family.key === 'game-variety' ? estimate?.games_played : undefined
-    const isEstimated = family.value == null && automatic !== undefined
-    let progress = family.value == null ? readProgress(automatic) : readProgress(family.value)
-    if (progress !== undefined && isEstimated && family.key === 'game-time') progress += readProgress(kv.discord_game_time_baseline_hours) ?? 0
+    const baseline = family.key === 'game-time' ? readProgress(kv.discord_game_time_baseline_hours)
+      : family.key === 'game-variety' ? readProgress(kv.discord_games_played_minimum) : undefined
+    const observed = readProgress(automatic)
+    const isEstimated = family.value == null && observed !== undefined
+      && (family.key === 'game-time' ? observed > 0 : observed > (baseline ?? 0))
+    let progress = family.value == null ? observed ?? baseline : readProgress(family.value)
+    if (progress !== undefined && family.value == null) {
+      progress = family.key === 'game-time' ? (observed ?? 0) + (baseline ?? 0) : Math.max(progress, baseline ?? 0)
+    }
     if (progress === undefined || (family.key === 'game-variety' && !Number.isInteger(progress))) continue
     let level = -1
     family.milestones.forEach((milestone, index) => { if (progress >= milestone) level = index })

@@ -93,8 +93,34 @@ test('storage failures and corrupt data do not report fabricated persisted total
   await assert.rejects(persistDiscordGameEstimate(database(null, true).client, 'owner', [game()], now))
   await assert.rejects(persistDiscordGameEstimate(database({ gameTimeMs: -1 }).client, 'owner', [game()], now))
   const { recordDiscordGameEstimate } = loadTypescript('lib/discord-activity-store.ts', {
+    './discord-achievements': { DISCORD_BADGE_DEFAULTS: { discord_game_time_baseline_at: '2026-10-23T09:54:43Z' } },
     './supabase-server': { getSupabase: () => ({}) }, './ttl-cache.mjs': { createTtlCache },
     './discord-activity-estimates.mjs': { persistDiscordGameEstimate: async () => { throw new Error('Storage offline') } },
   })
   assert.equal(await recordDiscordGameEstimate('owner', [game()]), null)
+})
+
+
+test('a confirmed snapshot replaces prior estimated hours without backfilling time already covered by the snapshot', () => {
+  // An older deployment may first observe the account after the snapshot date,
+  // but its backfilled hours still predate the snapshot and must be replaced.
+  const previous = observeDiscordGames(null, [game()], now + 60_000)
+  const cutoff = now + 30_000
+  const recalibrated = observeDiscordGames(previous, [game()], cutoff + 20_000, cutoff)
+  assert.equal(recalibrated.gameTimeMs, 20_000)
+  assert.deepEqual(recalibrated.games, previous.games)
+  assert.equal(previous.gameTimeMs, 3_660_000)
+  const next = observeDiscordGames(recalibrated, [game()], cutoff + 40_000, cutoff)
+  assert.equal(next.gameTimeMs, 40_000)
+  assert.equal(observeDiscordGames(null, [game()], cutoff + 20_000, cutoff).gameTimeMs, 20_000)
+})
+
+test('concurrent recalibration preserves the confirmed snapshot boundary across server instances', async () => {
+  const previous = { ...observeDiscordGames(null, [game()], now), revision: 'old-snapshot' }
+  const db = database(previous)
+  const cutoff = now + 30_000
+  const results = await Promise.all(Array.from({ length: 5 }, () => persistDiscordGameEstimate(db.client, 'owner', [game()], cutoff + 20_000, undefined, cutoff)))
+  assert.ok(results.every(result => result.game_time_hours === 20_000 / 3_600_000))
+  assert.equal(db.read().gameTimeMs, 20_000)
+  assert.equal(db.read().games.length, 1)
 })

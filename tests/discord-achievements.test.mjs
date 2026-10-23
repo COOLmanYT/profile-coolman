@@ -10,9 +10,10 @@ const id = snowflakeAt(createdAt)
 const now = Date.parse('2026-10-23T00:00:00.000Z')
 
 test('the configured 8 November 2025 creation date takes precedence over a different account ID', () => {
-  assert.deepEqual(getDiscordAchievementBadges(id, DISCORD_BADGE_DEFAULTS, now).map(badge => badge.key), ['last-meadow'])
-  assert.deepEqual(getDiscordAchievementBadges(id, DISCORD_BADGE_DEFAULTS, Date.parse('2026-11-07T23:59:59.999Z')).map(badge => badge.key), ['last-meadow'])
-  const badges = getDiscordAchievementBadges(id, DISCORD_BADGE_DEFAULTS, Date.parse('2026-11-08T00:00:00.000Z'))
+  const automatic = { ...DISCORD_BADGE_DEFAULTS, discord_account_age_minimum_years: 0 }
+  assert.equal(getDiscordAchievementBadges(id, automatic, now).some(badge => badge.key === 'account-age'), false)
+  assert.equal(getDiscordAchievementBadges(id, automatic, Date.parse('2026-11-07T23:59:59.999Z')).some(badge => badge.key === 'account-age'), false)
+  const badges = getDiscordAchievementBadges(id, automatic, Date.parse('2026-11-08T00:00:00.000Z'))
   assert.equal(badges[0].label, 'Account Age: Seed')
   assert.equal(badges[0].details, '1 year on Discord')
 })
@@ -20,10 +21,10 @@ test('the configured 8 November 2025 creation date takes precedence over a diffe
 test('manual totals work without Lanyard setup and live KV can override or hide them', () => {
   const manual = { ...DISCORD_BADGE_DEFAULTS, discord_game_time_hours: 75, discord_games_played: 10, discord_streaming_hours: 5 }
   assert.deepEqual(getDiscordAchievementBadges(id, manual, now).map((badge) => badge.label), [
-    'Game Time: Committed', 'Game Variety: Enthusiast', 'Streaming: Fledgling', 'Last Meadow Online',
+    'Account Age: Seed', 'Game Time: Committed', 'Game Variety: Enthusiast', 'Streaming: Fledgling', 'Last Meadow Online',
   ])
   const liveKv = { discord_game_time_hours: '300', discord_games_played: '0', discord_streaming_hours: 'invalid' }
-  assert.deepEqual(getDiscordAchievementBadges(id, { ...manual, ...liveKv }, now).map((badge) => badge.label), ['Game Time: Devoted', 'Last Meadow Online'])
+  assert.deepEqual(getDiscordAchievementBadges(id, { ...manual, ...liveKv }, now).map((badge) => badge.label), ['Account Age: Seed', 'Game Time: Devoted', 'Last Meadow Online'])
 })
 
 test('badge ordering follows the supplied profile and keeps unknown badges stable at the end', () => {
@@ -164,4 +165,41 @@ test('an observed session crossing a playtime milestone changes the badge icon w
   const nextGame = observeDiscordGames(upgradedState, [{ type: 0, name: 'Game B', application_id: '456' }], now + 4 * 3_600_000 + 2)
   const ordered = orderDiscordBadges(getDiscordAchievementBadges(undefined, {}, now, gameEstimateTotals(nextGame)))
   assert.deepEqual(ordered.map(b => b.key), ['game-variety', 'game-time'])
+})
+
+
+test('confirmed screenshot progress displays Breakout, Dabbler and Recreational before storage is available', () => {
+  const badges = orderDiscordBadges(getDiscordAchievementBadges(undefined, DISCORD_BADGE_DEFAULTS, now))
+    .filter(badge => ['streaming', 'game-variety', 'game-time'].includes(badge.key))
+  assert.deepEqual(badges.map(b => [b.label, b.details]), [
+    ['Streaming: Breakout', '23 hours streamed'],
+    ['Game Variety: Dabbler', '8 different games played'],
+    ['Game Time: Recreational', '5 hours played'],
+  ])
+})
+
+test('new observations advance confirmed progress, respect the known game-count minimum, and retain manual overrides', () => {
+  const estimate = { game_time_hours: 15, games_played: 2, tracked_since: DISCORD_BADGE_DEFAULTS.discord_game_time_baseline_at }
+  const badges = getDiscordAchievementBadges(undefined, DISCORD_BADGE_DEFAULTS, now, estimate)
+  assert.equal(badges.find(b => b.key === 'game-time').label, 'Game Time: Dedicated')
+  assert.equal(badges.find(b => b.key === 'game-time').details, 'Estimated · 20 hours played')
+  assert.equal(badges.find(b => b.key === 'game-variety').details, '8 different games played')
+  const moreGames = getDiscordAchievementBadges(undefined, DISCORD_BADGE_DEFAULTS, now, { ...estimate, games_played: 10 })
+  assert.equal(moreGames.find(b => b.key === 'game-variety').label, 'Game Variety: Enthusiast')
+  const manual = getDiscordAchievementBadges(undefined, { ...DISCORD_BADGE_DEFAULTS, discord_game_time_hours: 0, discord_games_played: 5, discord_streaming_hours: 75 }, now, estimate)
+  assert.equal(manual.some(b => b.key === 'game-time'), false)
+  assert.equal(manual.find(b => b.key === 'game-variety').details, '5 different games played')
+  assert.equal(manual.find(b => b.key === 'streaming').label, 'Streaming: Standout')
+})
+
+
+test('the confirmed Seed badge stays visible without inventing an anniversary date and future anniversaries still upgrade it', () => {
+  const confirmed = getDiscordAchievementBadges(undefined, DISCORD_BADGE_DEFAULTS, now).find(b => b.key === 'account-age')
+  assert.equal(confirmed.label, 'Account Age: Seed')
+  assert.equal(confirmed.details, 'Level confirmed on Discord')
+  const next = getDiscordAchievementBadges(undefined, DISCORD_BADGE_DEFAULTS, Date.parse('2027-11-08T00:00:00Z')).find(b => b.key === 'account-age')
+  assert.equal(next.label, 'Account Age: Sprout')
+  assert.notEqual(next.iconUrl, confirmed.iconUrl)
+  assert.equal(next.details, '2 years on Discord')
+  assert.equal(getDiscordAchievementBadges(undefined, { ...DISCORD_BADGE_DEFAULTS, discord_account_age_badge: false }, now).some(b => b.key === 'account-age'), false)
 })
