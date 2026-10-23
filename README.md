@@ -115,6 +115,25 @@ Recommended toggle IDs include:
 - `discord_web`
 - `discord_desktop`
 
+## Discord achievement badges
+
+The Discord widget supports all ten tiers of the new **Account Age**, **Game Time**, **Game Variety**, and **Streaming** badges, using Discord-hosted artwork. Existing Nitro, Server Booster, Quest, Orbs, and Gifting badges remain visible.
+
+Account Age is calculated from the Discord account ID and advances on its UTC anniversary, starting at one year. This is an age-based display, not confirmation that Discord has enabled or displayed the badge for the account. Set the Lanyard KV key `discord_account_age_badge` to `false` to hide it.
+
+Lanyard's presence response does not include Discord's historical game or streaming progress. Supply the totals shown in Discord's Badge Directory through these optional [Lanyard KV keys](https://github.com/Phineas/lanyard#kv):
+
+| Key | Value |
+| --- | --- |
+| `discord_game_time_hours` | Total hours Discord has counted toward Game Time |
+| `discord_games_played` | Whole number of different games Discord has counted |
+| `discord_streaming_hours` | Total hours Discord has counted toward Streaming |
+| `discord_account_age_badge` | `false` to hide the calculated Account Age badge |
+
+For example, `.set discord_game_time_hours 75` sent to the Lanyard bot displays the Committed tier after the next widget refresh. Missing, invalid, or below-unlock totals leave that badge hidden. These are owner-maintained totals; the widget does not accumulate time from current presence or assume that a live stream represents historical streaming progress. To hide an activity badge, delete its KV key or set it to `0`. The Dashboard's existing Badges toggle hides the complete badge row.
+
+Badge meanings are documented in [Discord's profile badge guide](https://support.discord.com/hc/en-us/articles/44369363856663-Discord-Profile-Badges-What-Each-Badge-Means). Tier names, milestones, and Discord CDN artwork URLs are catalogued by [mezotv/discord-badges](https://github.com/mezotv/discord-badges#account-age-badges). Activity totals can lag behind recent activity in Discord.
+
 ## Connect Twitch
 
 Set `TWITCH_REDIRECT_URI` to the exact public URL of this profile deployment. Register that same URL in your Twitch Developer application, for example `https://profile.coolmanyt.com/api/twitch/callback`, plus `http://localhost:3000/api/twitch/callback` for local development. In Vercel, set `TWITCH_BROADCASTER_LOGIN=coolman_yt1` as well as the Twitch client credentials and redirect URI. After setting these values, sign in to the dashboard and select **Connect Twitch**. Approve the `moderator:read:followers` and `channel:read:subscriptions` scopes to display follower and subscriber totals.

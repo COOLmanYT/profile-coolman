@@ -3,6 +3,7 @@
 import { startPolling, fetchWidgetJson } from '@/lib/widget-polling.mjs'
 import { memo, useEffect, useRef, useState, type ReactNode } from 'react'
 import Image from 'next/image'
+import { getDiscordAchievementBadges } from '@/lib/discord-achievements'
 
 interface DiscordActivity {
   name: string
@@ -139,7 +140,7 @@ const BADGE_MAP: Array<{ bit: number; label: string; iconHash: string }> = [
   { bit: 1 << 7, label: 'HypeSquad Brilliance', iconHash: '011940fd013da3f7fb926e4a1cd2e618' },
   { bit: 1 << 8, label: 'HypeSquad Balance', iconHash: '3aa41de486fa12454c3761e8e223442e' },
   { bit: 1 << 9, label: 'Early Supporter', iconHash: '7060786766c9c840eb3019e725d2b358' },
-  { bit: 1 << 17, label: 'Active Developer', iconHash: '6bdc42827a38498929a4920da12695d9' },
+  { bit: 1 << 17, label: 'Early Verified Bot Developer', iconHash: '6bdc42827a38498929a4920da12695d9' },
 ]
 const NITRO_STARTED_AT = '2025-01-26T00:00:00.000Z'
 const BOOSTER_STARTED_AT = '2025-01-27T00:00:00.000Z'
@@ -218,6 +219,7 @@ function getSpecialBadges(presence?: DiscordPresence) {
     { key: 'quest', label: 'Completed a Quest', details: 'Completed a Discord Quest', iconUrl: `${BADGE_ASSET_BASE}/quest.png` },
     { key: 'orbs', label: 'Orbs Apprentice', details: 'Earned the Orbs Apprentice badge', iconUrl: `${BADGE_ASSET_BASE}/orb.svg` },
     { key: 'legend-gifting', label: 'Legend Gifting', details: 'Earned the Legend Gifting badge', iconUrl: `${BADGE_ASSET_BASE}/gifting/legend.png` },
+    ...getDiscordAchievementBadges(user?.id, presence?.kv),
   ] satisfies SpecialBadge[]
 }
 
