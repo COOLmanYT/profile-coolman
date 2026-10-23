@@ -133,6 +133,34 @@ test('stalled or malformed connections retry and invalid activities cannot break
   stop()
 })
 
+test('invalid heartbeat intervals disconnect without allocating heartbeat timers', async () => {
+  for (const interval of [undefined, null, '1000', {}, [], 0, -1, 999, 120_001, Number.MAX_SAFE_INTEGER, Infinity, NaN]) {
+    const env = environment()
+    const stop = env.store.subscribe(() => {})
+    await settle()
+    env.message({ op: 1, d: { heartbeat_interval: interval } })
+    assert.equal(env.sockets[0].closed, true, `reject ${String(interval)}`)
+    assert.deepEqual(env.sockets[0].sent, [])
+    // Only bounded reconnect / REST timers remain after rejecting the hello.
+    assert.equal([...env.jobs.values()].every(job => job.delay >= 1000 && job.delay <= 60_000), true)
+    stop()
+    assert.equal(env.jobs.size, 0)
+  }
+})
+
+test('heartbeat boundary intervals preserve the negotiated cadence on repeated sends', async () => {
+  for (const interval of [1000, 120_000]) {
+    const env = environment()
+    const stop = env.store.subscribe(() => {})
+    await settle()
+    env.message({ op: 1, d: { heartbeat_interval: interval } })
+    env.message({ op: 0, t: 'INIT_STATE', d: presence() })
+    await env.advance(interval * 2)
+    assert.equal(env.sockets[0].sent.filter(message => message.op === 3).length, 2)
+    stop()
+  }
+})
+
 test('structured Spotify data provides real track links, split artists and local progress; expired data is rejected', () => {
   const track = lanyardTrack(presence(), 2000)
   assert.equal(track.progressMs, 1000)
