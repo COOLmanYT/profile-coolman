@@ -73,7 +73,7 @@ export default function SeasonalOptionsClient({ legalSimpleModeDefault, youtubeE
     <div className="min-h-screen bg-[#151515] px-5 py-10 text-white">
       <main className="mx-auto max-w-md rounded-2xl border border-white/10 bg-white/5 p-5">
         <Link href="/" className="text-xs text-white/45 hover:text-white">← Back to profile</Link>
-        <h1 className="mt-4 text-2xl font-bold">Seasonal Options</h1>
+        <h1 className="mt-4 text-2xl font-bold">Options</h1>
         <p className="mt-1 text-sm text-white/55">Automatic dates use your browser time zone: {timeZone}.</p>
         <label className="mt-6 block text-sm font-medium">Theme</label>
         <select value={theme} onChange={(event) => { const next = event.target.value as SeasonalTheme | ''; setTheme(next); if (!next) clearOnce() }} className="mt-2 w-full rounded-lg border border-white/15 bg-black/25 px-3 py-2 text-sm">

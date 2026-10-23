@@ -1,6 +1,7 @@
 'use client'
 
 import { startPolling, fetchWidgetJson } from '@/lib/widget-polling.mjs'
+import { getGameActivityLink } from '@/lib/game-activity.mjs'
 import { memo, useEffect, useRef, useState, type ReactNode } from 'react'
 import Image from 'next/image'
 
@@ -8,6 +9,9 @@ interface DiscordActivity {
   name: string
   type: number
   details?: string
+  details_url?: string
+  state_url?: string
+  url?: string
   state?: string
   emoji?: {
     id?: string | null
@@ -17,6 +21,8 @@ interface DiscordActivity {
   assets?: {
     large_image?: string
     large_text?: string
+    large_url?: string
+    small_url?: string
   }
   application_id?: string
 }
@@ -447,7 +453,10 @@ function DiscordWidget({
           )}
 
           {/* Activity rows */}
-          {visibleActivities.map((activity, idx) => (
+          {visibleActivities.map((activity, idx) => {
+            const gameLink = getGameActivityLink(activity)
+            const activityName = <>{activity.type === 0 && 'Playing '}{activity.type === 2 && 'Listening to '}{activity.type === 3 && 'Watching '}{activity.name}</>
+            return (
             <div key={idx} className="flex items-center gap-2">
               <div className="flex-shrink-0 w-7 h-7 bg-white/10 rounded-lg flex items-center justify-center text-xs">
                 {activity.type === 0 && '🎮'}
@@ -457,18 +466,14 @@ function DiscordWidget({
                 {activity.type === 5 && '🏆'}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-white text-xs font-semibold truncate leading-tight">
-                  {activity.type === 0 && 'Playing '}
-                  {activity.type === 2 && 'Listening to '}
-                  {activity.type === 3 && 'Watching '}
-                  {activity.name}
-                </p>
+                {gameLink ? <a href={gameLink.href} target="_blank" rel="noopener noreferrer" title={gameLink.source === 'steam' ? `View ${activity.name} on Steam` : `Search DuckDuckGo for ${activity.name} game`} className="block text-white text-xs font-semibold truncate leading-tight hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/70">{activityName} <span aria-hidden>↗</span></a> : <p className="text-white text-xs font-semibold truncate leading-tight">{activityName}</p>}
                 {activity.details && (
                   <p className="text-white/50 text-[10px] truncate mt-0.5">{activity.details}</p>
                 )}
               </div>
             </div>
-          ))}
+            )
+          })}
 
           {visibleActivities.length === 0 && !showStatus && (
             <p className="text-white/40 text-xs">No visible activity</p>
