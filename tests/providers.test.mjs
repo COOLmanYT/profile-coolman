@@ -1,11 +1,106 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { createTtlCache } from '../lib/ttl-cache.mjs'
+import { createSpotifyFetcher, SpotifyCooldownError } from '../lib/spotify-fetch.mjs'
 import { loadTypescript, nextServer } from './load-typescript.mjs'
 
 const rateLimit = { limitPublicRequest: () => ({ allowed: true }) }
 const request = { nextUrl: new URL('https://test.invalid/api/spotify') }
 const json = (body, status = 200) => Response.json(body, { status })
+
+async function withSpotify(upstream, run) {
+  const values = { SPOTIFY_CLIENT_ID: 'client', SPOTIFY_CLIENT_SECRET: 'secret', SPOTIFY_REFRESH_TOKEN: 'refresh' }
+  const original = Object.fromEntries(Object.keys(values).map(key => [key, process.env[key]]))
+  Object.assign(process.env, values)
+  try {
+    const route = loadTypescript('app/api/spotify/route.ts', {
+      'next/server': nextServer, '@/lib/rate-limit.mjs': rateLimit,
+      '@/lib/ttl-cache.mjs': { createTtlCache },
+      '@/lib/spotify-fetch.mjs': { createSpotifyFetcher, SpotifyCooldownError },
+      '@/lib/provider-monitor.mjs': { monitoredFetch: async (_provider, url) => upstream(url) },
+    })
+    await run(route.GET)
+  } finally {
+    for (const [key, value] of Object.entries(original)) {
+      if (value === undefined) delete process.env[key]
+      else process.env[key] = value
+    }
+  }
+}
+
+test('concurrent visitors share playback while history remains uncached and separate', async () => {
+  const calls = []
+  await withSpotify(url => {
+    calls.push(url)
+    if (url.includes('/api/token')) return json({ access_token: 'token' })
+    if (url.includes('recently-played')) return json({ items: [] })
+    return json({ is_playing: true, progress_ms: 1000, item: { id: 'a'.repeat(22), name: 'Song', duration_ms: 100_000, artists: [] } })
+  }, async GET => {
+    const responses = await Promise.all(Array.from({ length: 10 }, () => GET(request)))
+    assert.equal(calls.filter(url => url.includes('currently-playing')).length, 1)
+    const body = await responses[0].json()
+    assert.equal(body.title, 'Song')
+    assert.equal(typeof body.observedAt, 'number')
+    assert.equal(responses[0].headers.get('Vercel-CDN-Cache-Control'), 'max-age=15')
+    assert.deepEqual(await responses[1].json(), body)
+    for (let i = 0; i < 2; i++) {
+      const history = await GET({ nextUrl: new URL('https://test.invalid/api/spotify?history=1') })
+      assert.equal(history.headers.get('Cache-Control'), 'no-store')
+      assert.equal(history.headers.get('Vercel-CDN-Cache-Control'), null)
+      assert.deepEqual((await history.json()).items, [])
+    }
+    assert.equal(calls.filter(url => url.includes('recently-played')).length, 2)
+    assert.equal(calls.filter(url => url.includes('/api/token')).length, 1)
+  })
+})
+
+test('Spotify 429 stops fallback endpoint chaining and history respects the same cooldown', async () => {
+  const calls = []
+  await withSpotify(url => {
+    calls.push(url)
+    if (url.includes('/api/token')) return json({ access_token: 'token' })
+    return new Response(null, { status: 429, headers: { 'Retry-After': '120' } })
+  }, async GET => {
+    const response = await GET(request)
+    assert.equal(response.status, 429)
+    assert.equal(response.headers.get('Retry-After'), '120')
+    assert.equal(response.headers.get('Cache-Control'), 'no-store')
+    const history = await GET({ nextUrl: new URL('https://test.invalid/api/spotify?history=1') })
+    assert.equal(history.status, 429)
+    assert.equal(calls.length, 2, 'only token and first playback request reach Spotify')
+  })
+})
+
+test('private playlist identifiers never enter the public playback cache', async () => {
+  await withSpotify(url => {
+    if (url.includes('/api/token')) return json({ access_token: 'token' })
+    if (url.includes('/playlists/')) return json({ public: false })
+    return json({ is_playing: true, item: { id: 'a'.repeat(22), name: 'Song' },
+      context: { type: 'playlist', uri: 'spotify:playlist:private-id', external_urls: { spotify: 'https://open.spotify.com/playlist/private-id' } },
+    })
+  }, async GET => {
+    const response = await GET(request)
+    const body = await response.json()
+    assert.equal(body.contextIsPublic, false)
+    assert.equal(body.contextUri, undefined)
+    assert.equal(body.contextUrl, undefined)
+    assert.equal(JSON.stringify(body).includes('private-id'), false)
+  })
+})
+
+test('a transient Spotify error is not cached as healthy or retained after recovery', async () => {
+  let failed = true
+  await withSpotify(url => {
+    if (url.includes('/api/token')) return json({ access_token: 'token' })
+    return failed ? json({}, 503) : new Response(null, { status: 204 })
+  }, async GET => {
+    const error = await GET(request)
+    assert.equal(error.status, 503)
+    assert.equal(error.headers.get('Cache-Control'), 'no-store')
+    failed = false
+    assert.equal((await GET(request)).status, 200)
+  })
+})
 
 test('Discord distinguishes offline presence from missing config, failed requests, and invalid responses', async () => {
   const original = process.env.DISCORD_USER_ID
@@ -48,6 +143,7 @@ test('Discord records only validated online activity and exposes aggregate estim
       let recorded
       const { GET } = loadTypescript('app/api/discord/route.ts', {
         'next/server': nextServer, '@/lib/rate-limit.mjs': rateLimit,
+        '@/lib/ttl-cache.mjs': { createTtlCache },
         '@/lib/provider-monitor.mjs': { monitoredFetch: async () => json({ success: true, data: { discord_status: status, activities } }) },
         '@/lib/discord-activity-store': { recordDiscordGameEstimate: async (id, games) => { recorded = { id, games }; return estimate } },
       })
@@ -103,18 +199,18 @@ test('Twitch requires valid stream data, reports partial failures, and treats ab
   }
 })
 
-test('Spotify reports idle as healthy, authentication/upstream errors as unavailable, and Discord fallback as degraded', async () => {
+test('Spotify reports idle as healthy and authentication/upstream errors as unavailable', async () => {
   const values = { SPOTIFY_CLIENT_ID: 'client', SPOTIFY_CLIENT_SECRET: 'secret', SPOTIFY_REFRESH_TOKEN: 'refresh', DISCORD_USER_ID: 'test' }
   const original = Object.fromEntries(Object.keys(values).map((key) => [key, process.env[key]]))
   Object.assign(process.env, values)
   try {
-    for (const [mode, expected, state] of [['idle', 200, 'healthy'], ['token', 503, 'unavailable'], ['upstream', 503, 'unavailable'], ['fallback', 200, 'degraded'], ['history', 503, 'unavailable']]) {
+    for (const [mode, expected, state] of [['idle', 200, 'healthy'], ['token', 503, 'unavailable'], ['upstream', 503, 'unavailable'], ['history', 503, 'unavailable']]) {
       const { GET } = loadTypescript('app/api/spotify/route.ts', {
         'next/server': nextServer, '@/lib/rate-limit.mjs': rateLimit,
         '@/lib/ttl-cache.mjs': { createTtlCache },
+        '@/lib/spotify-fetch.mjs': { createSpotifyFetcher, SpotifyCooldownError },
         '@/lib/provider-monitor.mjs': { monitoredFetch: async (_provider, url) => {
           if (url.includes('/api/token')) return mode === 'token' ? json({}, 401) : json({ access_token: 'token' })
-          if (url.includes('lanyard')) return json({ success: true, data: { activities: mode === 'fallback' ? [{ type: 2, name: 'Spotify', details: 'Track' }] : [] } })
           if (mode === 'idle') return new Response(null, { status: 204 })
           return json({}, 500)
         } },
@@ -124,7 +220,6 @@ test('Spotify reports idle as healthy, authentication/upstream errors as unavail
       const body = await response.json()
       assert.equal(body.providerStatus, state, mode)
       if (mode === 'idle') assert.equal(body.isPlaying, false)
-      if (mode === 'fallback') assert.equal(body.isPlaying, true)
     }
   } finally {
     for (const [key, value] of Object.entries(original)) {
@@ -144,6 +239,7 @@ test('Discord normalizes malformed activity payloads before displaying or record
       let recorded
       const { GET } = loadTypescript('app/api/discord/route.ts', {
         'next/server': nextServer, '@/lib/rate-limit.mjs': rateLimit,
+        '@/lib/ttl-cache.mjs': { createTtlCache },
         '@/lib/provider-monitor.mjs': { monitoredFetch: async () => json({ success: true, data: { discord_status: 'online', activities } }) },
         '@/lib/discord-activity-store': { recordDiscordGameEstimate: async (_id, games) => { recorded = games; return null } },
       })

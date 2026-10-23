@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { startPolling, fetchWidgetJson } from '../lib/widget-polling.mjs'
+import { startPolling, fetchWidgetJson, retryAfterMs } from '../lib/widget-polling.mjs'
 
 const settle = async () => { for (let i = 0; i < 8; i++) await Promise.resolve() }
 function environment() {
@@ -82,5 +82,24 @@ test('widget JSON rejects HTTP failures, invalid JSON, and unavailable providers
     }
     globalThis.fetch = async () => Response.json({ isPlaying: false, providerStatus: 'healthy' })
     assert.equal((await fetchWidgetJson('/api/test', new AbortController().signal)).isPlaying, false)
+  } finally { globalThis.fetch = original }
+})
+
+test('Retry-After exceeds the ordinary backoff cap and survives a polling restart', async () => {
+  const env = environment()
+  const stop = startPolling({ ...env, intervalMs: 100, maxDelayMs: 250,
+    poll: async () => { throw Object.assign(new Error('rate limited'), { retryAfterMs: 120_000 }) }, onError: () => {},
+  })
+  await settle()
+  assert.equal([...env.jobs.values()][0].delay, 120_000)
+  stop()
+  const original = globalThis.fetch
+  let calls = 0
+  globalThis.fetch = async () => { calls++; return new Response(null, { status: 429, headers: { 'Retry-After': '120' } }) }
+  try {
+    await assert.rejects(fetchWidgetJson('/api/cooldown-test'), error => error.retryAfterMs === 120_000)
+    await assert.rejects(fetchWidgetJson('/api/cooldown-test'), error => error.retryAfterMs > 119_000)
+    assert.equal(calls, 1)
+    assert.equal(retryAfterMs(new Date(121_000).toUTCString(), 1000), 120_000)
   } finally { globalThis.fetch = original }
 })

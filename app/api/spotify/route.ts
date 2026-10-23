@@ -2,10 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { monitoredFetch } from '@/lib/provider-monitor.mjs'
 import { limitPublicRequest } from '@/lib/rate-limit.mjs'
 import { createTtlCache } from '@/lib/ttl-cache.mjs'
+import { createSpotifyFetcher, SpotifyCooldownError } from '@/lib/spotify-fetch.mjs'
 
-// Force this route to always be dynamic so Next.js / Vercel never statically
-// caches the response. Without this, the CDN can serve a stale snapshot to
-// every visitor instead of fetching live playback state.
+// Fetch at request time; successful public playback has a short CDN-only TTL.
 export const dynamic = 'force-dynamic'
 
 const SPOTIFY_TOKEN_URL = 'https://accounts.spotify.com/api/token'
@@ -17,6 +16,9 @@ const SPOTIFY_RECENTLY_PLAYED_URL = 'https://api.spotify.com/v1/me/player/recent
 // Set SPOTIFY_DEBUG=true in your environment to include upstream status codes and
 // playback diagnostics in API responses. Never enable this in production long-term.
 const DEBUG = process.env.SPOTIFY_DEBUG === 'true'
+const spotifyFetch = createSpotifyFetcher(monitoredFetch)
+const playbackCache = createTtlCache({ ttlMs: 15_000, staleOnError: false })
+const noStore = { headers: { 'Cache-Control': 'no-store' } }
 
 // Spotify access tokens last 60 minutes. Cache the refreshed token for slightly
 // less so concurrent profile polls share one refresh instead of each request
@@ -75,7 +77,7 @@ async function getAccessToken(): Promise<TokenResult> {
       }
 
       const basic = Buffer.from(`${clientId}:${clientSecret}`).toString('base64')
-      const res = await monitoredFetch('spotify', SPOTIFY_TOKEN_URL, {
+      const res = await spotifyFetch(SPOTIFY_TOKEN_URL, {
         method: 'POST',
         headers: {
           Authorization: `Basic ${basic}`,
@@ -105,6 +107,7 @@ async function getAccessToken(): Promise<TokenResult> {
     })
     return { accessToken }
   } catch (error) {
+    if (error instanceof SpotifyCooldownError) throw error
     return { error: error instanceof Error ? error.message : 'token_refresh_failed' }
   }
 }
@@ -117,7 +120,7 @@ async function fetchPlaylistVisibility(accessToken: string, playlistId: string):
   }
   return cache.get(async () => {
     try {
-      const res = await monitoredFetch('spotify',
+      const res = await spotifyFetch(
         `${SPOTIFY_PLAYLIST_URL}/${playlistId}?fields=public`,
         {
           headers: { Authorization: `Bearer ${accessToken}` },
@@ -163,20 +166,12 @@ async function mapTrackData(data: SpotifyPlaybackResponse, accessToken: string) 
     progressMs: data.progress_ms ?? 0,
     embedUrl: item.id ? `https://open.spotify.com/embed/track/${item.id}` : undefined,
     contextType: data.context?.type,
-    contextUri,
-    contextUrl:
-      data.context?.external_urls?.spotify ??
-      (playlistId ? `https://open.spotify.com/playlist/${playlistId}` : undefined),
+    contextUri: contextIsPublic ? contextUri : undefined,
+    contextUrl: contextIsPublic
+      ? data.context?.external_urls?.spotify ?? (playlistId ? `https://open.spotify.com/playlist/${playlistId}` : undefined)
+      : undefined,
     contextIsPublic,
   }
-}
-
-type LanyardActivity = {
-  type: number
-  name: string
-  details?: string
-  state?: string
-  assets?: { large_image?: string }
 }
 
 type SpotifyRecentlyPlayedResponse = {
@@ -191,12 +186,7 @@ type SpotifyRecentlyPlayedResponse = {
   }>
 }
 
-export async function GET(req: NextRequest) {
-  // Prevent CDN / Vercel edge caches from serving stale playback state.
-  const noStore = { headers: { 'Cache-Control': 'no-store' } }
-  const rate = limitPublicRequest(req, 'spotify')
-  if (!rate.allowed) return NextResponse.json({ error: 'RATE_LIMITED' }, { status: 429, headers: { 'Retry-After': String(rate.retryAfterSeconds) } })
-
+async function loadSpotify(history: boolean) {
   try {
     const tokenResult = await getAccessToken()
     if (tokenResult.error || !tokenResult.accessToken) {
@@ -205,12 +195,12 @@ export async function GET(req: NextRequest) {
 
     const accessToken = tokenResult.accessToken
 
-    if (req.nextUrl.searchParams.get('history') === '1') {
-      const historyRes = await monitoredFetch('spotify', SPOTIFY_RECENTLY_PLAYED_URL, { headers: { Authorization: `Bearer ${accessToken}` }, cache: 'no-store' })
+    if (history) {
+      const historyRes = await spotifyFetch(SPOTIFY_RECENTLY_PLAYED_URL, { headers: { Authorization: `Bearer ${accessToken}` }, cache: 'no-store' })
       if (!historyRes.ok) return NextResponse.json({ providerStatus: 'unavailable', error: 'Spotify history unavailable' }, { ...noStore, status: 503 })
-      const history = await historyRes.json() as SpotifyRecentlyPlayedResponse
-      if (!Array.isArray(history.items)) throw new Error('Invalid Spotify history')
-      const items = history.items.flatMap((item) => item.track?.name ? [{
+      const historyData = await historyRes.json() as SpotifyRecentlyPlayedResponse
+      if (!Array.isArray(historyData.items)) throw new Error('Invalid Spotify history')
+      const items = historyData.items.flatMap((item) => item.track?.name ? [{
         title: item.track.name,
         artist: (item.track.artists ?? []).map((artist) => artist.name).filter(Boolean).join(', '),
         albumArt: item.track.album?.images?.[0]?.url,
@@ -221,7 +211,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Primary: /v1/me/player/currently-playing
-    const nowPlayingRes = await monitoredFetch('spotify', SPOTIFY_NOW_PLAYING_URL, {
+    const nowPlayingRes = await spotifyFetch(SPOTIFY_NOW_PLAYING_URL, {
       headers: { Authorization: `Bearer ${accessToken}` },
       cache: 'no-store',
     })
@@ -237,7 +227,7 @@ export async function GET(req: NextRequest) {
     // Fallback: /v1/me/player (Get Playback State)
     // Covers cases where currently-playing returns 204 (e.g. certain device contexts
     // or Spotify considers the stream "not current") but playback is actually active.
-    const playbackRes = await monitoredFetch('spotify', SPOTIFY_PLAYBACK_URL, {
+    const playbackRes = await spotifyFetch(SPOTIFY_PLAYBACK_URL, {
       headers: { Authorization: `Bearer ${accessToken}` },
       cache: 'no-store',
     })
@@ -264,66 +254,35 @@ export async function GET(req: NextRequest) {
       }, noStore)
     }
 
-    // Both Spotify endpoints returned non-200 (204, 4xx, etc.).
-    // Last-resort: read Spotify activity from Discord presence via Lanyard.
-    const discordUserId = process.env.DISCORD_USER_ID
-    if (discordUserId && discordUserId !== 'placeholder') {
-      try {
-        const lanyardRes = await monitoredFetch('discord',
-          `https://api.lanyard.rest/v1/users/${discordUserId}`,
-          { cache: 'no-store' }
-        )
-        if (lanyardRes.ok) {
-          const lanyardJson = await lanyardRes.json().catch(() => null)
-          if (lanyardJson?.success && lanyardJson.data) {
-            const activities: LanyardActivity[] = lanyardJson.data.activities ?? []
-            const spotifyActivity = activities.find(
-              (a) => a.type === 2 && a.name.toLowerCase().includes('spotify')
-            )
-            if (spotifyActivity) {
-              const title = spotifyActivity.details ?? spotifyActivity.name
-              const artist = spotifyActivity.state
-              let albumArt: string | undefined
-              const largeImage = spotifyActivity.assets?.large_image
-              if (largeImage) {
-                albumArt = largeImage.startsWith('spotify:')
-                  ? `https://i.scdn.co/image/${largeImage.split(':')[1] ?? ''}`
-                  : largeImage
-              }
-              const songUrl =
-                title || artist
-                  ? `https://open.spotify.com/search/${encodeURIComponent(`${title ?? ''} ${artist ?? ''}`.trim())}`
-                  : undefined
-
-                return NextResponse.json({
-                  providerStatus: 'degraded',
-                  isPlaying: true,
-                  title,
-                  artist,
-                  artists: artist ? [artist] : [],
-                  albumArt,
-                  songUrl,
-                  durationMs: undefined,
-                  progressMs: undefined,
-                  embedUrl: undefined,
-                  contextType: undefined,
-                  contextUri: undefined,
-                  contextUrl: undefined,
-                  ...(DEBUG ? { debug: { fallback: 'discord_lanyard' } } : {}),
-                }, noStore)
-              }
-          }
-        }
-      } catch {
-        // Lanyard fallback failed; fall through to not-playing response
-      }
-    }
-
     if (nowPlayingRes.ok && playbackRes.ok) {
       return NextResponse.json({ providerStatus: 'healthy', isPlaying: false }, noStore)
     }
     return NextResponse.json({ providerStatus: 'unavailable', error: 'Spotify playback unavailable' }, { ...noStore, status: 503 })
-  } catch {
+  } catch (error) {
+    if (error instanceof SpotifyCooldownError) {
+      return NextResponse.json({ providerStatus: 'unavailable', error: 'Spotify cooling down' }, { status: 429, headers: { 'Cache-Control': 'no-store', 'Retry-After': String(error.retryAfterSeconds) } })
+    }
+    return NextResponse.json({ providerStatus: 'unavailable', error: 'Spotify playback unavailable' }, { ...noStore, status: 503 })
+  }
+}
+
+// Only public playback is cached. History and errors always stay out of the CDN.
+export async function GET(req: NextRequest) {
+  const rate = limitPublicRequest(req, 'spotify')
+  if (!rate.allowed) return NextResponse.json({ error: 'RATE_LIMITED' }, { status: 429, headers: { 'Cache-Control': 'no-store', 'Retry-After': String(rate.retryAfterSeconds) } })
+  if (req.nextUrl.searchParams.get('history') === '1') return loadSpotify(true)
+  try {
+    const body = await playbackCache.get(async () => {
+      const response = await loadSpotify(false)
+      if (!response.ok) throw response
+      return { ...await response.json(), observedAt: Date.now() }
+    })
+    return NextResponse.json(body, { headers: {
+      'Cache-Control': 'public, max-age=0, must-revalidate',
+      'Vercel-CDN-Cache-Control': 'max-age=15',
+    } })
+  } catch (error) {
+    if (error instanceof Response) return error.clone()
     return NextResponse.json({ providerStatus: 'unavailable', error: 'Spotify playback unavailable' }, { ...noStore, status: 503 })
   }
 }
