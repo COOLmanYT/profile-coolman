@@ -119,9 +119,17 @@ Recommended toggle IDs include:
 
 The YouTube section shows the newest public upload from the channel feed across all formats, including Shorts, regular videos and stream uploads. It includes the thumbnail, title, publication date and view count, plus subscribers, total channel views, public video count, last upload date and live status. Uploads and totals refresh from YouTube at most every 15 minutes; live status refreshes every minute while the page is visible. Failed or unrecognized responses display unavailable data rather than zero counts or a guessed offline status.
 
-The Dashboard controls the entire `youtube` module and its `youtube_stats`, `youtube_latest` and `youtube_live` sections. Visitor **Options → Media preferences** offers the same controls saved in that browser, and **Hide modules for this visit** provides a temporary override. Global settings always take priority. The latest-upload control replaces the old separate Short/long-form preferences and defaults on.
+The Dashboard controls the entire `youtube` module and its `youtube_stats`, `youtube_latest` and `youtube_live` sections. `youtube_shorts` and `youtube_videos` allow either or both upload types. Visitor **Options → Media preferences** offers browser-saved controls and a Shorts-only, Videos-only or both selector; global format restrictions take priority. Format selection uses the channel's selected Shorts/Videos/Live tabs, including uploads older than the RSS feed window. **Hide modules for this visit** provides a temporary override.
+
+`youtube_embed_default` defaults to false and controls the initial player preference for visitors. Each visitor can follow that default or explicitly turn the player on/off. The enabled player first checks YouTube oEmbed availability, then loads a fixed privacy-enhanced iframe URL with no autoplay. Provider HTML is never injected. Embedding permission, browser restrictions or playback errors can still prevent playback; the YouTube watch link remains available.
 
 Public YouTube pages supply channel totals by default. Optionally set the server-only `YOUTUBE_API_KEY` with YouTube Data API v3 enabled for [official channel statistics](https://developers.google.com/youtube/v3/docs/channels/); public pages remain the fallback. Subscriber counts can be rounded or hidden by YouTube. No API key is sent to the browser. YouTube page changes or consent screens may make individual fields unavailable while the rest of the widget continues to work.
+
+## Profile likes
+
+Apply `supabase/migrations/20261023133931_add_profile_likes.sql` to add the service-only like tables and atomic `like_profile_once` function. The public API keeps a random browser UUID in a rolling 400-day HttpOnly cookie and local storage, storing only its hash server-side. A unique key and serialized counter update prevent duplicate/retried submissions from incrementing twice. Local storage and the cookie restore each other, while browser Web Locks coordinate first-use identity creation across tabs. Clearing both storage mechanisms, browser eviction or changing browsers can allow another like; this does not claim to identify a person or prevent deliberate token forgery.
+
+The heart button sits opposite the view count in normal layout beneath the status module, with space above the footer. A successful new like plays a brief heart animation, respecting reduced-motion preferences. Failed storage requests are reported unavailable and never presented as a successful like or a fabricated zero count.
 
 ## Connect Twitch
 

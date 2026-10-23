@@ -116,6 +116,9 @@ export default function ProfileCard({ toggles, preview = false }: ProfileCardPro
           showStats={(toggles.youtube_stats ?? true) && (preview || mediaPreferences.showYoutubeStats)}
           showLatest={(toggles.youtube_latest ?? true) && (preview || mediaPreferences.showLatestUpload)}
           showLive={(toggles.youtube_live ?? true) && (preview || mediaPreferences.showYoutubeLive)}
+          includeShorts={(toggles.youtube_shorts ?? true) && (preview || mediaPreferences.youtubeFormat !== 'videos')}
+          includeVideos={(toggles.youtube_videos ?? true) && (preview || mediaPreferences.youtubeFormat !== 'shorts')}
+          showEmbed={preview || mediaPreferences.youtubeEmbed === 'default' ? (toggles.youtube_embed_default ?? false) : mediaPreferences.youtubeEmbed === 'on'}
         />}
 
         {/* Social Links */}

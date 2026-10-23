@@ -1,61 +1,66 @@
 'use client'
 
 import Image from 'next/image'
-import { useState } from 'react'
-import { usePolling } from './usePolling'
+import dynamic from 'next/dynamic'
+import { useEffect, useState } from 'react'
+import { startPolling, fetchWidgetJson } from '@/lib/widget-polling.mjs'
+
+const YouTubeEmbed = dynamic(() => import('./YouTubeEmbed'))
 
 type LatestVideo = { id: string; title: string; url: string; publishedAt?: string; thumbnailUrl: string; views?: number }
 type YouTubeData = {
   latest?: LatestVideo
-  channel?: { title?: string; url: string; subscribers?: string; totalViews?: string; videoCount?: string }
+  short?: LatestVideo
+  longform?: LatestVideo
+  channel?: { title?: string; avatarUrl?: string; url: string; subscribers?: string; totalViews?: string; videoCount?: string }
   live?: { status: 'live' | 'offline' | 'unknown'; url?: string; title?: string }
   uploadsUnavailable?: boolean
   updatedAt?: string
+  formatsUnavailable?: { shorts: boolean; videos: boolean }
 }
 
 function postedDate(value?: string) {
   return value && Number.isFinite(Date.parse(value)) ? new Intl.DateTimeFormat('en', { dateStyle: 'medium' }).format(new Date(value)) : 'Date unavailable'
 }
 
-export default function YouTubeWidget({ showStats, showLatest, showLive }: { showStats: boolean; showLatest: boolean; showLive: boolean }) {
+export default function YouTubeWidget({ showStats, showLatest, showLive, includeShorts = true, includeVideos = true, showEmbed = false }: { showStats: boolean; showLatest: boolean; showLive: boolean; includeShorts?: boolean; includeVideos?: boolean; showEmbed?: boolean }) {
   const [data, setData] = useState<YouTubeData | null>(null)
   const [failed, setFailed] = useState(false)
   const enabled = showStats || showLatest || showLive
-  usePolling(async (signal) => {
+  useEffect(() => {
     if (!enabled) return
-    try {
-      const response = await fetch('/api/youtube', { cache: 'no-store', signal })
-      if (!response.ok) throw new Error('YouTube unavailable')
-      const next = await response.json() as YouTubeData
+    return startPolling({ intervalMs: 60_000, timeoutMs: 30_000, poll: async (signal: AbortSignal) => {
+      const next = await fetchWidgetJson('/api/youtube', signal) as YouTubeData
       if (!signal.aborted) { setData(next); setFailed(false) }
-    } catch { if (!signal.aborted) setFailed(true) }
-  }, { intervalMs: 60_000 })
+    }, onError: () => setFailed(true) })
+  }, [enabled])
   if (!enabled) return null
-  const latest = data?.latest
+  const latest = includeShorts && includeVideos ? data?.latest : includeShorts ? data?.short : includeVideos ? data?.longform : undefined
+  const label = includeShorts && includeVideos ? 'Latest upload' : includeShorts ? 'Latest Short' : 'Latest video'
+  const unavailable = failed || (includeShorts && includeVideos ? data?.uploadsUnavailable : includeShorts ? data?.formatsUnavailable?.shorts : data?.formatsUnavailable?.videos)
   return (
-    <section aria-label="YouTube" className="w-full space-y-3 rounded-2xl border border-red-400/25 bg-black/25 p-4 text-white">
+    <section aria-label="YouTube" className="w-full space-y-3 rounded-2xl border border-red-400/35 bg-[#290b0b]/75 p-3 text-white shadow-lg shadow-red-500/10">
       <div className="flex items-center justify-between gap-2">
-        <a href={data?.channel?.url ?? 'https://www.youtube.com/channel/UCJr64JsgfMr8SHeUhLA3lKw'} target="_blank" rel="noopener noreferrer" className="min-w-0 hover:underline">
-          <h2 className="text-sm font-bold"><span aria-hidden className="mr-2 text-red-300">▶</span>YouTube</h2>
-          <p className="mt-1 truncate text-xs text-white/70">{data?.channel?.title ?? 'COOLmanGamer'} ↗</p>
+        <a href={data?.channel?.url ?? 'https://www.youtube.com/channel/UCJr64JsgfMr8SHeUhLA3lKw'} target="_blank" rel="noopener noreferrer" className="flex min-w-0 flex-1 items-center gap-2.5 hover:underline">
+          <span className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-red-500/15 text-red-200 ring-1 ring-red-300/30">{data?.channel?.avatarUrl ? <Image src={data.channel.avatarUrl} alt="" fill className="object-cover" unoptimized /> : <span aria-hidden>▶</span>}</span>
+          <div className="min-w-0"><h2 className="text-sm font-semibold">YouTube</h2><p className="mt-0.5 truncate text-[11px] text-red-200">{data?.channel?.title ?? 'COOLman'} ↗</p></div>
         </a>
         {showLive && <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ${!failed && data?.live?.status === 'live' ? 'bg-red-600 text-white' : 'bg-white/10 text-white/70'}`}>{!failed && data?.live?.status === 'live' ? '● LIVE' : !failed && data?.live?.status === 'offline' ? 'Offline' : 'Live status unavailable'}</span>}
       </div>
       {!data && !failed && <p role="status" className="animate-pulse text-xs text-white/70">Loading YouTube…</p>}
       {failed && <p role="status" className="text-xs text-white/70">YouTube could not refresh.{data ? ' Showing the last available data.' : ' Try again shortly.'}</p>}
-      {showStats && data && <dl className="grid grid-cols-2 gap-2 text-xs">
-        {([['Subscribers', data.channel?.subscribers], ['Total views', data.channel?.totalViews], ['Public videos', data.channel?.videoCount]] as const).map(([label, value]) => <div key={label} className="rounded-lg bg-white/5 p-2"><dt className="text-white/65">{label}</dt><dd className="mt-1 break-words font-semibold">{value ?? 'Unavailable'}</dd></div>)}
-        <div className="rounded-lg bg-white/5 p-2"><dt className="text-white/65">Last upload</dt><dd className="mt-1 font-semibold">{latest ? postedDate(latest.publishedAt) : 'Unavailable'}</dd></div>
+      {showStats && data && <dl className="grid grid-cols-2 gap-2 text-center text-[11px]">
+        {([['Subscribers', data.channel?.subscribers], ['Total views', data.channel?.totalViews], ['Public videos', data.channel?.videoCount]] as const).map(([label, value]) => <div key={label} className="flex flex-col rounded-lg bg-white/5 px-2 py-1.5"><dt className="order-2 mt-0.5 text-white/60">{label}</dt><dd className="order-1 break-words text-sm font-semibold" title={value ?? 'Unavailable'}>{value?.replace(/\s+(subscribers?|views?|videos?)$/i, '') ?? '—'}</dd></div>)}
+        <div className="flex flex-col rounded-lg bg-white/5 px-2 py-1.5"><dt className="order-2 mt-0.5 text-white/60">Last upload</dt><dd className="order-1 text-sm font-semibold">{postedDate(data.latest?.publishedAt)}</dd></div>
       </dl>}
       {showLive && !failed && data?.live?.status === 'live' && data.live.url && <a href={data.live.url} target="_blank" rel="noopener noreferrer" className="block rounded-lg bg-red-600/30 p-3 text-xs font-semibold hover:bg-red-600/40">Watch live: {data.live.title ?? 'YouTube stream'} ↗</a>}
-      {showLatest && data && (latest ? <a href={latest.url} target="_blank" rel="noopener noreferrer" className="group block rounded-xl border border-white/10 p-2.5 hover:bg-white/5">
-        <h3 className="mb-2 text-[10px] font-bold uppercase tracking-widest text-red-200">Latest upload · All formats</h3>
-        <div className="relative aspect-video overflow-hidden rounded-lg bg-white/10"><Image src={latest.thumbnailUrl} alt="" fill sizes="(max-width: 640px) 85vw, 360px" className="object-cover transition-transform group-hover:scale-105" unoptimized /></div>
-        <p className="mt-2 break-words text-sm font-semibold">{latest.title}</p>
-        <p className="mt-1 text-xs text-white/70">{latest.views === undefined ? 'Views unavailable' : `${latest.views.toLocaleString()} views`}</p>
-        <p className="mt-1 text-xs text-white/70">Posted {latest.publishedAt && Number.isFinite(Date.parse(latest.publishedAt)) ? <time dateTime={latest.publishedAt}>{postedDate(latest.publishedAt)}</time> : 'date unavailable'} · Watch ↗</p>
-      </a> : <p className="text-xs text-white/70">{data.uploadsUnavailable ? 'Latest upload unavailable. Visit the channel to see new videos.' : 'No public uploads found.'}</p>)}
-      {data?.updatedAt && <p className="text-[10px] text-white/55">Refreshes every minute · Counts may be delayed or rounded by YouTube.</p>}
+      {showLatest && data && <div className="border-t border-white/10 pt-2.5"><h3 className="text-[10px] font-bold uppercase tracking-widest text-red-200">{label}</h3>{latest ? <>
+        <a href={latest.url} target="_blank" rel="noopener noreferrer" className="group mt-2 flex gap-2.5">
+          {!showEmbed && <div className="relative h-[62px] w-[110px] shrink-0 overflow-hidden rounded-lg bg-white/10"><Image src={latest.thumbnailUrl} alt="" fill sizes="110px" className="object-cover transition-transform group-hover:scale-105" unoptimized /></div>}
+          <div className="min-w-0 flex-1"><p className="line-clamp-2 break-words text-sm font-semibold leading-tight">{latest.title}</p><p className="mt-1 text-[10px] text-white/55">{latest.views === undefined ? 'Views unavailable' : `${latest.views.toLocaleString()} views`}</p><p className="mt-1 text-[10px] text-white/45">{latest.publishedAt && Number.isFinite(Date.parse(latest.publishedAt)) ? <time dateTime={latest.publishedAt}>{postedDate(latest.publishedAt)}</time> : 'Date unavailable'} · Watch ↗</p></div>
+        </a>
+        {showEmbed && <YouTubeEmbed key={latest.id} id={latest.id} title={latest.title} url={latest.url} />}
+      </> : <p className="mt-2 text-[11px] text-white/55">{!includeShorts && !includeVideos ? 'Uploads are hidden by the global settings.' : unavailable ? 'Uploads are temporarily unavailable.' : includeShorts && !includeVideos ? 'No public Shorts found.' : 'No public videos found.'}</p>}</div>}
     </section>
   )
 }

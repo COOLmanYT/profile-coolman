@@ -9,6 +9,7 @@ import { getSeasonalSettings } from '@/lib/site-settings'
 import Link from 'next/link'
 import ShareCard from '@/components/ShareCard'
 import StatusWidget from '@/components/StatusWidget'
+import LikeCounter from '@/components/LikeCounter'
 
 export default async function Home() {
   const [toggles, seasonalSettings] = await Promise.all([getToggles(), getSeasonalSettings()])
@@ -21,10 +22,13 @@ export default async function Home() {
         <SeasonalEffects />
         <div className="relative w-full max-w-[390px] lg:max-w-[460px]">
           <ProfileCard toggles={toggles} />
-          <ViewCounter />
           <StatusWidget />
+          <div className="mt-4 flex min-h-8 items-center justify-between gap-4 px-1">
+            <ViewCounter />
+            <LikeCounter />
+          </div>
         </div>
-        <footer className="mt-5 flex flex-wrap items-center justify-center gap-3 text-[11px] text-white/35">
+        <footer className="mt-6 flex flex-wrap items-center justify-center gap-3 text-[11px] text-white/35">
           <Link href="/options" className="transition-colors hover:text-white/80">Options</Link>
           <span aria-hidden>•</span>
           <Link href="/dashboard" className="transition-colors hover:text-white/80">Dashboard</Link>

@@ -26,6 +26,9 @@ const TOGGLE_LABELS: Record<string, string> = {
   youtube_stats: 'Subscribers, total views, video count and last upload',
   youtube_latest: 'Latest upload (all formats)',
   youtube_live: 'Live status and stream link',
+  youtube_shorts: 'Include Shorts',
+  youtube_videos: 'Include videos and stream uploads',
+  youtube_embed_default: 'Playable embed on by default for visitors',
   discord: 'Entire module',
   discord_profile: 'Profile and presence status',
   discord_banner: 'Profile banner',
@@ -45,7 +48,7 @@ const TOGGLE_LABELS: Record<string, string> = {
 const TOGGLE_GROUPS = [
   { title: 'Spotify', description: 'Control the entire Spotify module or its individual sections.', parentKey: 'spotify', keys: ['spotify', 'spotify_widget', 'spotify_position', 'spotify_embed', 'spotify_playlist', 'spotify_history'] },
   { title: 'Twitch', description: 'Control the entire Twitch module or its channel, stats and stream sections.', parentKey: 'twitch', keys: ['twitch', 'twitch_profile', 'twitch_stats', 'twitch_live', 'twitch_schedule'] },
-  { title: 'YouTube', description: 'Control channel stats, live status and the latest upload across all formats.', parentKey: 'youtube', keys: ['youtube', 'youtube_stats', 'youtube_latest', 'youtube_live'] },
+  { title: 'YouTube', description: 'Choose channel sections and allowed upload formats. The embed default is off; visitors can override it in Options.', parentKey: 'youtube', keys: ['youtube', 'youtube_stats', 'youtube_latest', 'youtube_live', 'youtube_shorts', 'youtube_videos', 'youtube_embed_default'] },
   { title: 'Discord profile', description: 'Control the entire Discord module or its profile details.', parentKey: 'discord', keys: ['discord', 'discord_profile', 'discord_banner', 'discord_badges', 'discord_decoration', 'discord_devices'] },
   { title: 'Discord Activity', description: 'Choose which Discord activity types appear.', parentKey: 'discord', keys: ['discord_music', 'discord_video', 'discord_games', 'discord_status', 'discord_other'] },
   { title: 'Discord Devices', description: 'Choose which active Discord devices appear.', parentKey: 'discord', keys: ['discord_mobile', 'discord_web', 'discord_desktop'] },

@@ -36,6 +36,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'DB error' }, { status: 500 })
     }
     revalidatePath('/')
+    if (id === 'youtube_embed_default') revalidatePath('/options')
     return NextResponse.json({ ok: true })
   } catch {
     return NextResponse.json({ error: 'DB error' }, { status: 500 })

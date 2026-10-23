@@ -40,7 +40,7 @@ const TEMPORARY_FEATURES: Array<{ category: string; id: TemporaryFeature; label:
   { category: 'Discord', id: 'discord_other', label: 'Other activity' },
 ]
 
-export default function SeasonalOptionsClient({ legalSimpleModeDefault }: { legalSimpleModeDefault: boolean }) {
+export default function SeasonalOptionsClient({ legalSimpleModeDefault, youtubeEmbedDefault = false }: { legalSimpleModeDefault: boolean; youtubeEmbedDefault?: boolean }) {
   const { showToast } = useToast()
   const { preference, setPreference, activateOnce, clearOnce, timeZone } = useSeasonalTheme()
   const { hiddenModules, setModuleHidden, hiddenFeatures, setFeatureHidden, mediaPreferences, setMediaPreferences } = useVisitorPreferences()
@@ -108,6 +108,9 @@ export default function SeasonalOptionsClient({ legalSimpleModeDefault }: { lega
             ['showLatestUpload', 'Show latest upload (Shorts, videos and streams)'],
             ['showYoutubeLive', 'Show YouTube live status'],
           ] as const).map(([key, label]) => <label key={key} className="mt-3 flex items-center justify-between gap-3 rounded-lg bg-white/5 px-3 py-2 text-sm"><span>{label}</span><input type="checkbox" checked={mediaPreferences[key]} onChange={(event) => updateMedia({ ...mediaPreferences, [key]: event.target.checked }, `${label}: ${event.target.checked ? 'on' : 'off'}`)} className="h-4 w-4 shrink-0 accent-red-600" /></label>)}
+          <label className="mt-4 block text-xs text-white/60">YouTube uploads<select value={mediaPreferences.youtubeFormat} onChange={(event) => updateMedia({ ...mediaPreferences, youtubeFormat: event.target.value as typeof mediaPreferences.youtubeFormat }, 'YouTube upload preference saved')} className="mt-1 w-full rounded bg-black/25 px-2 py-2 text-sm text-white"><option value="both">Shorts and videos</option><option value="shorts">Shorts only</option><option value="videos">Videos only</option></select></label>
+          <label className="mt-4 block text-xs text-white/60">Try the playable YouTube embed<select value={mediaPreferences.youtubeEmbed} onChange={(event) => updateMedia({ ...mediaPreferences, youtubeEmbed: event.target.value as typeof mediaPreferences.youtubeEmbed }, 'YouTube embed preference saved')} className="mt-1 w-full rounded bg-black/25 px-2 py-2 text-sm text-white"><option value="default">Use site default ({youtubeEmbedDefault ? 'on' : 'off'})</option><option value="on">On</option><option value="off">Off</option></select></label>
+          <p className="mt-1 text-[11px] text-white/45">When on, the player connects to YouTube. Some videos cannot play embedded; a watch link stays available.</p>
           <label className="mt-4 block text-xs text-white/60">Twitch schedule time zone<select value={mediaPreferences.scheduleTimeZone ?? ''} onChange={(event) => updateMedia({ ...mediaPreferences, scheduleTimeZone: event.target.value || null }, 'Twitch schedule time zone saved')} className="mt-1 w-full rounded bg-black/25 px-2 py-2 text-sm text-white"><option value="">Use your local time zone</option><option value="Australia/Sydney">Australia/Sydney</option><option value="UTC">UTC</option><option value="America/Los_Angeles">America/Los Angeles</option><option value="America/New_York">America/New York</option><option value="Europe/London">Europe/London</option></select></label>
         </section>
         <section className="mt-8 border-t border-white/10 pt-5">
