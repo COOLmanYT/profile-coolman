@@ -3,6 +3,7 @@
 import { startPolling, fetchWidgetJson } from '@/lib/widget-polling.mjs'
 import { memo, useEffect, useRef, useState, type ReactNode } from 'react'
 import Image from 'next/image'
+import { DISCORD_BADGE_DEFAULTS, getDiscordAchievementBadges, getDiscordMembershipBadges, orderDiscordBadges, type DiscordActivityEstimate } from '@/lib/discord-achievements'
 
 interface DiscordActivity {
   name: string
@@ -28,6 +29,7 @@ interface DiscordPresence {
   active_on_discord_web?: boolean
   active_on_discord_desktop?: boolean
   kv?: Record<string, unknown>
+  activity_estimate?: DiscordActivityEstimate | null
   discord_user?: {
     username: string
     global_name?: string
@@ -139,12 +141,9 @@ const BADGE_MAP: Array<{ bit: number; label: string; iconHash: string }> = [
   { bit: 1 << 7, label: 'HypeSquad Brilliance', iconHash: '011940fd013da3f7fb926e4a1cd2e618' },
   { bit: 1 << 8, label: 'HypeSquad Balance', iconHash: '3aa41de486fa12454c3761e8e223442e' },
   { bit: 1 << 9, label: 'Early Supporter', iconHash: '7060786766c9c840eb3019e725d2b358' },
-  { bit: 1 << 17, label: 'Active Developer', iconHash: '6bdc42827a38498929a4920da12695d9' },
+  { bit: 1 << 17, label: 'Early Verified Bot Developer', iconHash: '6bdc42827a38498929a4920da12695d9' },
 ]
-const NITRO_STARTED_AT = '2025-01-26T00:00:00.000Z'
-const BOOSTER_STARTED_AT = '2025-01-27T00:00:00.000Z'
 const BADGE_ASSET_BASE = '/discord-badges'
-const ONE_YEAR_MS = 365.25 * 24 * 60 * 60 * 1000
 const DISCORD_POLL_MS = 20000
 const STATUS_PULSE_DURATION_MS = 260
 
@@ -160,74 +159,24 @@ function getBadges(flags?: number) {
   return BADGE_MAP.filter((badge) => (flags & badge.bit) === badge.bit)
 }
 
-function getMembershipYears(startedAt: string) {
-  const start = Date.parse(startedAt)
-  if (!Number.isFinite(start)) return 1
-  return Math.max(1, Math.floor((Date.now() - start) / ONE_YEAR_MS))
-}
-
-function formatBadgeDate(startedAt: string) {
-  const date = new Date(startedAt)
-  if (Number.isNaN(date.getTime())) return 'Unknown start date'
-  return new Intl.DateTimeFormat('en', { day: 'numeric', month: 'long', year: 'numeric' }).format(date)
-}
-
-function getMonthsSince(startedAt: string) {
-  const start = Date.parse(startedAt)
-  if (!Number.isFinite(start)) return 1
-  return Math.max(1, Math.floor((Date.now() - start) / (ONE_YEAR_MS / 12)))
-}
-
-function getNitroBadgeUrl(startedAt: string) {
-  const months = getMonthsSince(startedAt)
-  const tier = months >= 72 ? 'opal'
-    : months >= 60 ? 'ruby'
-      : months >= 36 ? 'emerald'
-        : months >= 24 ? 'diamond'
-          : months >= 12 ? 'platinum'
-            : months >= 6 ? 'gold'
-              : months >= 3 ? 'silver'
-                : 'bronze'
-  return `${BADGE_ASSET_BASE}/subscriptions/${tier}.svg`
-}
-
-function getBoosterBadgeUrl(startedAt: string) {
-  const months = getMonthsSince(startedAt)
-  const tier = months >= 24 ? 9
-    : months >= 18 ? 8
-      : months >= 15 ? 7
-        : months >= 12 ? 6
-          : months >= 9 ? 5
-            : months >= 6 ? 4
-              : months >= 3 ? 3
-                : months >= 2 ? 2
-                  : 1
-  return `${BADGE_ASSET_BASE}/boosts/discord-boost-${tier}.svg`
-}
-
-function getSpecialBadges(presence?: DiscordPresence) {
+function getSpecialBadges(presence: DiscordPresence | undefined, now: number) {
   const user = presence?.discord_user
-  const nitroStartedAt = user?.premium_since ?? NITRO_STARTED_AT
-  const boosterStartedAt = user?.premium_guild_since ?? BOOSTER_STARTED_AT
-  const nitroYears = getMembershipYears(nitroStartedAt)
-  const boosterYears = getMembershipYears(boosterStartedAt)
-
   return [
-    { key: 'nitro', label: `Nitro ${nitroYears} Year${nitroYears === 1 ? '' : 's'}`, details: `Subscription started ${formatBadgeDate(nitroStartedAt)}`, iconUrl: getNitroBadgeUrl(nitroStartedAt) },
-    { key: 'booster', label: `Server Booster ${boosterYears} Year${boosterYears === 1 ? '' : 's'}`, details: `Boosting started ${formatBadgeDate(boosterStartedAt)}`, iconUrl: getBoosterBadgeUrl(boosterStartedAt) },
+    ...getDiscordMembershipBadges(user, presence?.kv, now),
     { key: 'quest', label: 'Completed a Quest', details: 'Completed a Discord Quest', iconUrl: `${BADGE_ASSET_BASE}/quest.png` },
     { key: 'orbs', label: 'Orbs Apprentice', details: 'Earned the Orbs Apprentice badge', iconUrl: `${BADGE_ASSET_BASE}/orb.svg` },
     { key: 'legend-gifting', label: 'Legend Gifting', details: 'Earned the Legend Gifting badge', iconUrl: `${BADGE_ASSET_BASE}/gifting/legend.png` },
+    ...getDiscordAchievementBadges(user?.id, { ...DISCORD_BADGE_DEFAULTS, ...presence?.kv }, now, presence?.activity_estimate),
   ] satisfies SpecialBadge[]
 }
 
 function BadgeTooltip({ label, details, children }: { label: string; details: string; children: ReactNode }) {
   return (
-    <span className="group/badge relative inline-flex" tabIndex={0} aria-label={`${label}. ${details}`}>
+    <span role="listitem" className="group/badge inline-flex min-w-0 items-center justify-center rounded-md p-0.5 transition-colors hover:bg-white/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#5865f2]" tabIndex={0} aria-label={`${label}. ${details}`}>
       {children}
       <span
         role="tooltip"
-        className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 hidden w-max max-w-[190px] -translate-x-1/2 rounded-md border border-white/15 bg-[#151515] px-2 py-1.5 text-left shadow-xl group-hover/badge:flex group-focus/badge:flex flex-col"
+        className="pointer-events-none absolute bottom-full left-0 z-20 mb-2 hidden w-full break-words rounded-md border border-white/15 bg-[#151515] px-2 py-1.5 text-left shadow-xl group-hover/badge:flex group-focus/badge:flex flex-col"
       >
         <strong className="text-[10px] leading-tight text-white">{label}</strong>
         <span className="mt-0.5 text-[9px] leading-tight text-white/65">{details}</span>
@@ -300,11 +249,20 @@ function DiscordWidget({
   showWeb = true,
   showDesktop = true,
 }: DiscordWidgetProps) {
+  const [badgeNow, setBadgeNow] = useState(() => Date.now())
   const [presence, setPresence] = useState<DiscordPresence | null>(null)
   const [loading, setLoading] = useState(true)
   const [isUnavailable, setIsUnavailable] = useState(false)
   const [statusPulse, setStatusPulse] = useState(false)
   const previousStatusRef = useRef<DiscordPresence['discord_status'] | null>(null)
+
+  // A separate clock keeps anniversary badges evolving even during provider outages.
+  // Hidden tabs pause and recalculate immediately when brought back into view.
+  useEffect(() => startPolling({
+    intervalMs: 60_000,
+    poll: async () => { setBadgeNow(Date.now()) },
+    onError: () => {},
+  }), [])
 
   useEffect(() => startPolling({
     intervalMs: DISCORD_POLL_MS,
@@ -347,8 +305,13 @@ function DiscordWidget({
   const avatarDecorationUrl = getAvatarDecorationUrl(presence?.discord_user)
   const nameplateUrl = getNameplateUrl(presence?.discord_user)
   const bannerUrl = getDiscordBannerUrl(presence?.discord_user)
-  const badges = getBadges(presence?.discord_user?.public_flags)
-  const specialBadges = getSpecialBadges(presence ?? undefined)
+  const badges = orderDiscordBadges([
+    ...getSpecialBadges(presence ?? undefined, badgeNow),
+    ...getBadges(presence?.discord_user?.public_flags).map(badge => ({
+      key: badge.label.toLowerCase().replaceAll(' ', '-'), label: badge.label,
+      details: 'Discord profile badge', iconUrl: `https://cdn.discordapp.com/badge-icons/${badge.iconHash}.png`,
+    })),
+  ])
   const serverTag = presence?.discord_user?.primary_guild?.tag ?? presence?.discord_user?.clan?.tag
   const displayName = presence?.discord_user?.username ?? 'coolman_yt'
   const deviceLabel = presence ? getDeviceLabel(presence, { showMobile, showWeb, showDesktop }) : null
@@ -378,7 +341,7 @@ function DiscordWidget({
               <Image src={bannerUrl} alt="Discord banner" fill className="object-cover" unoptimized />
             </div>
           )}
-          {showProfile && <div className="flex items-center gap-2.5">
+          {showProfile && <div className="flex items-start gap-2.5">
             <div className="relative w-9 h-9 rounded-full overflow-hidden border border-white/15 bg-white/10 flex-shrink-0">
               {avatarUrl ? (
                 <Image src={avatarUrl} alt="Discord avatar" fill className="object-cover" unoptimized />
@@ -399,36 +362,16 @@ function DiscordWidget({
                     {serverTag}
                   </span>
                 )}
-                {showBadges && (badges.length > 0 || specialBadges.length > 0) && (
-                  <div className="flex flex-wrap items-center gap-1">
-                    {badges.map((badge) => (
-                      <BadgeTooltip key={badge.label} label={badge.label} details="Discord profile badge">
-                        <Image
-                          src={`https://cdn.discordapp.com/badge-icons/${badge.iconHash}.png`}
-                          alt=""
-                          className="w-4 h-4 rounded-sm"
-                          loading="lazy"
-                          width={16}
-                          height={16}
-                          unoptimized
-                        />
-                      </BadgeTooltip>
-                    ))}
-                    {specialBadges.map((badge) => (
-                      <BadgeTooltip key={badge.key} label={badge.label} details={badge.details}>
-                        <Image
-                          src={badge.iconUrl}
-                          alt=""
-                          className="w-4 h-4 object-contain"
-                          width={16}
-                          height={16}
-                          unoptimized
-                        />
-                      </BadgeTooltip>
-                    ))}
-                  </div>
-                )}
               </div>
+              {showBadges && badges.length > 0 && (
+                <div role="list" aria-label="Discord profile badges" className="relative mt-1.5 grid w-[152px] max-w-full grid-cols-6 gap-1">
+                  {badges.map((badge) => (
+                    <BadgeTooltip key={badge.key} label={badge.label} details={badge.details}>
+                      <Image src={badge.iconUrl} alt="" className="h-[18px] w-[18px] object-contain" width={18} height={18} unoptimized />
+                    </BadgeTooltip>
+                  ))}
+                </div>
+              )}
               {showDevices && deviceLabel && <p className="mt-1 text-[10px] text-white/50">Active on: {deviceLabel}</p>}
               {showDecoration && nameplateUrl && (
                 <div className="mt-1.5 w-[120px] h-5 relative">
