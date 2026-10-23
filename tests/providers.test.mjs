@@ -23,6 +23,7 @@ test('Discord distinguishes offline presence from missing config, failed request
         'next/server': nextServer, '@/lib/rate-limit.mjs': rateLimit,
         '@/lib/ttl-cache.mjs': { createTtlCache },
         '@/lib/provider-monitor.mjs': { monitoredFetch: async () => upstream() },
+        '@/lib/discord-activity-store': { recordDiscordGameEstimate: async () => null },
       })
       const response = await GET(request)
       assert.equal(response.status, expected)
@@ -30,6 +31,31 @@ test('Discord distinguishes offline presence from missing config, failed request
       assert.equal(body.providerStatus, expected === 200 ? 'healthy' : 'unavailable')
       if (expected === 200) assert.equal(body.discord_status, 'offline')
       else assert.equal(body.discord_status, undefined)
+    }
+  } finally {
+    if (original === undefined) delete process.env.DISCORD_USER_ID
+    else process.env.DISCORD_USER_ID = original
+  }
+})
+
+test('Discord records only validated online activity and exposes aggregate estimates', async () => {
+  const original = process.env.DISCORD_USER_ID
+  process.env.DISCORD_USER_ID = 'test-owner'
+  const activities = [{ type: 0, name: 'Game', application_id: '123' }]
+  const estimate = { game_time_hours: 2, games_played: 1, tracked_since: '2026-10-23T00:00:00Z' }
+  try {
+    for (const status of ['online', 'offline']) {
+      let recorded
+      const { GET } = loadTypescript('app/api/discord/route.ts', {
+        'next/server': nextServer, '@/lib/rate-limit.mjs': rateLimit,
+        '@/lib/provider-monitor.mjs': { monitoredFetch: async () => json({ success: true, data: { discord_status: status, activities } }) },
+        '@/lib/discord-activity-store': { recordDiscordGameEstimate: async (id, games) => { recorded = { id, games }; return estimate } },
+      })
+      const response = await GET(request)
+      const body = await response.json()
+      assert.equal(response.status, 200)
+      assert.deepEqual(recorded, { id: 'test-owner', games: status === 'online' ? activities : [] })
+      assert.deepEqual(body.activity_estimate, estimate)
     }
   } finally {
     if (original === undefined) delete process.env.DISCORD_USER_ID
@@ -105,5 +131,31 @@ test('Spotify reports idle as healthy, authentication/upstream errors as unavail
       if (value === undefined) delete process.env[key]
       else process.env[key] = value
     }
+  }
+})
+
+
+test('Discord normalizes malformed activity payloads before displaying or recording them', async () => {
+  const original = process.env.DISCORD_USER_ID
+  process.env.DISCORD_USER_ID = 'test-owner'
+  const valid = { type: 0, name: 'Game', application_id: '123' }
+  try {
+    for (const activities of [{ bad: true }, [null, {}, { type: '0', name: 'Bad' }, { type: 9, name: 'Bad' }, valid]]) {
+      let recorded
+      const { GET } = loadTypescript('app/api/discord/route.ts', {
+        'next/server': nextServer, '@/lib/rate-limit.mjs': rateLimit,
+        '@/lib/provider-monitor.mjs': { monitoredFetch: async () => json({ success: true, data: { discord_status: 'online', activities } }) },
+        '@/lib/discord-activity-store': { recordDiscordGameEstimate: async (_id, games) => { recorded = games; return null } },
+      })
+      const response = await GET(request)
+      const body = await response.json()
+      const expected = Array.isArray(activities) ? [valid] : []
+      assert.equal(response.status, 200)
+      assert.deepEqual(body.activities, expected)
+      assert.deepEqual(recorded, expected)
+    }
+  } finally {
+    if (original === undefined) delete process.env.DISCORD_USER_ID
+    else process.env.DISCORD_USER_ID = original
   }
 })
