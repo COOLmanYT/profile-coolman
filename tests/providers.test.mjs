@@ -133,3 +133,29 @@ test('Spotify reports idle as healthy, authentication/upstream errors as unavail
     }
   }
 })
+
+
+test('Discord normalizes malformed activity payloads before displaying or recording them', async () => {
+  const original = process.env.DISCORD_USER_ID
+  process.env.DISCORD_USER_ID = 'test-owner'
+  const valid = { type: 0, name: 'Game', application_id: '123' }
+  try {
+    for (const activities of [{ bad: true }, [null, {}, { type: '0', name: 'Bad' }, { type: 9, name: 'Bad' }, valid]]) {
+      let recorded
+      const { GET } = loadTypescript('app/api/discord/route.ts', {
+        'next/server': nextServer, '@/lib/rate-limit.mjs': rateLimit,
+        '@/lib/provider-monitor.mjs': { monitoredFetch: async () => json({ success: true, data: { discord_status: 'online', activities } }) },
+        '@/lib/discord-activity-store': { recordDiscordGameEstimate: async (_id, games) => { recorded = games; return null } },
+      })
+      const response = await GET(request)
+      const body = await response.json()
+      const expected = Array.isArray(activities) ? [valid] : []
+      assert.equal(response.status, 200)
+      assert.deepEqual(body.activities, expected)
+      assert.deepEqual(recorded, expected)
+    }
+  } finally {
+    if (original === undefined) delete process.env.DISCORD_USER_ID
+    else process.env.DISCORD_USER_ID = original
+  }
+})

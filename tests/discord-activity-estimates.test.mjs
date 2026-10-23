@@ -43,38 +43,43 @@ test('non-playing activities do not count and ancient/future timestamps are boun
   assert.equal(observeDiscordGames(null, [game('123', now + 1000)], now).gameTimeMs, 0)
 })
 
-function database(initial = null, fail = false) {
-  let stored = initial
+function database(initial = null, fail = false, legacy = null) {
+  const currentId = 'discord_activity_estimates:v2:owner'
+  const legacyId = 'discord_activity_estimates:owner'
+  const rows = new Map()
+  if (initial) rows.set(currentId, structuredClone(initial))
+  if (legacy) rows.set(legacyId, structuredClone(legacy))
   const client = { from: () => {
-    let operation = 'read', value, expectedRevision
+    let operation = 'read', value, expectedRevision, id
     const query = {
       select: () => query,
-      eq: (column, filter) => { if (column === 'value->>revision') expectedRevision = filter; return query },
+      eq: (column, filter) => { if (column === 'value->>revision') expectedRevision = filter; if (column === 'id') id = filter; return query },
       update: (payload) => { operation = 'update'; value = payload.value; return query },
       insert: (payload) => ({ abortSignal: async () => {
         await Promise.resolve()
         if (fail) return { error: { code: 'unavailable' } }
-        if (stored) return { error: { code: '23505' } }
-        stored = structuredClone(payload.value)
+        if (rows.has(payload.id)) return { error: { code: '23505' } }
+        rows.set(payload.id, structuredClone(payload.value))
         return { error: null }
       } }),
       abortSignal: () => query,
       maybeSingle: async () => {
         if (fail) return { error: { code: 'unavailable' }, data: null }
         if (operation === 'read') {
+          const stored = rows.get(id)
           const snapshot = stored ? { value: structuredClone(stored) } : null
           await Promise.resolve()
           return { data: snapshot, error: null }
         }
         await Promise.resolve()
-        if (stored?.revision !== expectedRevision) return { data: null, error: null }
-        stored = structuredClone(value)
-        return { data: { id: 'test' }, error: null }
+        if (rows.get(id)?.revision !== expectedRevision) return { data: null, error: null }
+        rows.set(id, structuredClone(value))
+        return { data: { id }, error: null }
       },
     }
     return query
   } }
-  return { client, read: () => stored }
+  return { client, read: (id = currentId) => rows.get(id), writeLegacy: value => rows.set(legacyId, structuredClone(value)) }
 }
 
 test('concurrent requests and fresh server instances persist one shared total', async () => {
@@ -123,4 +128,47 @@ test('concurrent recalibration preserves the confirmed snapshot boundary across 
   assert.ok(results.every(result => result.game_time_hours === 20_000 / 3_600_000))
   assert.equal(db.read().gameTimeMs, 20_000)
   assert.equal(db.read().games.length, 1)
+})
+
+
+test('offline and empty observations prevent later timestamps from recounting the observed gap', () => {
+  const first = observeDiscordGames(null, [game()], now)
+  const offline = observeDiscordGames(first, [], now + 3_600_000)
+  const resumed = observeDiscordGames(offline, [game()], now + 7_200_000)
+  assert.equal(first.gameTimeMs, 3_600_000)
+  assert.equal(offline.gameTimeMs, first.gameTimeMs)
+  assert.equal(resumed.gameTimeMs, 7_200_000)
+  const firstEmpty = observeDiscordGames(null, [], now)
+  assert.equal(observeDiscordGames(firstEmpty, [game()], now + 20_000).gameTimeMs, 20_000)
+})
+
+test('older snapshot requests cannot reset or rewrite a newer saved period', async () => {
+  const cutoff = now - 1_800_000
+  const saved = { ...observeDiscordGames(null, [game()], now, cutoff), revision: 'new-snapshot' }
+  const db = database(saved)
+  const totals = await persistDiscordGameEstimate(db.client, 'owner', [game()], now + 20_000, undefined, 0)
+  assert.equal(totals.game_time_hours, 0.5)
+  assert.deepEqual(db.read(), saved)
+})
+
+test('legacy preview counters import once and subsequent legacy writes cannot affect current totals', async () => {
+  const legacy = { ...observeDiscordGames(null, [game()], now), revision: 'legacy' }
+  const db = database(null, false, legacy)
+  const imported = await persistDiscordGameEstimate(db.client, 'owner', [game()], now + 20_000)
+  assert.equal(imported.game_time_hours, 3_620_000 / 3_600_000)
+  assert.deepEqual(db.read('discord_activity_estimates:owner'), legacy)
+  db.writeLegacy({ ...legacy, gameTimeMs: 100 * 3_600_000, revision: 'old-tab' })
+  const current = await persistDiscordGameEstimate(db.client, 'owner', [game()], now + 40_000)
+  assert.equal(current.game_time_hours, 3_640_000 / 3_600_000)
+  assert.equal(db.read().games.length, 1)
+})
+
+
+test('a future snapshot boundary never credits time before that boundary', () => {
+  const cutoff = now + 3_600_000
+  const first = observeDiscordGames(null, [game()], now, cutoff)
+  const next = observeDiscordGames(first, [game()], now + 20_000, cutoff)
+  assert.equal(next.gameTimeMs, 0)
+  const after = observeDiscordGames(next, [game()], cutoff + 20_000, cutoff)
+  assert.equal(after.gameTimeMs, 20_000)
 })

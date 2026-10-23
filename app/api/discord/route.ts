@@ -25,11 +25,17 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ providerStatus: 'unavailable', error: 'Discord presence unavailable' }, { ...noStore, status: 503 })
     }
     const data = json.data
-    const activityEstimate = await recordDiscordGameEstimate(DISCORD_USER_ID, data.discord_status === 'offline' ? [] : data.activities ?? [])
+    const activities = Array.isArray(data.activities) ? data.activities.filter((activity: unknown) => {
+      if (!activity || typeof activity !== 'object') return false
+      const candidate = activity as Record<string, unknown>
+      return typeof candidate.name === 'string' && typeof candidate.type === 'number'
+        && Number.isInteger(candidate.type) && candidate.type >= 0 && candidate.type <= 5
+    }) : []
+    const activityEstimate = await recordDiscordGameEstimate(DISCORD_USER_ID, data.discord_status === 'offline' ? [] : activities)
     return NextResponse.json({
       providerStatus: 'healthy',
       discord_status: data.discord_status,
-      activities: data.activities ?? [],
+      activities,
       discord_user: data.discord_user,
       kv: data.kv ?? {},
       activity_estimate: activityEstimate,
