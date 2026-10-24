@@ -1,5 +1,7 @@
 import './ttl-cache.test.mjs'
 import './youtube-feed.test.mjs'
+import './profile-likes.test.mjs'
+import './game-activity.test.mjs'
 import './status-components.test.mjs'
 import './provider-monitor.test.mjs'
 import './rate-limit.test.mjs'

@@ -102,4 +102,10 @@
   @media (prefers-reduced-motion: reduce) {
     .seasonal-snow span, .seasonal-confetti span, .seasonal-bunny, .seasonal-lantern-light { animation: none; }
   }
+
+  @keyframes profile-like-pop { 0%, 100% { transform: scale(1); } 35% { transform: scale(1.25); } 65% { transform: scale(.95); } }
+  @keyframes profile-like-spark { from { transform: rotate(var(--spark-angle)) translateX(0) scale(.8); opacity: 1; } to { transform: rotate(var(--spark-angle)) translateX(27px) scale(.2); opacity: 0; } }
+  .profile-like-pop { animation: profile-like-pop .5s ease-out; }
+  .profile-like-spark { position: absolute; left: 8px; top: 7px; color: #fda4af; font-size: 10px; pointer-events: none; animation: profile-like-spark .8s ease-out forwards; }
+  @media (prefers-reduced-motion: reduce) { .profile-like-pop, .profile-like-spark { animation: none; } .profile-like-spark { display: none; } }
 }

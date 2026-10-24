@@ -1,35 +1,69 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { parseLatestYoutubeVideos, parseYoutubeViewCount } from '@/lib/youtube-feed.mjs'
+import { parseLatestYoutubeVideos, parseYoutubeChannel, parseYoutubeLive, parseYoutubeTab, enrichYoutubeVideo } from '@/lib/youtube-feed.mjs'
 import { monitoredFetch } from '@/lib/provider-monitor.mjs'
 import { limitPublicRequest } from '@/lib/rate-limit.mjs'
 
 const CHANNEL_ID = 'UCJr64JsgfMr8SHeUhLA3lKw'
-const FEED_URL = `https://www.youtube.com/feeds/videos.xml?channel_id=${CHANNEL_ID}`
+const CHANNEL_URL = `https://www.youtube.com/channel/${CHANNEL_ID}`
+type Video = { id: string; title: string; url: string; thumbnailUrl: string; publishedAt?: string; views?: number; isShort?: boolean }
 
-async function withViewCount<T extends { id: string }>(video: T | undefined) {
-  if (!video) return undefined
+async function page(url: string, revalidate = 900) {
   try {
-    const response = await monitoredFetch('youtube', `https://www.youtube.com/watch?v=${video.id}`, { next: { revalidate: 900 } })
-    if (!response.ok) return video
-    const views = parseYoutubeViewCount(await response.text())
-    return views === undefined ? video : { ...video, views }
-  } catch {
-    return video
+    const response = await monitoredFetch('youtube', url, { headers: { 'Accept-Language': 'en-US,en;q=0.9', 'User-Agent': 'Mozilla/5.0' }, next: { revalidate } })
+    return response.ok ? await response.text() : null
+  } catch { return null }
+}
+
+async function channelStats() {
+  // Optional official API source; the key is used only on the server.
+  if (process.env.YOUTUBE_API_KEY) {
+    try {
+      const response = await monitoredFetch('youtube', `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${CHANNEL_ID}&key=${encodeURIComponent(process.env.YOUTUBE_API_KEY)}`, { next: { revalidate: 900 } })
+      if (response.ok) {
+        const item = (await response.json()).items?.[0]
+        if (item?.statistics) {
+          const count = (value: unknown) => typeof value === 'string' && /^\d+$/.test(value) ? Number(value).toLocaleString('en-US') : undefined
+          return { title: item.snippet?.title, avatarUrl: item.snippet?.thumbnails?.default?.url, subscribers: item.statistics.hiddenSubscriberCount ? undefined : count(item.statistics.subscriberCount), totalViews: count(item.statistics.viewCount), videoCount: count(item.statistics.videoCount) }
+        }
+      }
+    } catch { /* Public page fallback remains available. */ }
   }
+  const html = await page(`${CHANNEL_URL}/about?hl=en`)
+  return html ? parseYoutubeChannel(html) : {}
 }
 
 export async function GET(req: NextRequest) {
   const rate = limitPublicRequest(req, 'youtube')
   if (!rate.allowed) return NextResponse.json({ error: 'RATE_LIMITED' }, { status: 429, headers: { 'Retry-After': String(rate.retryAfterSeconds) } })
-  try {
-    const response = await monitoredFetch('youtube', FEED_URL, { next: { revalidate: 900 } })
-    if (!response.ok) throw new Error('YouTube feed unavailable')
-    const xml = await response.text()
-    const { short, longform } = parseLatestYoutubeVideos(xml)
-    if (!short && !longform) throw new Error('Latest videos missing')
-    const [shortWithViews, longformWithViews] = await Promise.all([withViewCount(short), withViewCount(longform)])
-    return NextResponse.json({ short: shortWithViews, longform: longformWithViews }, { headers: { 'Cache-Control': 'public, s-maxage=900, stale-while-revalidate=1800' } })
-  } catch {
-    return NextResponse.json({ unavailable: true }, { headers: { 'Cache-Control': 'public, s-maxage=60' } })
+  const [xml, channel, livePage, shortsPage, videosPage, streamsPage] = await Promise.all([
+    page(`https://www.youtube.com/feeds/videos.xml?channel_id=${CHANNEL_ID}`),
+    channelStats(),
+    page(`${CHANNEL_URL}/live?hl=en`, 60),
+    page(`${CHANNEL_URL}/shorts?hl=en`),
+    page(`${CHANNEL_URL}/videos?hl=en`),
+    page(`${CHANNEL_URL}/streams?hl=en`),
+  ])
+  const videos = parseLatestYoutubeVideos(xml ?? '')
+  const shortCandidate = shortsPage ? parseYoutubeTab(shortsPage, 'shorts', CHANNEL_ID) : null
+  const videoCandidate = videosPage ? parseYoutubeTab(videosPage, 'videos', CHANNEL_ID) : null
+  const streamCandidate = streamsPage ? parseYoutubeTab(streamsPage, 'streams', CHANNEL_ID) : null
+  const metadata = new Map<string, Promise<string | null>>()
+  const enrich = (candidate: Video | undefined | null): Promise<Video | undefined> => {
+    if (!candidate) return Promise.resolve(undefined)
+    const known = [videos.latest, videos.short, videos.longform].find((video) => video?.id === candidate.id)
+    const video = { ...known, ...candidate, publishedAt: known?.publishedAt ?? candidate.publishedAt, views: known?.views ?? candidate.views }
+    if (video.views !== undefined && video.publishedAt) return Promise.resolve(video)
+    if (!metadata.has(video.id)) metadata.set(video.id, page(`https://www.youtube.com/watch?v=${video.id}`))
+    return metadata.get(video.id)!.then((html) => html ? enrichYoutubeVideo(video, html) : video)
   }
+  const [latest, short, regular, stream] = await Promise.all([enrich(videos.latest), enrich(shortCandidate ?? videos.short), enrich(videoCandidate), enrich(streamCandidate)])
+  const longform = [regular, stream].filter((video): video is Video => !!video).sort((a, b) => (Date.parse(b.publishedAt ?? '') || 0) - (Date.parse(a.publishedAt ?? '') || 0))[0]
+  return NextResponse.json({
+    latest, short, longform,
+    formatsUnavailable: { shorts: shortCandidate === null && !videos.short, videos: videoCandidate === null && streamCandidate === null },
+    channel: { ...channel, url: CHANNEL_URL },
+    live: livePage ? parseYoutubeLive(livePage, CHANNEL_ID) : { status: 'unknown' },
+    uploadsUnavailable: !xml || !/<feed\b/.test(xml),
+    updatedAt: new Date().toISOString(),
+  }, { headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=60' } })
 }

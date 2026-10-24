@@ -4,7 +4,7 @@ const nextConfig = {
     return [{
       source: '/:path*',
       headers: [
-        { key: 'Content-Security-Policy', value: "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; img-src 'self' data: https://i.scdn.co https://*.scdn.co https://cdn.discordapp.com https://static-cdn.jtvnw.net https://i.ytimg.com https://cdn.simpleicons.org https://avatars.githubusercontent.com; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com; connect-src 'self' https://vitals.vercel-insights.com wss://api.lanyard.rest; frame-src https://open.spotify.com; upgrade-insecure-requests" },
+        { key: 'Content-Security-Policy', value: "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; img-src 'self' data: https://i.scdn.co https://*.scdn.co https://cdn.discordapp.com https://static-cdn.jtvnw.net https://i.ytimg.com https://yt3.googleusercontent.com https://yt3.ggpht.com https://cdn.simpleicons.org https://avatars.githubusercontent.com; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com; connect-src 'self' https://vitals.vercel-insights.com wss://api.lanyard.rest; frame-src https://open.spotify.com https://www.youtube-nocookie.com; upgrade-insecure-requests" },
         { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
         { key: 'X-Content-Type-Options', value: 'nosniff' },
         { key: 'X-Frame-Options', value: 'DENY' },

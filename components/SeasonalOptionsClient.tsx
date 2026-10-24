@@ -40,7 +40,7 @@ const TEMPORARY_FEATURES: Array<{ category: string; id: TemporaryFeature; label:
   { category: 'Discord', id: 'discord_other', label: 'Other activity' },
 ]
 
-export default function SeasonalOptionsClient({ legalSimpleModeDefault }: { legalSimpleModeDefault: boolean }) {
+export default function SeasonalOptionsClient({ legalSimpleModeDefault, youtubeEmbedDefault = false }: { legalSimpleModeDefault: boolean; youtubeEmbedDefault?: boolean }) {
   const { showToast } = useToast()
   const { preference, setPreference, activateOnce, clearOnce, timeZone } = useSeasonalTheme()
   const { hiddenModules, setModuleHidden, hiddenFeatures, setFeatureHidden, mediaPreferences, setMediaPreferences } = useVisitorPreferences()
@@ -73,7 +73,7 @@ export default function SeasonalOptionsClient({ legalSimpleModeDefault }: { lega
     <div className="min-h-screen bg-[#151515] px-5 py-10 text-white">
       <main className="mx-auto max-w-md rounded-2xl border border-white/10 bg-white/5 p-5">
         <Link href="/" className="text-xs text-white/45 hover:text-white">← Back to profile</Link>
-        <h1 className="mt-4 text-2xl font-bold">Seasonal Options</h1>
+        <h1 className="mt-4 text-2xl font-bold">Options</h1>
         <p className="mt-1 text-sm text-white/55">Automatic dates use your browser time zone: {timeZone}.</p>
         <label className="mt-6 block text-sm font-medium">Theme</label>
         <select value={theme} onChange={(event) => { const next = event.target.value as SeasonalTheme | ''; setTheme(next); if (!next) clearOnce() }} className="mt-2 w-full rounded-lg border border-white/15 bg-black/25 px-3 py-2 text-sm">
@@ -95,15 +95,22 @@ export default function SeasonalOptionsClient({ legalSimpleModeDefault }: { lega
         <section className="mt-8 border-t border-white/10 pt-5">
           <h2 className="text-base font-semibold">Hide modules for this visit</h2>
           <p className="mt-1 text-xs text-white/50">These only affect your browser and clear after refresh.</p>
-          {([['spotify', 'Spotify listening'], ['twitch', 'Twitch presence'], ['discord', 'Discord presence']] as [TemporaryModule, string][]).map(([module, label]) => (
+          {([['spotify', 'Spotify listening'], ['twitch', 'Twitch presence'], ['youtube', 'YouTube channel'], ['discord', 'Discord presence']] as [TemporaryModule, string][]).map(([module, label]) => (
             <label key={module} className="mt-3 flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-sm"><span>{label}</span><input type="checkbox" checked={hiddenModules.includes(module)} onChange={(event) => updateModule(module, event.target.checked)} className="h-4 w-4 accent-red-600" /></label>
           ))}
         </section>
         <section className="mt-8 border-t border-white/10 pt-5">
           <h2 className="text-base font-semibold">Media preferences</h2>
-          <p className="mt-1 text-xs text-white/50">Saved only in this browser. Latest YouTube content is off by default.</p>
-          <label className="mt-4 flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-sm"><span>Show latest YouTube Short</span><input type="checkbox" checked={mediaPreferences.showLatestShort} onChange={(event) => updateMedia({ ...mediaPreferences, showLatestShort: event.target.checked }, `Latest YouTube Short ${event.target.checked ? 'shown' : 'hidden'}`)} className="h-4 w-4 accent-red-600" /></label>
-          <label className="mt-2 flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-sm"><span>Show latest YouTube long-form video</span><input type="checkbox" checked={mediaPreferences.showLatestLongform} onChange={(event) => updateMedia({ ...mediaPreferences, showLatestLongform: event.target.checked }, `Latest long-form video ${event.target.checked ? 'shown' : 'hidden'}`)} className="h-4 w-4 accent-red-600" /></label>
+          <p className="mt-1 text-xs text-white/50">Saved only in this browser. Global Dashboard settings take priority.</p>
+          {([
+            ['showYoutube', 'Show YouTube widget'],
+            ['showYoutubeStats', 'Show channel stats and last upload date'],
+            ['showLatestUpload', 'Show latest upload (Shorts, videos and streams)'],
+            ['showYoutubeLive', 'Show YouTube live status'],
+          ] as const).map(([key, label]) => <label key={key} className="mt-3 flex items-center justify-between gap-3 rounded-lg bg-white/5 px-3 py-2 text-sm"><span>{label}</span><input type="checkbox" checked={mediaPreferences[key]} onChange={(event) => updateMedia({ ...mediaPreferences, [key]: event.target.checked }, `${label}: ${event.target.checked ? 'on' : 'off'}`)} className="h-4 w-4 shrink-0 accent-red-600" /></label>)}
+          <label className="mt-4 block text-xs text-white/60">YouTube uploads<select value={mediaPreferences.youtubeFormat} onChange={(event) => updateMedia({ ...mediaPreferences, youtubeFormat: event.target.value as typeof mediaPreferences.youtubeFormat }, 'YouTube upload preference saved')} className="mt-1 w-full rounded bg-black/25 px-2 py-2 text-sm text-white"><option value="both">Shorts and videos</option><option value="shorts">Shorts only</option><option value="videos">Videos only</option></select></label>
+          <label className="mt-4 block text-xs text-white/60">Try the playable YouTube embed<select value={mediaPreferences.youtubeEmbed} onChange={(event) => updateMedia({ ...mediaPreferences, youtubeEmbed: event.target.value as typeof mediaPreferences.youtubeEmbed }, 'YouTube embed preference saved')} className="mt-1 w-full rounded bg-black/25 px-2 py-2 text-sm text-white"><option value="default">Use site default ({youtubeEmbedDefault ? 'on' : 'off'})</option><option value="on">On</option><option value="off">Off</option></select></label>
+          <p className="mt-1 text-[11px] text-white/45">When on, the player connects to YouTube. Some videos cannot play embedded; a watch link stays available.</p>
           <label className="mt-4 block text-xs text-white/60">Twitch schedule time zone<select value={mediaPreferences.scheduleTimeZone ?? ''} onChange={(event) => updateMedia({ ...mediaPreferences, scheduleTimeZone: event.target.value || null }, 'Twitch schedule time zone saved')} className="mt-1 w-full rounded bg-black/25 px-2 py-2 text-sm text-white"><option value="">Use your local time zone</option><option value="Australia/Sydney">Australia/Sydney</option><option value="UTC">UTC</option><option value="America/Los_Angeles">America/Los Angeles</option><option value="America/New_York">America/New York</option><option value="Europe/London">Europe/London</option></select></label>
         </section>
         <section className="mt-8 border-t border-white/10 pt-5">
