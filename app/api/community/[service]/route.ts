@@ -16,7 +16,8 @@ export async function GET(req: NextRequest, context: { params: Promise<{ service
   try {
     const data = await caches[service].get(async () => ({ ...await fetchCommunityProfile(service), updatedAt: new Date().toISOString() }))
     return NextResponse.json(data, { headers: { 'Cache-Control': 'public, s-maxage=60' } })
-  } catch {
+  } catch (error) {
+    console.warn('[community-profile]', service, error instanceof Error ? error.message : 'UNKNOWN_ERROR')
     return NextResponse.json({ error: 'PROFILE_UNAVAILABLE', providerStatus: 'unavailable' }, { status: 503, headers: { 'Cache-Control': 'no-store' } })
   }
 }
