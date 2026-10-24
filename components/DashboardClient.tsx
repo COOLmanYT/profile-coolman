@@ -11,7 +11,7 @@ interface DashboardClientProps {
 }
 
 const TOGGLE_LABELS: Record<string, string> = {
-  github: 'Recent public GitHub activity',
+  github: 'GitHub graph, projects and totals',
   announcement: 'Live announcement',
   spotify: 'Entire module',
   spotify_widget: 'Now-playing widget',
@@ -49,7 +49,7 @@ const TOGGLE_LABELS: Record<string, string> = {
 }
 
 const TOGGLE_GROUPS = [
-  { title: 'GitHub', description: 'Recent public activity, refreshed every 15 minutes.', parentKey: 'github', keys: ['github'] },
+  { title: 'GitHub', description: 'Contribution graph, recently updated projects, total stars and public repositories. Refreshed hourly.', parentKey: 'github', keys: ['github'] },
   { title: 'Announcement', description: 'Message the Lanyard bot: .set announcement Your message. Clear it with .del announcement. Optional link: .set announcement_url https://example.com', parentKey: 'announcement', keys: ['announcement'] },
   { title: 'Spotify', description: 'Control the entire Spotify module or its individual sections.', parentKey: 'spotify', keys: ['spotify', 'spotify_widget', 'spotify_position', 'spotify_embed', 'spotify_playlist', 'spotify_history'] },
   { title: 'Twitch', description: 'Control the channel, stats and stream sections. Stream takeover also requires the live stream widget to be enabled.', parentKey: 'twitch', keys: ['twitch', 'twitch_profile', 'twitch_stats', 'twitch_live', 'twitch_takeover', 'twitch_schedule'] },
