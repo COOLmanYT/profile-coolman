@@ -11,6 +11,16 @@ interface DashboardClientProps {
 }
 
 const TOGGLE_LABELS: Record<string, string> = {
+  github: 'Entire module',
+  github_profile: 'GitHub profile header',
+  github_stats: 'Star and public repository totals',
+  github_commits: 'Commits made in past year',
+  github_graph: 'Contribution graph',
+  github_projects: 'Recently updated projects',
+  github_commit_titles: 'Latest commit titles',
+  github_language: 'Project languages',
+  github_licence: 'Project licences',
+  announcement: 'Live announcement',
   spotify: 'Entire module',
   spotify_widget: 'Now-playing widget',
   spotify_position: 'Player position and duration',
@@ -21,6 +31,7 @@ const TOGGLE_LABELS: Record<string, string> = {
   twitch_profile: 'Channel profile and live status',
   twitch_stats: 'Follower and subscriber totals',
   twitch_live: 'Live stream widget',
+  twitch_takeover: 'Feature the stream at the top while live',
   twitch_schedule: 'Next scheduled stream',
   youtube: 'Entire module',
   youtube_stats: 'Subscribers, total views, video count and last upload',
@@ -46,8 +57,10 @@ const TOGGLE_LABELS: Record<string, string> = {
 }
 
 const TOGGLE_GROUPS = [
+  { title: 'GitHub', description: 'Control the entire GitHub module or its individual sections.', parentKey: 'github', keys: ['github', 'github_profile', 'github_stats', 'github_commits', 'github_graph', 'github_projects', 'github_commit_titles', 'github_language', 'github_licence'] },
+  { title: 'Announcement', description: 'Message the Lanyard bot: .set announcement Your message. Clear it with .del announcement. Optional link: .set announcement_url https://example.com', parentKey: 'announcement', keys: ['announcement'] },
   { title: 'Spotify', description: 'Control the entire Spotify module or its individual sections.', parentKey: 'spotify', keys: ['spotify', 'spotify_widget', 'spotify_position', 'spotify_embed', 'spotify_playlist', 'spotify_history'] },
-  { title: 'Twitch', description: 'Control the entire Twitch module or its channel, stats and stream sections.', parentKey: 'twitch', keys: ['twitch', 'twitch_profile', 'twitch_stats', 'twitch_live', 'twitch_schedule'] },
+  { title: 'Twitch', description: 'Control the channel, stats and stream sections. Stream takeover also requires the live stream widget to be enabled.', parentKey: 'twitch', keys: ['twitch', 'twitch_profile', 'twitch_stats', 'twitch_live', 'twitch_takeover', 'twitch_schedule'] },
   { title: 'YouTube', description: 'Choose channel sections and allowed upload formats. The embed default is off; visitors can override it in Options.', parentKey: 'youtube', keys: ['youtube', 'youtube_stats', 'youtube_latest', 'youtube_live', 'youtube_shorts', 'youtube_videos', 'youtube_embed_default'] },
   { title: 'Discord profile', description: 'Control the entire Discord module or its profile details.', parentKey: 'discord', keys: ['discord', 'discord_profile', 'discord_banner', 'discord_badges', 'discord_decoration', 'discord_devices'] },
   { title: 'Discord Activity', description: 'Choose which Discord activity types appear.', parentKey: 'discord', keys: ['discord_music', 'discord_video', 'discord_games', 'discord_status', 'discord_other'] },
