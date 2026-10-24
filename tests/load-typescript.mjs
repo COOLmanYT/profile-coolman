@@ -4,7 +4,7 @@ import ts from 'typescript'
 // Execute the real route code with explicit local dependencies, never live services.
 export function loadTypescript(path, dependencies) {
   const source = readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')
-  const { outputText } = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } })
+  const { outputText } = ts.transpileModule(source, { fileName: path, compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } })
   const exports = {}
   const require = (id) => {
     if (!(id in dependencies)) throw new Error(`Unmocked dependency: ${id}`)

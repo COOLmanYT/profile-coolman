@@ -26,6 +26,18 @@ interface ProfileCardProps {
 export default function ProfileCard({ toggles, preview = false }: ProfileCardProps) {
   const { hiddenModules, hiddenFeatures, mediaPreferences } = useVisitorPreferences()
   const showFeature = (feature: TemporaryFeature) => preview || !hiddenFeatures.includes(feature)
+  const githubVisibility = {
+    showProfile: (toggles.github_profile ?? true) && showFeature('github_profile'),
+    showStats: (toggles.github_stats ?? true) && showFeature('github_stats'),
+    showCommitCount: (toggles.github_commits ?? true) && showFeature('github_commits'),
+    showGraph: (toggles.github_graph ?? true) && showFeature('github_graph'),
+    showProjects: (toggles.github_projects ?? true) && showFeature('github_projects'),
+    showCommitTitles: (toggles.github_commit_titles ?? true) && showFeature('github_commit_titles'),
+    showLanguage: (toggles.github_language ?? true) && showFeature('github_language'),
+    showLicence: (toggles.github_licence ?? true) && showFeature('github_licence'),
+  }
+  const showGithub = (toggles.github ?? true) && (preview || !hiddenModules.includes('github'))
+    && (githubVisibility.showProfile || githubVisibility.showStats || githubVisibility.showCommitCount || githubVisibility.showGraph || githubVisibility.showProjects)
   const showTwitch = toggles.twitch && (preview || !hiddenModules.includes('twitch'))
   const showTwitchProfile = (toggles.twitch_profile ?? true) && showFeature('twitch_profile')
   const showTwitchStats = (toggles.twitch_stats ?? true) && showFeature('twitch_stats')
@@ -136,7 +148,7 @@ export default function ProfileCard({ toggles, preview = false }: ProfileCardPro
         />}
 
         {/* Social Links */}
-        {(toggles.github ?? true) && (preview || !hiddenModules.includes('github')) && <GithubWidget />}
+        {showGithub && <GithubWidget {...githubVisibility} />}
         <SocialLinks />
       </div>
     </div>

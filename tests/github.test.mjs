@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { createGithubActivityLoader, GITHUB_CACHE_MS, parseContributionCalendar, summarizeCommit } from '../lib/github-activity.mjs'
+import { createGithubActivityLoader, GITHUB_CACHE_MS, parseContributionCalendar, summarizeCommit, yearlyCommitQuery } from '../lib/github-activity.mjs'
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
+import * as jsxRuntime from 'react/jsx-runtime'
 import { loadTypescript, nextServer } from './load-typescript.mjs'
 
 const DAY = 86_400_000
@@ -15,6 +18,7 @@ function upstream(repos = [repo()], changes = {}) {
   return async (url, init) => {
     assert.equal(init.headers.Authorization, undefined)
     if (changes.handle) { const response = changes.handle(url, init); if (response) return response }
+    if (url.includes('/search/commits?')) return json({ total_count: 522, incomplete_results: false, items: [{ author: { email: 'private@example.invalid' } }] }, { ETag: '"year"' })
     if (url.includes('/contributions')) return new Response(calendarHtml, { headers: { ETag: '"calendar"' } })
     if (url.includes('/commits?')) return json(commit(), { ETag: '"commit"' })
     return json(repos, { ETag: '"repos"' })
@@ -37,7 +41,7 @@ test('GitHub snapshot totals public owned repositories, sums stars, and links re
   const loader = createGithubActivityLoader({ fetcher: async (url, init) => {
     calls.push(url)
     return upstream([
-      repo('old', { pushed_at: '2026-01-01T00:00:00Z' }), repo('new', { pushed_at: '2026-10-24T01:00:00Z', default_branch: 'feature/main' }),
+      repo('old', { pushed_at: '2026-01-01T00:00:00Z' }), repo('new', { pushed_at: '2026-10-24T01:00:00Z', default_branch: 'feature/main', language: 'TypeScript', license: { spdx_id: 'MIT', name: 'MIT License' } }),
       repo('fork', { fork: true, stargazers_count: 3 }), repo('archived', { archived: true }),
       repo('private', { private: true, stargazers_count: 100 }), repo('foreign', { full_name: 'someone/foreign' }),
     ])(url, init)
@@ -46,11 +50,15 @@ test('GitHub snapshot totals public owned repositories, sums stars, and links re
   assert.equal(profile.providerStatus, 'healthy')
   assert.equal(profile.publicRepos, 4)
   assert.equal(profile.totalStars, 9)
+  assert.equal(profile.commitsPastYear, 522)
   assert.deepEqual(profile.projects.map(item => item.name), ['new', 'old'])
   assert.equal(profile.projects[0].url, 'https://github.com/COOLmanYT/new')
   assert.equal(profile.projects[0].commit.url, `https://github.com/COOLmanYT/new/commit/${sha}`)
   assert.equal(profile.projects[0].commit.title, 'Improve the profile')
   assert.equal(profile.projects[0].updatedAt, '2026-10-24T01:00:00Z')
+  assert.equal(profile.projects[0].language, 'TypeScript')
+  assert.deepEqual(profile.projects[0].licence, { name: 'MIT License', label: 'MIT' })
+  assert.equal(profile.projects[1].licence, null)
   assert.equal(calls.some(url => url.includes('sha=feature%2Fmain')), true)
   assert.equal(JSON.stringify(profile).includes('private@example.invalid'), false)
   assert.equal(JSON.stringify(profile).includes('javascript:'), false)
@@ -87,14 +95,14 @@ test('concurrent visitors share one hourly snapshot and ETags revalidate all res
     return upstream()(url, init)
   } })
   const results = await Promise.all(Array.from({ length: 20 }, () => loader.get()))
-  assert.equal(calls.length, 3)
+  assert.equal(calls.length, 4)
   now += GITHUB_CACHE_MS - 1
   assert.deepEqual(await loader.get(), results[0])
-  assert.equal(calls.length, 3)
+  assert.equal(calls.length, 4)
   now++
   assert.deepEqual((await loader.get()).projects, results[0].projects)
-  assert.equal(calls.length, 6)
-  assert.equal(calls.slice(3).every(call => Boolean(call.init.headers['If-None-Match'])), true)
+  assert.equal(calls.length, 8)
+  assert.equal(calls.slice(4).every(call => Boolean(call.init.headers['If-None-Match'])), true)
 })
 
 test('partial provider failures retain real stats and projects while missing graph/commits stay unavailable', async () => {
@@ -159,4 +167,43 @@ test('commit titles remain plain text, use their real SHA and reject invalid pay
   const project = { url: 'https://github.com/COOLmanYT/project' }
   assert.equal(summarizeCommit(commit('<b>literal title</b>'), project).title, '<b>literal title</b>')
   for (const payload of [null, [], {}, [{ sha: 'bad', commit: { message: 'hello' } }]]) assert.equal(summarizeCommit(payload, project), null)
+})
+
+test('yearly commit count uses one bounded author/date/public query and never treats incomplete results as zero', async () => {
+  assert.equal(yearlyCommitQuery(Date.parse('2026-10-24T12:00:00Z')), 'author:COOLmanYT author-date:2025-10-24..2026-10-24 is:public')
+  for (const result of [{ total_count: 0, incomplete_results: false }, { total_count: 522, incomplete_results: true }, { total_count: -1, incomplete_results: false }]) {
+    let searches = 0
+    const profile = await createGithubActivityLoader({ fetcher: upstream([], { handle: url => {
+      if (url.includes('/search/commits?')) {
+        searches++
+        assert.equal(new URL(url).searchParams.get('per_page'), '1')
+        return json(result)
+      }
+    } }) }).get()
+    assert.equal(searches, 1)
+    assert.equal(profile.commitsPastYear, result.incomplete_results === false && result.total_count === 0 ? 0 : null)
+  }
+})
+
+test('compact GitHub card keeps real links and metadata, and each section control hides its content', async () => {
+  const profile = await createGithubActivityLoader({ fetcher: upstream([repo('sample-project', { language: 'TypeScript', license: { spdx_id: 'MIT', name: 'MIT License' } })]) }).get()
+  function render(props = {}) {
+    let state = 0
+    const { default: Widget } = loadTypescript('components/GithubWidget.tsx', {
+      react: { useEffect: () => {}, useState: () => [state++ === 0 ? profile : false, () => {}] },
+      'react/jsx-runtime': jsxRuntime, '@/lib/widget-polling.mjs': { startPolling: () => () => {}, fetchWidgetJson: () => {} },
+    })
+    return renderToStaticMarkup(createElement(Widget, props))
+  }
+  const visible = render()
+  assert.match(visible, /<svg[^>]*aria-hidden="true"/)
+  assert.match(visible, /522/)
+  assert.match(visible, /TypeScript/)
+  assert.match(visible, /MIT/)
+  assert.match(visible, /sample-project\/commit\//)
+  assert.doesNotMatch(visible, /Latest on/)
+  for (const [flag, text] of [['showGraph', 'Contributions · past year'], ['showStats', 'Public repos'], ['showCommitCount', 'Commits · past year'], ['showProjects', 'sample-project'], ['showLanguage', 'TypeScript'], ['showLicence', 'MIT'], ['showCommitTitles', 'Improve the profile']]) {
+    assert.equal(render({ [flag]: false }).includes(text), false, flag)
+  }
+  assert.equal(render({ showProfile: false }).includes('@COOLmanYT'), false)
 })

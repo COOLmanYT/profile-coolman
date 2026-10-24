@@ -11,6 +11,7 @@ export type VisitorSimulation = {
 }
 export type TemporaryModule = 'spotify' | 'twitch' | 'discord' | 'youtube' | 'github' | 'announcement'
 export type TemporaryFeature =
+  | 'github_profile' | 'github_stats' | 'github_commits' | 'github_graph' | 'github_projects' | 'github_commit_titles' | 'github_language' | 'github_licence'
   | 'spotify_widget' | 'spotify_position' | 'spotify_embed' | 'spotify_playlist' | 'spotify_history'
   | 'twitch_profile' | 'twitch_stats' | 'twitch_live' | 'twitch_schedule' | 'twitch_takeover'
   | 'discord_profile' | 'discord_banner' | 'discord_badges' | 'discord_decoration' | 'discord_devices'
