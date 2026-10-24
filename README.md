@@ -19,6 +19,17 @@ A Next.js profile site with advanced Spotify mini-player, rich Discord presence,
 2. `npm install`
 3. `npm run dev`
 
+### Live presence and request budget
+
+Spotify and Discord share one browser connection to `wss://api.lanyard.rest/socket` per visible page. The existing `DISCORD_USER_ID` configuration is discovered through `/api/discord`; no new environment variable or exposed Spotify credential is needed. Lanyard supplies the song ID, artwork and timestamps. The progress bar advances locally, and ended/disconnected presence is discarded. Discord must expose Spotify presence for live updates; Spotify playback remains a fallback when that data is absent.
+
+- `/api/discord` bootstraps the connection and syncs saved Discord achievement estimates once per minute. Its successful public response has a 15-second CDN cache. A cached REST song never replaces a newer socket song.
+- Spotify playback polls every 60 seconds only without usable Lanyard song data. Optional playlist context refreshes every five minutes while live and only attaches to the matching song. Successful public playback is coalesced for 15 seconds per running instance and cached at the CDN for 15 seconds; this is not a strict global request cap. Responses carry a timestamp so progress accounts for cache age.
+- Listening history starts only when expanded and refreshes every three minutes. History responses and errors remain `no-store` and never enter the CDN cache.
+- Hidden pages disconnect and abort requests. Socket reconnects use capped exponential backoff with jitter; stalled handshakes time out. Spotify 429 responses stop additional upstream calls in the same function instance until `Retry-After` expires, including across playback/history endpoints. Browser polling also honours cooldowns across visibility changes. Multiple function instances still have independent cooldowns.
+
+CDN hits still count as Vercel edge requests. Verify actual cache headers/hits and provider behaviour on the deployed preview before making production cost or latency claims.
+
 ## Environment Variables
 
 | Variable | Description |

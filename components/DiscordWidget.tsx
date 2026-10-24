@@ -1,7 +1,8 @@
 'use client'
 
-import { startPolling, fetchWidgetJson } from '@/lib/widget-polling.mjs'
+import { startPolling } from '@/lib/widget-polling.mjs'
 import { getGameActivityLink } from '@/lib/game-activity.mjs'
+import { useLanyard } from '@/lib/use-lanyard'
 import { memo, useEffect, useRef, useState, type ReactNode } from 'react'
 import Image from 'next/image'
 import { DISCORD_BADGE_DEFAULTS, getDiscordAchievementBadges, getDiscordMembershipBadges, orderDiscordBadges, type DiscordActivityEstimate } from '@/lib/discord-achievements'
@@ -150,7 +151,6 @@ const BADGE_MAP: Array<{ bit: number; label: string; iconHash: string }> = [
   { bit: 1 << 17, label: 'Early Verified Bot Developer', iconHash: '6bdc42827a38498929a4920da12695d9' },
 ]
 const BADGE_ASSET_BASE = '/discord-badges'
-const DISCORD_POLL_MS = 20000
 const STATUS_PULSE_DURATION_MS = 260
 
 type SpecialBadge = {
@@ -256,9 +256,10 @@ function DiscordWidget({
   showDesktop = true,
 }: DiscordWidgetProps) {
   const [badgeNow, setBadgeNow] = useState(() => Date.now())
-  const [presence, setPresence] = useState<DiscordPresence | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [isUnavailable, setIsUnavailable] = useState(false)
+  const live = useLanyard()
+  const presence = live.presence as DiscordPresence | null
+  const loading = !live.ready
+  const isUnavailable = live.unavailable
   const [statusPulse, setStatusPulse] = useState(false)
   const previousStatusRef = useRef<DiscordPresence['discord_status'] | null>(null)
 
@@ -268,18 +269,6 @@ function DiscordWidget({
     intervalMs: 60_000,
     poll: async () => { setBadgeNow(Date.now()) },
     onError: () => {},
-  }), [])
-
-  useEffect(() => startPolling({
-    intervalMs: DISCORD_POLL_MS,
-    poll: async (signal: AbortSignal) => {
-      const data = await fetchWidgetJson('/api/discord', signal) as DiscordPresence
-      if (signal.aborted) return
-      setPresence(data)
-      setIsUnavailable(false)
-      setLoading(false)
-    },
-    onError: () => { setIsUnavailable(true); setLoading(false) },
   }), [])
 
   useEffect(() => {
