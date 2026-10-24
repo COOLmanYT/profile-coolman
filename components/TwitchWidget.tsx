@@ -1,29 +1,8 @@
 'use client'
 
 import Image from 'next/image'
-import { startPolling, fetchWidgetJson } from '@/lib/widget-polling.mjs'
-import { memo, useEffect, useState } from 'react'
-
-interface TwitchPresence {
-  isLive: boolean
-  title?: string
-  game?: string
-  viewers?: number
-  followers?: number | null
-  subscribers?: number | null
-  thumbnailUrl?: string
-  startedAt?: string
-  tags?: string[]
-  channelName?: string
-  channelLogin?: string
-  profileImageUrl?: string
-  description?: string
-  broadcasterType?: string
-  channelUrl?: string
-  nextStream?: { title?: string; category?: string; startsAt: string }
-}
-
-const TWITCH_POLL_MS = 30_000
+import { memo } from 'react'
+import type { TwitchPresence, TwitchState } from '@/lib/use-twitch-presence'
 
 function formatDuration(startedAt?: string) {
   if (!startedAt) return 'Live now'
@@ -47,22 +26,8 @@ function downloadCalendarEvent(stream: NonNullable<TwitchPresence['nextStream']>
   setTimeout(() => URL.revokeObjectURL(url), 0)
 }
 
-function TwitchWidget({ showProfile = true, showStats = true, showLive = true, showSchedule = true, scheduleTimeZone }: { showProfile?: boolean; showStats?: boolean; showLive?: boolean; showSchedule?: boolean; scheduleTimeZone?: string }) {
-  const [presence, setPresence] = useState<TwitchPresence | null>(null)
-  const [loaded, setLoaded] = useState(false)
-  const [isUnavailable, setIsUnavailable] = useState(false)
-
-  useEffect(() => startPolling({
-    intervalMs: TWITCH_POLL_MS,
-    poll: async (signal: AbortSignal) => {
-      const data = await fetchWidgetJson('/api/twitch', signal) as TwitchPresence
-      if (signal.aborted) return
-      setPresence(data)
-      setIsUnavailable(false)
-      setLoaded(true)
-    },
-    onError: () => { setIsUnavailable(true); setLoaded(true) },
-  }), [])
+function TwitchWidget({ state, showProfile = true, showStats = true, showLive = true, showSchedule = true, scheduleTimeZone }: { state: TwitchState; showProfile?: boolean; showStats?: boolean; showLive?: boolean; showSchedule?: boolean; scheduleTimeZone?: string }) {
+  const { presence, loaded, isUnavailable } = state
 
   return (
     <div className="w-full rounded-2xl border border-[#9146ff]/35 bg-[#170b29]/75 p-3 shadow-lg shadow-[#9146ff]/10">
@@ -123,4 +88,4 @@ function TwitchWidget({ showProfile = true, showStats = true, showLive = true, s
   )
 }
 
-export default memo(TwitchWidget, (prev, next) => prev.showProfile === next.showProfile && prev.showStats === next.showStats && prev.showLive === next.showLive && prev.showSchedule === next.showSchedule && prev.scheduleTimeZone === next.scheduleTimeZone)
+export default memo(TwitchWidget)

@@ -82,6 +82,20 @@ test('new songs update immediately and expire even after REST metadata refreshes
   stop()
 })
 
+test('announcement edits and deletion arrive on the shared socket without another request', async () => {
+  const env = environment()
+  const stops = Array.from({ length: 3 }, () => env.store.subscribe(() => {}))
+  await settle()
+  env.message({ op: 0, t: 'INIT_STATE', d: { ...presence(), kv: {} } })
+  env.message({ op: 0, t: 'PRESENCE_UPDATE', d: { ...presence(), kv: { announcement: 'New video tonight!' } } })
+  assert.equal(env.store.getSnapshot().presence.kv.announcement, 'New video tonight!')
+  env.message({ op: 0, t: 'PRESENCE_UPDATE', d: { ...presence(), kv: {} } })
+  assert.equal(env.store.getSnapshot().presence.kv.announcement, undefined)
+  assert.equal(env.requests, 1)
+  assert.equal(env.sockets.length, 1)
+  stops.forEach(stop => stop())
+})
+
 test('socket failures back off without a REST request per retry and discard stale playback', async () => {
   const env = environment()
   const stop = env.store.subscribe(() => {})

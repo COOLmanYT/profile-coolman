@@ -4,6 +4,7 @@ import { useSyncExternalStore } from 'react'
 import { createLanyardStore, EMPTY_PRESENCE } from './lanyard-client.mjs'
 
 export interface LanyardPresence {
+  kv?: Record<string, string>
   userId?: string
   discord_status: 'online' | 'idle' | 'dnd' | 'offline'
   activities: Array<{ name: string; type: number }>

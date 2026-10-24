@@ -9,10 +9,10 @@ export type VisitorSimulation = {
   dateTime: string | null
   dateTimeSetAt: number | null
 }
-export type TemporaryModule = 'spotify' | 'twitch' | 'discord' | 'youtube'
+export type TemporaryModule = 'spotify' | 'twitch' | 'discord' | 'youtube' | 'github' | 'announcement'
 export type TemporaryFeature =
   | 'spotify_widget' | 'spotify_position' | 'spotify_embed' | 'spotify_playlist' | 'spotify_history'
-  | 'twitch_profile' | 'twitch_stats' | 'twitch_live' | 'twitch_schedule'
+  | 'twitch_profile' | 'twitch_stats' | 'twitch_live' | 'twitch_schedule' | 'twitch_takeover'
   | 'discord_profile' | 'discord_banner' | 'discord_badges' | 'discord_decoration' | 'discord_devices'
   | 'discord_status' | 'discord_music' | 'discord_video' | 'discord_games' | 'discord_other'
 export type YoutubeFormat = 'both' | 'shorts' | 'videos'

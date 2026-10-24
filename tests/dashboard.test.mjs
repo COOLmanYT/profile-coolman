@@ -48,6 +48,18 @@ test('YouTube module and section controls persist independently through owner se
   }
 })
 
+test('GitHub, announcement and stream takeover can be disabled through owner settings', async () => {
+  for (const id of ['github', 'announcement', 'twitch_takeover']) {
+    assert.equal(DEFAULT_TOGGLES[id], true)
+    const route = toggleRoute()
+    assert.equal((await route.POST(request({ id, value: false }))).status, 200)
+    assert.equal(route.writes.length, 1)
+    assert.equal(route.writes[0].id, id)
+    assert.equal(route.writes[0].value, false)
+    assert.deepEqual(route.invalidations, ['/'])
+  }
+})
+
 test('the embed default is off and changing it invalidates both the profile and visitor settings', async () => {
   assert.equal(DEFAULT_TOGGLES.youtube_embed_default, false)
   const route = toggleRoute()

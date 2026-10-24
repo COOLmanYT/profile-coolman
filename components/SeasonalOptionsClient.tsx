@@ -27,6 +27,7 @@ const TEMPORARY_FEATURES: Array<{ category: string; id: TemporaryFeature; label:
   { category: 'Twitch', id: 'twitch_profile', label: 'Channel profile and live status' },
   { category: 'Twitch', id: 'twitch_stats', label: 'Follower and subscriber totals' },
   { category: 'Twitch', id: 'twitch_live', label: 'Live stream widget' },
+  { category: 'Twitch', id: 'twitch_takeover', label: 'Stream takeover at the top' },
   { category: 'Twitch', id: 'twitch_schedule', label: 'Next scheduled stream' },
   { category: 'Discord', id: 'discord_profile', label: 'Profile and presence status' },
   { category: 'Discord', id: 'discord_banner', label: 'Profile banner' },
@@ -95,7 +96,7 @@ export default function SeasonalOptionsClient({ legalSimpleModeDefault, youtubeE
         <section className="mt-8 border-t border-white/10 pt-5">
           <h2 className="text-base font-semibold">Hide modules for this visit</h2>
           <p className="mt-1 text-xs text-white/50">These only affect your browser and clear after refresh.</p>
-          {([['spotify', 'Spotify listening'], ['twitch', 'Twitch presence'], ['youtube', 'YouTube channel'], ['discord', 'Discord presence']] as [TemporaryModule, string][]).map(([module, label]) => (
+          {([['spotify', 'Spotify listening'], ['twitch', 'Twitch presence'], ['youtube', 'YouTube channel'], ['discord', 'Discord presence'], ['github', 'GitHub activity'], ['announcement', 'Live announcement']] as [TemporaryModule, string][]).map(([module, label]) => (
             <label key={module} className="mt-3 flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-sm"><span>{label}</span><input type="checkbox" checked={hiddenModules.includes(module)} onChange={(event) => updateModule(module, event.target.checked)} className="h-4 w-4 accent-red-600" /></label>
           ))}
         </section>

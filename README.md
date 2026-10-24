@@ -184,6 +184,23 @@ For example, `.set discord_game_time_hours 75` sent to the Lanyard bot displays 
 
 Badge meanings are documented in [Discord's profile badge guide](https://support.discord.com/hc/en-us/articles/44369363856663-Discord-Profile-Badges-What-Each-Badge-Means). Tier names, milestones, and Discord CDN artwork URLs are catalogued by [mezotv/discord-badges](https://github.com/mezotv/discord-badges#account-age-badges). Activity totals can lag behind recent activity in Discord.
 
+## Live profile features
+
+The **GitHub** module shows up to four recent public coding events from `COOLmanYT`. It requests only `/users/COOLmanYT/events/public` without authentication and never publishes commit messages or author email addresses. Successful results are cached for 15 minutes in the Vercel CDN and per server instance, with concurrent refreshes coalesced. Refreshes send an ETag and respect longer upstream polling intervals. Upstream failures and rate limits return an unavailable state with a retry cooldown instead of retrying for every visitor. [GitHub events can arrive 30 seconds to six hours late](https://docs.github.com/en/rest/activity/events); this is recent activity, not a real-time contribution tracker. No GitHub token is required.
+
+To publish a **live announcement**, DM the [Lanyard bot](https://github.com/Phineas/lanyard#kv):
+
+```text
+.set announcement New video tonight!
+.set announcement_url https://www.youtube.com/@coolmangamer
+```
+
+The optional link must use HTTPS. The message is plain text, limited to 280 characters on the profile. To remove it, send `.del announcement`; remove the optional link with `.del announcement_url`. KV is public, so use it only for messages intended for everyone. Updates and deletion arrive on the same Lanyard WebSocket used by Discord and Spotify, with no additional polling, database or API key. While that connection is unavailable, the announcement is hidden. Clearing the message hides the whole announcement.
+
+**Stream takeover** adds a large Twitch preview, stream title, category, viewers, locally updated uptime and a **Watch the stream** button at the top of the profile when Twitch reports a live broadcast. It shares the channel card's existing 30-second poll and cached response; it makes no additional Twitch requests and loads no Twitch player. Offline and unavailable responses remove the takeover. This follows the existing Twitch polling/cache delay rather than providing instant stream detection.
+
+The Dashboard can disable GitHub, announcements or stream takeover globally. Takeover also respects the Twitch module and live-stream controls. Visitors can hide the new modules or takeover for their visit in **Options**. No schema migration, dependency or new environment variable is needed. CDN hits still count as edge requests, and process caches/cooldowns are per instance; these are cost reductions, not a fleet-wide quota guarantee.
+
 ## Connect Twitch
 
 Set `TWITCH_REDIRECT_URI` to the exact public URL of this profile deployment. Register that same URL in your Twitch Developer application, for example `https://profile.coolmanyt.com/api/twitch/callback`, plus `http://localhost:3000/api/twitch/callback` for local development. In Vercel, set `TWITCH_BROADCASTER_LOGIN=coolman_yt1` as well as the Twitch client credentials and redirect URI. After setting these values, sign in to the dashboard and select **Connect Twitch**. Approve the `moderator:read:followers` and `channel:read:subscriptions` scopes to display follower and subscriber totals.
