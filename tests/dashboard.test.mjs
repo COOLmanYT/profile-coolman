@@ -48,6 +48,17 @@ test('YouTube module and section controls persist independently through owner se
   }
 })
 
+test('community modules and details persist independently through owner settings', async () => {
+  for (const id of ['roblox', 'roblox_stats', 'steam', 'steam_activity', 'buymeacoffee']) {
+    assert.equal(DEFAULT_TOGGLES[id], true)
+    const route = toggleRoute()
+    assert.equal((await route.POST(request({ id, value: false }))).status, 200)
+    assert.equal(route.writes[0].id, id)
+    assert.equal(route.writes[0].value, false)
+    assert.deepEqual(route.invalidations, ['/'])
+  }
+})
+
 test('the embed default is off and changing it invalidates both the profile and visitor settings', async () => {
   assert.equal(DEFAULT_TOGGLES.youtube_embed_default, false)
   const route = toggleRoute()
