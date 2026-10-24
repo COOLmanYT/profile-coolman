@@ -8,6 +8,8 @@ import TwitchWidget from './TwitchWidget'
 import DiscordWidget from './DiscordWidget'
 import SocialLinks from './SocialLinks'
 import YouTubeWidget from './YouTubeWidget'
+import CommunityWidget from './CommunityWidget'
+import BuyMeACoffeeWidget from './BuyMeACoffeeWidget'
 import SeasonalHat from './SeasonalHat'
 import { useVisitorPreferences, type TemporaryFeature } from './VisitorPreferencesProvider'
 
@@ -120,6 +122,10 @@ export default function ProfileCard({ toggles, preview = false }: ProfileCardPro
           includeVideos={(toggles.youtube_videos ?? true) && (preview || mediaPreferences.youtubeFormat !== 'shorts')}
           showEmbed={preview || mediaPreferences.youtubeEmbed === 'default' ? (toggles.youtube_embed_default ?? false) : mediaPreferences.youtubeEmbed === 'on'}
         />}
+
+        {toggles.roblox !== false && (preview || !hiddenModules.includes('roblox')) && <CommunityWidget service="roblox" showDetails={(toggles.roblox_stats ?? true) && showFeature('roblox_stats')} />}
+        {toggles.steam !== false && (preview || !hiddenModules.includes('steam')) && <CommunityWidget service="steam" showDetails={(toggles.steam_activity ?? true) && showFeature('steam_activity')} />}
+        {toggles.buymeacoffee !== false && (preview || !hiddenModules.includes('buymeacoffee')) && <BuyMeACoffeeWidget />}
 
         {/* Social Links */}
         <SocialLinks />

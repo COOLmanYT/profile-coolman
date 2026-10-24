@@ -19,6 +19,8 @@ const LABELS: Record<SeasonalTheme, string> = {
 
 const LEGAL_SIMPLE_MODE_KEY = 'coolman-legal-simple-mode'
 const TEMPORARY_FEATURES: Array<{ category: string; id: TemporaryFeature; label: string }> = [
+  { category: 'Roblox', id: 'roblox_stats', label: 'Friends, followers and following counts' },
+  { category: 'Steam', id: 'steam_activity', label: 'Status, current game and public activity' },
   { category: 'Spotify', id: 'spotify_widget', label: 'Now-playing widget' },
   { category: 'Spotify', id: 'spotify_position', label: 'Player position and duration' },
   { category: 'Spotify', id: 'spotify_embed', label: 'Embed player' },
@@ -95,7 +97,7 @@ export default function SeasonalOptionsClient({ legalSimpleModeDefault, youtubeE
         <section className="mt-8 border-t border-white/10 pt-5">
           <h2 className="text-base font-semibold">Hide modules for this visit</h2>
           <p className="mt-1 text-xs text-white/50">These only affect your browser and clear after refresh.</p>
-          {([['spotify', 'Spotify listening'], ['twitch', 'Twitch presence'], ['youtube', 'YouTube channel'], ['discord', 'Discord presence']] as [TemporaryModule, string][]).map(([module, label]) => (
+          {([['spotify', 'Spotify listening'], ['twitch', 'Twitch presence'], ['youtube', 'YouTube channel'], ['discord', 'Discord presence'], ['roblox', 'Roblox profile'], ['steam', 'Steam profile'], ['buymeacoffee', 'Buy Me a Coffee']] as [TemporaryModule, string][]).map(([module, label]) => (
             <label key={module} className="mt-3 flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-sm"><span>{label}</span><input type="checkbox" checked={hiddenModules.includes(module)} onChange={(event) => updateModule(module, event.target.checked)} className="h-4 w-4 accent-red-600" /></label>
           ))}
         </section>
@@ -116,7 +118,7 @@ export default function SeasonalOptionsClient({ legalSimpleModeDefault, youtubeE
         <section className="mt-8 border-t border-white/10 pt-5">
           <h2 className="text-base font-semibold">Hide module features for this visit</h2>
           <p className="mt-1 text-xs text-white/50">Fine-tune what you see without changing the Dashboard. These settings clear after refresh.</p>
-          {(['Spotify', 'Twitch', 'Discord'] as const).map((category) => (
+          {(['Spotify', 'Twitch', 'Discord', 'Roblox', 'Steam'] as const).map((category) => (
             <div key={category} className="mt-4"><h3 className="text-xs font-semibold uppercase tracking-wider text-white/45">{category}</h3><div className="mt-2 space-y-2">{TEMPORARY_FEATURES.filter((feature) => feature.category === category).map((feature) => (
               <label key={feature.id} className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-sm"><span>{feature.label}</span><input type="checkbox" checked={hiddenFeatures.includes(feature.id)} onChange={(event) => updateFeature(feature.id, event.target.checked)} className="h-4 w-4 accent-red-600" /></label>
             ))}</div></div>

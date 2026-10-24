@@ -190,6 +190,16 @@ Set `TWITCH_REDIRECT_URI` to the exact public URL of this profile deployment. Re
 
 The Dashboard reports whether Twitch is configured and connected. The public Twitch endpoint is cached for 25 seconds to keep API use bounded when multiple visitors load the profile.
 
+## Roblox, Steam and Buy Me a Coffee modules
+
+The profile includes dedicated cards for the existing Roblox account (`2873599962`), Steam account (`coolmanyt1`) and [Buy Me a Coffee page](https://buymeacoffee.com/coolmanyt). Dashboard controls can hide each module globally, Roblox social counts, or Steam activity. Options can hide the same modules and details for the current visit; the Dashboard preview ignores visitor overrides.
+
+Roblox uses public profile, avatar and social-count endpoints. Steam uses its best-effort [public Community XML feed](https://partner.steamgames.com/documentation/community_data), which Valve marks deprecated; no Steam API key or account cookies are required. Private or missing activity is labelled unavailable, never inferred as offline or zero. If that feed stops working, the Steam profile link remains usable. Only display names, avatars, public social counts, membership date and Steam activity are returned; real names, locations and profile summaries are omitted.
+
+`/api/community/roblox` and `/api/community/steam` rate-limit requests and cache/coalesce successful snapshots for a minute per server instance. Upstream requests time out after ten seconds. Unavailable profiles return HTTP 503 with `Cache-Control: no-store`; partial profiles are marked degraded. Polling uses the existing visibility-aware abort/backoff behavior and retains the last profile with an explicit warning on refresh failures. Stale in-game status is hidden after a refresh failure.
+
+Buy Me a Coffee is an external support link; no payment form, third-party script, donation total or supporter data is loaded. No new environment variables, dependencies, database tables or migrations are needed. Existing social shortcut icons remain available independently of module visibility.
+
 ## Quality checks
 
 Run `npm run lint`, `npm test`, `npx tsc --noEmit`, and `npm run audit` before deploying.
