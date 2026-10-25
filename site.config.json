@@ -1,0 +1,611 @@
+{
+  "profile": {
+    "username": "COOLman",
+    "bio": "just a cool dude making content",
+    "location": "lost in my thoughts",
+    "avatar": "/avatar.png",
+    "birthday": {
+      "month": 11,
+      "day": 28
+    }
+  },
+  "site": {
+    "url": "https://profile.coolmanyt.com",
+    "repository": "https://github.com/COOLmanYT/profile-coolman",
+    "contactEmail": "support@coolmanyt.com",
+    "language": "en"
+  },
+  "appearance": {
+    "defaultMode": "dark",
+    "allowModeSwitch": true,
+    "card": {
+      "from": "#ff0000",
+      "to": "#8b0000"
+    },
+    "background": {
+      "type": "preset",
+      "preset": "waves",
+      "animation": "drift",
+      "speed": 1,
+      "colors": [
+        "#8b0000",
+        "#ffffff",
+        "#000000"
+      ],
+      "src": "",
+      "poster": "",
+      "fit": "cover",
+      "position": "center",
+      "overlay": 0.15
+    }
+  },
+  "providers": {
+    "github": {
+      "username": "COOLmanYT"
+    },
+    "youtube": {
+      "channelId": "UCJr64JsgfMr8SHeUhLA3lKw"
+    },
+    "twitch": {
+      "login": "coolman_yt1"
+    },
+    "discord": {
+      "username": "coolman_yt",
+      "badges": {
+        "discord_nitro_started_at": "2025-01-26T00:00:00.000Z",
+        "discord_booster_started_at": "2025-01-27T00:00:00.000Z",
+        "discord_nitro_badge": true,
+        "discord_booster_badge": true,
+        "discord_account_created_at": "2025-11-08",
+        "discord_account_age_minimum_years": 1,
+        "discord_game_time_hours": null,
+        "discord_games_played": null,
+        "discord_streaming_hours": 23,
+        "discord_game_time_baseline_hours": 5,
+        "discord_game_time_baseline_at": "2026-10-23T09:54:43.000Z",
+        "discord_games_played_minimum": 8,
+        "discord_last_meadow_badge": true
+      }
+    },
+    "roblox": {
+      "userId": "2873599962"
+    },
+    "steam": {
+      "id": "76561198765816074",
+      "username": "coolmanyt1"
+    },
+    "buymeacoffee": {
+      "slug": "coolmanyt"
+    },
+    "status": {
+      "url": "https://status.coolmanyt.com",
+      "componentsUrl": "https://status.coolmanyt.com/v3/components.json",
+      "profileComponent": "coolman profile website",
+      "label": "COOLman brand"
+    }
+  },
+  "socials": [
+    {
+      "label": "Website",
+      "url": "https://coolmanyt.com",
+      "icon": "globe",
+      "enabled": true
+    },
+    {
+      "label": "YouTube",
+      "url": "https://youtube.com/@COOLmanGamer",
+      "icon": "youtube",
+      "enabled": true
+    },
+    {
+      "label": "X",
+      "url": "https://x.com/coolman_yt1",
+      "icon": "x",
+      "enabled": true
+    },
+    {
+      "label": "Twitch",
+      "url": "https://www.twitch.tv/coolman_yt1",
+      "icon": "twitch",
+      "enabled": true
+    },
+    {
+      "label": "Spotify",
+      "url": "https://open.spotify.com/user/31px5awkcyikvgrfiiqkxem6oxni",
+      "icon": "spotify",
+      "enabled": true
+    },
+    {
+      "label": "Buy Me a Coffee",
+      "url": "https://buymeacoffee.com/coolmanyt",
+      "icon": "buymeacoffee",
+      "enabled": true
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/COOLmanYT",
+      "icon": "github",
+      "enabled": true
+    },
+    {
+      "label": "Steam",
+      "url": "https://steamcommunity.com/id/coolmanyt1",
+      "icon": "steam",
+      "enabled": true
+    },
+    {
+      "label": "Discord",
+      "url": "https://discord.gg/SzHksR3QFj",
+      "icon": "discord",
+      "enabled": true
+    },
+    {
+      "label": "Roblox",
+      "url": "https://www.roblox.com/users/2873599962/",
+      "icon": "roblox",
+      "enabled": true
+    }
+  ],
+  "modules": {
+    "github": {
+      "label": "GitHub",
+      "description": "Control the entire GitHub module or its individual sections.",
+      "enabled": true,
+      "default": true,
+      "features": {
+        "status": {
+          "label": "GitHub public status",
+          "enabled": true,
+          "default": true
+        },
+        "profile": {
+          "label": "GitHub profile header",
+          "enabled": true,
+          "default": true
+        },
+        "stats": {
+          "label": "Star and public repository totals",
+          "enabled": true,
+          "default": true
+        },
+        "commits": {
+          "label": "Commits made in past year",
+          "enabled": true,
+          "default": true
+        },
+        "graph": {
+          "label": "Contribution graph",
+          "enabled": true,
+          "default": true
+        },
+        "projects": {
+          "label": "Recently updated projects",
+          "enabled": true,
+          "default": true
+        },
+        "commit_titles": {
+          "label": "Latest commit titles",
+          "enabled": true,
+          "default": true
+        },
+        "language": {
+          "label": "Project languages",
+          "enabled": true,
+          "default": true
+        },
+        "licence": {
+          "label": "Project licences",
+          "enabled": true,
+          "default": true
+        }
+      }
+    },
+    "announcement": {
+      "label": "Announcement",
+      "description": "Message the Lanyard bot: .set announcement Your message. Clear it with .del announcement. Optional link: .set announcement_url https://example.com",
+      "enabled": true,
+      "default": true,
+      "features": {}
+    },
+    "spotify": {
+      "label": "Spotify",
+      "description": "Control the entire Spotify module or its individual sections.",
+      "enabled": true,
+      "default": true,
+      "features": {
+        "widget": {
+          "label": "Now-playing widget",
+          "enabled": true,
+          "default": true
+        },
+        "position": {
+          "label": "Player position and duration",
+          "enabled": true,
+          "default": true
+        },
+        "embed": {
+          "label": "Embed Player",
+          "enabled": true,
+          "default": true
+        },
+        "playlist": {
+          "label": "Playlist Link",
+          "enabled": true,
+          "default": true
+        },
+        "history": {
+          "label": "Listening History",
+          "enabled": true,
+          "default": true
+        }
+      }
+    },
+    "twitch": {
+      "label": "Twitch",
+      "description": "Control the channel, stats and stream sections. Stream takeover also requires the live stream widget to be enabled.",
+      "enabled": true,
+      "default": true,
+      "features": {
+        "profile": {
+          "label": "Channel profile and live status",
+          "enabled": true,
+          "default": true
+        },
+        "stats": {
+          "label": "Follower and subscriber totals",
+          "enabled": true,
+          "default": true
+        },
+        "live": {
+          "label": "Live stream widget",
+          "enabled": true,
+          "default": true
+        },
+        "takeover": {
+          "label": "Feature the stream at the top while live",
+          "enabled": true,
+          "default": true
+        },
+        "schedule": {
+          "label": "Next scheduled stream",
+          "enabled": true,
+          "default": true
+        }
+      }
+    },
+    "youtube": {
+      "label": "YouTube",
+      "description": "Choose channel sections and allowed upload formats. The embed default is off; visitors can override it in Options.",
+      "enabled": true,
+      "default": true,
+      "features": {
+        "stats": {
+          "label": "Subscribers, total views, video count and last upload",
+          "enabled": true,
+          "default": true
+        },
+        "latest": {
+          "label": "Latest upload (all formats)",
+          "enabled": true,
+          "default": true
+        },
+        "live": {
+          "label": "Live status and stream link",
+          "enabled": true,
+          "default": true
+        },
+        "shorts": {
+          "label": "Include Shorts",
+          "enabled": true,
+          "default": true
+        },
+        "videos": {
+          "label": "Include videos and stream uploads",
+          "enabled": true,
+          "default": true
+        },
+        "embed_default": {
+          "label": "Playable embed on by default for visitors",
+          "enabled": true,
+          "default": false
+        }
+      }
+    },
+    "discord": {
+      "label": "Discord profile",
+      "description": "Control the entire Discord module or its profile details.",
+      "enabled": true,
+      "default": true,
+      "features": {
+        "profile": {
+          "label": "Profile and presence status",
+          "enabled": true,
+          "default": true
+        },
+        "banner": {
+          "label": "Profile banner",
+          "enabled": true,
+          "default": true
+        },
+        "badges": {
+          "label": "Profile badges",
+          "enabled": true,
+          "default": true
+        },
+        "decoration": {
+          "label": "Avatar decoration and nameplate",
+          "enabled": true,
+          "default": true
+        },
+        "devices": {
+          "label": "Device presence",
+          "enabled": true,
+          "default": true
+        },
+        "music": {
+          "label": "Music",
+          "enabled": true,
+          "default": true
+        },
+        "video": {
+          "label": "Video",
+          "enabled": true,
+          "default": true
+        },
+        "games": {
+          "label": "Games",
+          "enabled": true,
+          "default": true
+        },
+        "status": {
+          "label": "Custom Status",
+          "enabled": true,
+          "default": true
+        },
+        "other": {
+          "label": "Other Activity",
+          "enabled": true,
+          "default": true
+        },
+        "mobile": {
+          "label": "Mobile",
+          "enabled": true,
+          "default": true
+        },
+        "web": {
+          "label": "Web",
+          "enabled": true,
+          "default": true
+        },
+        "desktop": {
+          "label": "Desktop",
+          "enabled": true,
+          "default": true
+        }
+      }
+    },
+    "roblox": {
+      "label": "Roblox",
+      "description": "Choose each part of the Roblox card.",
+      "enabled": true,
+      "default": true,
+      "features": {
+        "avatar": {
+          "label": "Avatar",
+          "enabled": true,
+          "default": true
+        },
+        "name": {
+          "label": "Display name",
+          "enabled": true,
+          "default": true
+        },
+        "username": {
+          "label": "Username",
+          "enabled": true,
+          "default": true
+        },
+        "stats": {
+          "label": "Social counts",
+          "enabled": true,
+          "default": true
+        },
+        "friends": {
+          "label": "Friends",
+          "enabled": true,
+          "default": true
+        },
+        "followers": {
+          "label": "Followers",
+          "enabled": true,
+          "default": true
+        },
+        "following": {
+          "label": "Following",
+          "enabled": true,
+          "default": true
+        }
+      }
+    },
+    "steam": {
+      "label": "Steam",
+      "description": "Choose each part of the Steam card.",
+      "enabled": true,
+      "default": true,
+      "features": {
+        "avatar": {
+          "label": "Avatar",
+          "enabled": true,
+          "default": true
+        },
+        "name": {
+          "label": "Display name",
+          "enabled": true,
+          "default": true
+        },
+        "username": {
+          "label": "Username",
+          "enabled": true,
+          "default": true
+        },
+        "activity": {
+          "label": "Activity and stats",
+          "enabled": true,
+          "default": true
+        },
+        "status": {
+          "label": "Online status",
+          "enabled": true,
+          "default": true
+        },
+        "game": {
+          "label": "Current game and store link",
+          "enabled": true,
+          "default": true
+        },
+        "hours": {
+          "label": "Hours in the past two weeks",
+          "enabled": true,
+          "default": true
+        },
+        "library": {
+          "label": "Games in library and library link",
+          "enabled": true,
+          "default": true
+        }
+      }
+    },
+    "buymeacoffee": {
+      "label": "Buy Me a Coffee",
+      "description": "Choose each part of the support card.",
+      "enabled": true,
+      "default": true,
+      "features": {
+        "cover": {
+          "label": "Cover image",
+          "enabled": true,
+          "default": true
+        },
+        "avatar": {
+          "label": "Avatar",
+          "enabled": true,
+          "default": true
+        },
+        "name": {
+          "label": "Display name",
+          "enabled": true,
+          "default": true
+        },
+        "username": {
+          "label": "Creator tagline",
+          "enabled": true,
+          "default": true
+        },
+        "bio": {
+          "label": "Bio",
+          "enabled": true,
+          "default": false
+        },
+        "price": {
+          "label": "Support price",
+          "enabled": true,
+          "default": true
+        },
+        "supporters": {
+          "label": "Public supporter total",
+          "enabled": true,
+          "default": true
+        },
+        "memberships": {
+          "label": "Membership options",
+          "enabled": true,
+          "default": true
+        },
+        "button": {
+          "label": "Support button",
+          "enabled": true,
+          "default": true
+        }
+      }
+    },
+    "socials": {
+      "label": "Social links",
+      "description": "Control social links.",
+      "enabled": true,
+      "default": true,
+      "features": {}
+    },
+    "status": {
+      "label": "Service status",
+      "description": "Control service status.",
+      "enabled": true,
+      "default": true,
+      "features": {}
+    },
+    "views": {
+      "label": "View counter",
+      "description": "Control view counter.",
+      "enabled": true,
+      "default": true,
+      "features": {}
+    },
+    "likes": {
+      "label": "Profile likes",
+      "description": "Control profile likes.",
+      "enabled": true,
+      "default": true,
+      "features": {}
+    },
+    "share": {
+      "label": "Share profile",
+      "description": "Control share profile.",
+      "enabled": true,
+      "default": true,
+      "features": {}
+    },
+    "seasons": {
+      "label": "Seasonal themes",
+      "description": "Control seasonal themes.",
+      "enabled": true,
+      "default": true,
+      "features": {}
+    },
+    "easterEgg": {
+      "label": "Developer easter egg",
+      "description": "Control developer easter egg.",
+      "enabled": true,
+      "default": true,
+      "features": {}
+    },
+    "analytics": {
+      "label": "Analytics",
+      "description": "Control analytics.",
+      "enabled": true,
+      "default": true,
+      "features": {}
+    },
+    "profile": {
+      "label": "Profile details",
+      "description": "Choose which personal details are displayed.",
+      "enabled": true,
+      "default": true,
+      "features": {
+        "avatar": {
+          "label": "Avatar",
+          "enabled": true,
+          "default": true
+        },
+        "bio": {
+          "label": "Bio",
+          "enabled": true,
+          "default": true
+        },
+        "location": {
+          "label": "Location",
+          "enabled": true,
+          "default": true
+        }
+      }
+    }
+  }
+}

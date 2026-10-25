@@ -1,5 +1,7 @@
 'use client'
 
+import { siteConfig, providerLinks } from '@/lib/site-config.mjs'
+
 import Image from 'next/image'
 import { memo } from 'react'
 import type { TwitchPresence, TwitchState } from '@/lib/use-twitch-presence'
@@ -17,11 +19,11 @@ function downloadCalendarEvent(stream: NonNullable<TwitchPresence['nextStream']>
   const end = new Date(start.getTime() + 60 * 60 * 1000)
   const format = (date: Date) => date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z')
   const escape = (value: string) => value.replace(/[\\,;]/g, '\\$&').replace(/\n/g, '\\n')
-  const event = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//COOLman//Twitch Stream//EN', 'BEGIN:VEVENT', `UID:coolman-${start.getTime()}@coolmanyt.com`, `DTSTAMP:${format(new Date())}`, `DTSTART:${format(start)}`, `DTEND:${format(end)}`, `SUMMARY:${escape(stream.title ?? 'COOLman Twitch stream')}`, `DESCRIPTION:${escape(`Watch COOLman on Twitch${stream.category ? ` — ${stream.category}` : ''}`)}`, 'URL:https://www.twitch.tv/coolman_yt1', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n')
+  const event = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Profile//Twitch Stream//EN', 'BEGIN:VEVENT', `UID:stream-${start.getTime()}@${new URL(siteConfig.site.url).hostname}`, `DTSTAMP:${format(new Date())}`, `DTSTART:${format(start)}`, `DTEND:${format(end)}`, `SUMMARY:${escape(stream.title ?? `${siteConfig.profile.username} Twitch stream`)}`, `DESCRIPTION:${escape(`Watch ${siteConfig.profile.username} on Twitch${stream.category ? ` — ${stream.category}` : ''}`)}`, `URL:${providerLinks.twitch}`, 'END:VEVENT', 'END:VCALENDAR'].join('\r\n')
   const url = URL.createObjectURL(new Blob([event], { type: 'text/calendar;charset=utf-8' }))
   const link = document.createElement('a')
   link.href = url
-  link.download = 'coolman-twitch-stream.ics'
+  link.download = 'twitch-stream.ics'
   link.click()
   setTimeout(() => URL.revokeObjectURL(url), 0)
 }
@@ -36,18 +38,18 @@ function TwitchWidget({ state, showProfile = true, showStats = true, showLive = 
         <div className="h-24 animate-pulse rounded-xl bg-white/10" />
       ) : (
         <div className="group">
-          <a href={presence?.channelUrl ?? 'https://www.twitch.tv/coolman_yt1'} target="_blank" rel="noopener noreferrer" className="block">
+          <a href={presence?.channelUrl ?? providerLinks.twitch} target="_blank" rel="noopener noreferrer" className="block">
           {showProfile && <div className="flex items-center gap-2.5">
             <div className="relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-full bg-white/10 ring-1 ring-[#bf94ff]/40">
               {presence?.profileImageUrl && <Image src={presence.profileImageUrl} alt={`${presence.channelName ?? 'Twitch'} profile`} fill className="object-cover" unoptimized />}
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5">
-                <p className="truncate text-sm font-semibold leading-tight text-white">{presence?.channelName ?? 'COOLmanYT'}</p>
+                <p className="truncate text-sm font-semibold leading-tight text-white">{presence?.channelName ?? siteConfig.profile.username}</p>
                 <span className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${!isUnavailable && presence?.isLive ? 'bg-red-500 animate-pulse' : 'bg-white/35'}`} aria-hidden="true" />
                 <span className={`text-[9px] font-bold uppercase tracking-wider ${!isUnavailable && presence?.isLive ? 'text-red-300' : 'text-white/45'}`}>{isUnavailable ? 'Unavailable' : presence?.isLive ? 'Live' : 'Offline'}</span>
               </div>
-              <p className="truncate text-[11px] text-[#bf94ff]">{presence?.channelLogin ? `twitch.tv/${presence.channelLogin}` : 'twitch.tv/coolman_yt1'}</p>
+              <p className="truncate text-[11px] text-[#bf94ff]">{presence?.channelLogin ? `twitch.tv/${presence.channelLogin}` : `twitch.tv/${siteConfig.providers.twitch.login}`}</p>
             </div>
           </div>}
           {showStats && <div className={`${showProfile ? 'mt-3 ' : ''}grid grid-cols-2 gap-2 text-center text-[11px]`}>

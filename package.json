@@ -12,7 +12,8 @@
     "lint": "eslint . --max-warnings=0",
     "test": "node --experimental-strip-types tests/all.test.mjs",
     "audit": "npm audit --audit-level=high",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "config:check": "node --input-type=module -e \"import('./lib/site-config.mjs').then(() => console.log('Profile configuration is valid'))\""
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.99.1",

@@ -1,3 +1,4 @@
+import { isControlAvailable } from '@/lib/site-config.mjs'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
@@ -22,7 +23,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
   }
   const { id, value } = payload ?? {}
-  if (typeof id !== 'string' || typeof value !== 'boolean' || !Object.hasOwn(DEFAULT_TOGGLES, id)) {
+  if (typeof id !== 'string' || typeof value !== 'boolean' || (!Object.hasOwn(DEFAULT_TOGGLES, id) || !isControlAvailable(id))) {
     return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
   }
 

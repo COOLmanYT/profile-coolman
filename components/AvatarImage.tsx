@@ -1,5 +1,7 @@
 'use client'
 
+import { siteConfig } from '@/lib/site-config.mjs'
+
 import { useState } from 'react'
 import Image from 'next/image'
 
@@ -18,8 +20,9 @@ export default function AvatarImage() {
 
   return (
     <Image
-      src="/avatar.png"
-      alt="COOLman"
+      src={siteConfig.profile.avatar}
+      alt={siteConfig.profile.username}
+      unoptimized
       fill
       className="rounded-full object-cover"
       onError={() => setFailed(true)}

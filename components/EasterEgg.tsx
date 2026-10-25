@@ -1,5 +1,7 @@
 'use client'
 
+import { siteConfig } from '@/lib/site-config.mjs'
+
 import { useEffect, useState } from 'react'
 
 const SEQUENCE = 'rm -rf /'
@@ -16,7 +18,7 @@ export default function EasterEgg() {
 
   useEffect(() => {
     console.log(
-      '%c👀 Welcome developer. Yes, this is vibe coded. github.com/COOLmanYT',
+      `%c👀 Welcome developer. ${siteConfig.site.repository}`,
       'color: #ff4444; font-size: 14px; font-weight: bold;'
     )
   }, [])

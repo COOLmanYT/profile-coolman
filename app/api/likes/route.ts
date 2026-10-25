@@ -1,3 +1,4 @@
+import { isModuleAvailable } from '@/lib/site-config.mjs'
 import { createHash, randomUUID } from 'node:crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabase } from '@/lib/supabase-server'
@@ -18,6 +19,7 @@ function unavailable() {
   return NextResponse.json({ error: 'LIKES_UNAVAILABLE' }, { status: 503, headers: { 'Cache-Control': 'no-store' } })
 }
 export async function GET(req: NextRequest) {
+  if (!isModuleAvailable('likes')) return NextResponse.json({ error: 'MODULE_DISABLED' }, { status: 404, headers: { 'Cache-Control': 'no-store' } })
   const rate = limitPublicRequest(req, 'likes-read', 120)
   if (!rate.allowed) return NextResponse.json({ error: 'RATE_LIMITED' }, { status: 429 })
   const supabase = getSupabase()
@@ -34,6 +36,7 @@ export async function GET(req: NextRequest) {
   } catch { return unavailable() }
 }
 export async function POST(req: NextRequest) {
+  if (!isModuleAvailable('likes')) return NextResponse.json({ error: 'MODULE_DISABLED' }, { status: 404, headers: { 'Cache-Control': 'no-store' } })
   if (!sameOriginLikeRequest(req)) return NextResponse.json({ error: 'INVALID_ORIGIN' }, { status: 403 })
   const rate = limitPublicRequest(req, 'likes-write', 12)
   if (!rate.allowed) return NextResponse.json({ error: 'RATE_LIMITED' }, { status: 429 })

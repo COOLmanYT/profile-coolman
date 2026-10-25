@@ -1,8 +1,10 @@
+import { isModuleAvailable, isControlAvailable } from '@/lib/site-config.mjs'
 import { NextRequest, NextResponse } from 'next/server'
 import { monitoredFetch } from '@/lib/provider-monitor.mjs'
 import { limitPublicRequest } from '@/lib/rate-limit.mjs'
 
 export async function GET(req: NextRequest) {
+  if (!isModuleAvailable('youtube') || !isControlAvailable('youtube_embed_default')) return NextResponse.json({ error: 'MODULE_DISABLED' }, { status: 404, headers: { 'Cache-Control': 'no-store' } })
   const rate = limitPublicRequest(req, 'youtube-embed', 60)
   if (!rate.allowed) return NextResponse.json({ error: 'RATE_LIMITED' }, { status: 429, headers: { 'Retry-After': String(rate.retryAfterSeconds) } })
   const id = req.nextUrl.searchParams.get('id') ?? ''

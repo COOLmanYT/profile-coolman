@@ -1,9 +1,10 @@
+import { siteConfig } from '@/lib/site-config.mjs'
 import Link from 'next/link'
 
-const REPOSITORY_URL = 'https://github.com/COOLmanYT/profile-coolman'
+const REPOSITORY_URL = siteConfig.site.repository
 const LICENCE_URL = `${REPOSITORY_URL}/blob/main/LICENSE`
 
-export const metadata = { title: 'Licence | COOLman' }
+export const metadata = { title: `Licence | ${siteConfig.profile.username}` }
 
 export default function LicencePage() {
   return (
@@ -27,7 +28,7 @@ export default function LicencePage() {
               <span className="text-lg" aria-hidden>⌘</span><p className="mt-2 text-sm font-semibold">View the repository</p><p className="mt-1 text-xs leading-5 text-white/50">Browse the source, changes and project details.</p><span className="mt-3 inline-block text-xs font-semibold text-red-200 group-hover:text-white">Open GitHub ↗</span>
             </a>
           </div>
-          <p className="mt-6 text-xs leading-5 text-white/40">Copyright © 2026 COOLmanYT. The software is provided “as is”, without warranty.</p>
+          <p className="mt-6 text-xs leading-5 text-white/40">Copyright © 2026 {siteConfig.profile.username}. The software is provided “as is”, without warranty.</p>
         </div>
       </article>
     </main>

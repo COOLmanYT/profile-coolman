@@ -1,5 +1,7 @@
 'use client'
 
+import { siteConfig, providerLinks } from '@/lib/site-config.mjs'
+
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
 import { useEffect, useState } from 'react'
@@ -41,9 +43,9 @@ export default function YouTubeWidget({ showStats, showLatest, showLive, include
   return (
     <section aria-label="YouTube" className="profile-module w-full space-y-3 text-white">
       <div className="flex items-center justify-between gap-2">
-        <a href={data?.channel?.url ?? 'https://www.youtube.com/channel/UCJr64JsgfMr8SHeUhLA3lKw'} target="_blank" rel="noopener noreferrer" className="flex min-w-0 flex-1 items-center gap-2.5 hover:underline">
+        <a href={data?.channel?.url ?? providerLinks.youtube} target="_blank" rel="noopener noreferrer" className="flex min-w-0 flex-1 items-center gap-2.5 hover:underline">
           <span className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-red-500/15 text-red-200 ring-1 ring-red-300/30">{data?.channel?.avatarUrl ? <Image src={data.channel.avatarUrl} alt="" fill className="object-cover" unoptimized /> : <span aria-hidden>▶</span>}</span>
-          <div className="min-w-0"><h2 className="flex items-center gap-1.5 text-sm font-semibold"><svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4 shrink-0 text-red-400"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" /></svg>YouTube</h2><p className="mt-0.5 truncate text-[11px] text-red-200">{data?.channel?.title ?? 'COOLman'} ↗</p></div>
+          <div className="min-w-0"><h2 className="flex items-center gap-1.5 text-sm font-semibold"><svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4 shrink-0 text-red-400"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" /></svg>YouTube</h2><p className="mt-0.5 truncate text-[11px] text-red-200">{data?.channel?.title ?? siteConfig.profile.username} ↗</p></div>
         </a>
         {showLive && <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ${!failed && data?.live?.status === 'live' ? 'bg-red-600 text-white' : 'bg-white/10 text-white/70'}`}>{!failed && data?.live?.status === 'live' ? '● LIVE' : !failed && data?.live?.status === 'offline' ? 'Offline' : 'Live status unavailable'}</span>}
       </div>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { isModuleAvailable } from '@/lib/site-config.mjs'
 import { useToast } from './ToastProvider'
 
 type HealthState = 'checking' | 'healthy' | 'warning' | 'error'
@@ -12,7 +13,7 @@ const providers = [
   { name: 'Twitch', endpoint: '/api/twitch', detail: (data: { isLive?: boolean }) => data.isLive ? 'Live now' : 'Endpoint reachable' },
   { name: 'YouTube', endpoint: '/api/youtube', detail: (data: { unavailable?: boolean }) => data.unavailable ? 'Latest-feed fallback active' : 'Latest feed available', warning: (data: { unavailable?: boolean }) => data.unavailable },
   { name: 'Instatus', endpoint: '/api/status', detail: (data: { services?: Array<{ state?: string }> }) => data.services?.some((service) => service.state === 'unknown') ? 'Status fallback active' : 'Status feed available', warning: (data: { services?: Array<{ state?: string }> }) => data.services?.some((service) => service.state === 'unknown') ?? false },
-]
+].filter(({ name }) => isModuleAvailable(name === 'Instatus' ? 'status' : name.toLowerCase()))
 
 export default function ProviderHealthClient() {
   const { showToast } = useToast()

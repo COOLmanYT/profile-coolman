@@ -1,5 +1,8 @@
 'use client'
 
+import { siteConfig, applyModulePolicy, isControlAvailable, isModuleAvailable } from '@/lib/site-config.mjs'
+import type { ReactNode } from 'react'
+
 import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import AvatarImage from './AvatarImage'
@@ -10,7 +13,7 @@ import SocialLinks from './SocialLinks'
 import YouTubeWidget from './YouTubeWidget'
 import CommunityWidget from './CommunityWidget'
 import BuyMeACoffeeWidget from './BuyMeACoffeeWidget'
-import { COMMUNITY_CONTROLS } from '@/lib/community-controls.mjs'
+import { configuredGroups } from '@/lib/site-config.mjs'
 import { DEFAULT_TOGGLES } from '@/lib/toggle-defaults.mjs'
 import SeasonalHat from './SeasonalHat'
 import GithubWidget from './GithubWidget'
@@ -27,10 +30,11 @@ interface ProfileCardProps {
   preview?: boolean
 }
 
-export default function ProfileCard({ toggles, preview = false }: ProfileCardProps) {
+export default function ProfileCard({ toggles: savedToggles, preview = false }: ProfileCardProps) {
+  const toggles = applyModulePolicy(savedToggles)
   const { visibilityLoaded, hiddenModules, hiddenFeatures, mediaPreferences } = useVisitorPreferences()
-  const showFeature = (feature: TemporaryFeature) => preview || !hiddenFeatures.includes(feature)
-  const communityVisible = Object.fromEntries(COMMUNITY_CONTROLS.flatMap(({ features }) => features.map(([key]) => [key, (toggles[key] ?? DEFAULT_TOGGLES[key]) && showFeature(key as TemporaryFeature)])))
+  const showFeature = (feature: TemporaryFeature) => isControlAvailable(feature) && (preview || !hiddenFeatures.includes(feature))
+  const communityVisible = Object.fromEntries(configuredGroups().flatMap(({ parentKey, keys }) => keys.filter((key) => key !== parentKey).map((key) => [key, (toggles[key] ?? DEFAULT_TOGGLES[key]) && showFeature(key as TemporaryFeature)])))
   const githubVisibility = {
     showStatus: (toggles.github_status ?? true) && showFeature('github_status'),
     showProfile: (toggles.github_profile ?? true) && showFeature('github_profile'),
@@ -82,38 +86,8 @@ export default function ProfileCard({ toggles, preview = false }: ProfileCardPro
     }
   }
 
-  return (
-    <div className={`relative w-full rounded-3xl shadow-2xl overflow-hidden border border-white/10 ${takeover ? 'bg-[linear-gradient(180deg,#170b29_0%,#401265_55%,#8B0000_100%)]' : 'bg-[linear-gradient(180deg,#ff0000_0%,#8B0000_100%)]'}`}>
-      {takeover && twitch.presence && <StreamTakeover presence={twitch.presence} />}
-      <div className="flex flex-col items-center px-5 sm:px-7 pt-8 sm:pt-9 pb-6 sm:pb-7 gap-4">
-        {(preview || visibilityLoaded) && (toggles.announcement ?? true) && (preview || !hiddenModules.includes('announcement')) && <LiveAnnouncement />}
-        {/* Avatar */}
-        <div className="relative h-[88px] w-[88px] flex-shrink-0">
-          <div className="h-full w-full overflow-hidden rounded-full ring-4 ring-white/30 shadow-xl [clip-path:circle(50%)]">
-            <AvatarImage />
-          </div>
-          <SeasonalHat />
-        </div>
-
-        {/* Username */}
-        <div className="text-center -mt-1">
-          <h1 className="text-[28px] font-bold text-white tracking-tight leading-tight title-soft-glow">COOLman</h1>
-          <p className="text-white/70 text-sm mt-1 leading-snug">just a cool dude making content</p>
-        </div>
-
-        {/* Location pill */}
-        <button
-          type="button"
-          onClick={onLocationTap}
-          className="flex items-center gap-1.5 bg-black/20 backdrop-blur-sm px-4 py-1.5 rounded-full border border-white/10"
-          aria-label="Location"
-        >
-          <span className="text-sm leading-none">&#x1F4CD;</span>
-          <span className="text-white/90 text-xs font-medium">lost in my thoughts</span>
-        </button>
-
-        {/* Spotify Widget */}
-        {(preview || visibilityLoaded) && toggles.spotify && (preview || !hiddenModules.includes('spotify')) && (
+  const modules: Record<string, ReactNode> = {
+    spotify: ((preview || visibilityLoaded) && toggles.spotify && (preview || !hiddenModules.includes('spotify')) && (
           <SpotifyWidget
             showWidget={(toggles.spotify_widget ?? true) && showFeature('spotify_widget')}
             showPosition={(toggles.spotify_position ?? true) && showFeature('spotify_position')}
@@ -121,12 +95,9 @@ export default function ProfileCard({ toggles, preview = false }: ProfileCardPro
             showPlaylistLink={(toggles.spotify_playlist ?? true) && showFeature('spotify_playlist')}
             showHistory={(toggles.spotify_history ?? true) && showFeature('spotify_history')}
           />
-        )}
-
-        {twitchEnabled && (showTwitchProfile || showTwitchStats || (showTwitchLive && !takeover) || showTwitchSchedule) && <TwitchWidget state={twitch} showProfile={showTwitchProfile} showStats={showTwitchStats} showLive={showTwitchLive && !takeover} showSchedule={showTwitchSchedule} scheduleTimeZone={mediaPreferences.scheduleTimeZone ?? undefined} />}
-
-        {/* Discord Widget */}
-        {(preview || visibilityLoaded) && toggles.discord !== false && (preview || !hiddenModules.includes('discord')) && ((toggles.discord_profile ?? true) || toggles.discord_music || toggles.discord_video || toggles.discord_games || toggles.discord_status || toggles.discord_other) && (
+        )),
+    twitch: (twitchEnabled && (showTwitchProfile || showTwitchStats || (showTwitchLive && !takeover) || showTwitchSchedule) && <TwitchWidget state={twitch} showProfile={showTwitchProfile} showStats={showTwitchStats} showLive={showTwitchLive && !takeover} showSchedule={showTwitchSchedule} scheduleTimeZone={mediaPreferences.scheduleTimeZone ?? undefined} />),
+    discord: ((preview || visibilityLoaded) && toggles.discord !== false && (preview || !hiddenModules.includes('discord')) && ((toggles.discord_profile ?? true) || toggles.discord_music || toggles.discord_video || toggles.discord_games || toggles.discord_status || toggles.discord_other) && (
           <DiscordWidget
             showProfile={(toggles.discord_profile ?? true) && showFeature('discord_profile')}
             showBanner={(toggles.discord_banner ?? true) && showFeature('discord_banner')}
@@ -138,28 +109,57 @@ export default function ProfileCard({ toggles, preview = false }: ProfileCardPro
             showGames={toggles.discord_games && showFeature('discord_games')}
             showStatus={toggles.discord_status && showFeature('discord_status')}
             showOther={toggles.discord_other && showFeature('discord_other')}
-            showMobile={toggles.discord_mobile ?? true}
-            showWeb={toggles.discord_web ?? true}
-            showDesktop={toggles.discord_desktop ?? true}
+            showMobile={(toggles.discord_mobile ?? true) && showFeature('discord_mobile')}
+            showWeb={(toggles.discord_web ?? true) && showFeature('discord_web')}
+            showDesktop={(toggles.discord_desktop ?? true) && showFeature('discord_desktop')}
           />
-        )}
-
-        {(preview || visibilityLoaded) && toggles.youtube !== false && (preview || (mediaPreferences.showYoutube && !hiddenModules.includes('youtube'))) && <YouTubeWidget
-          showStats={(toggles.youtube_stats ?? true) && (preview || mediaPreferences.showYoutubeStats)}
-          showLatest={(toggles.youtube_latest ?? true) && (preview || mediaPreferences.showLatestUpload)}
-          showLive={(toggles.youtube_live ?? true) && (preview || mediaPreferences.showYoutubeLive)}
+        )),
+    youtube: ((preview || visibilityLoaded) && toggles.youtube !== false && (preview || (mediaPreferences.showYoutube && !hiddenModules.includes('youtube'))) && <YouTubeWidget
+          showStats={(toggles.youtube_stats ?? true) && (preview || mediaPreferences.showYoutubeStats) && showFeature('youtube_stats')}
+          showLatest={(toggles.youtube_latest ?? true) && (preview || mediaPreferences.showLatestUpload) && showFeature('youtube_latest')}
+          showLive={(toggles.youtube_live ?? true) && (preview || mediaPreferences.showYoutubeLive) && showFeature('youtube_live')}
           includeShorts={(toggles.youtube_shorts ?? true) && (preview || mediaPreferences.youtubeFormat !== 'videos')}
           includeVideos={(toggles.youtube_videos ?? true) && (preview || mediaPreferences.youtubeFormat !== 'shorts')}
-          showEmbed={preview || mediaPreferences.youtubeEmbed === 'default' ? (toggles.youtube_embed_default ?? false) : mediaPreferences.youtubeEmbed === 'on'}
-        />}
+          showEmbed={isControlAvailable('youtube_embed_default') && (preview || mediaPreferences.youtubeEmbed === 'default' ? (toggles.youtube_embed_default ?? false) : mediaPreferences.youtubeEmbed === 'on')}
+        />),
+    roblox: ((preview || visibilityLoaded) && toggles.roblox !== false && (preview || !hiddenModules.includes('roblox')) && <CommunityWidget service="roblox" visible={communityVisible} />),
+    steam: ((preview || visibilityLoaded) && toggles.steam !== false && (preview || !hiddenModules.includes('steam')) && <CommunityWidget service="steam" visible={communityVisible} />),
+    buymeacoffee: ((preview || visibilityLoaded) && toggles.buymeacoffee !== false && (preview || !hiddenModules.includes('buymeacoffee')) && <BuyMeACoffeeWidget visible={communityVisible} />),
+    github: (showGithub && <GithubWidget {...githubVisibility} />),
+  }
 
-        {(preview || visibilityLoaded) && toggles.roblox !== false && (preview || !hiddenModules.includes('roblox')) && <CommunityWidget service="roblox" visible={communityVisible} />}
-        {(preview || visibilityLoaded) && toggles.steam !== false && (preview || !hiddenModules.includes('steam')) && <CommunityWidget service="steam" visible={communityVisible} />}
-        {(preview || visibilityLoaded) && toggles.buymeacoffee !== false && (preview || !hiddenModules.includes('buymeacoffee')) && <BuyMeACoffeeWidget visible={communityVisible} />}
+  return (
+    <div style={takeover ? undefined : { background: `linear-gradient(180deg,${siteConfig.appearance.card.from},${siteConfig.appearance.card.to})` }} className={`relative profile-card w-full rounded-3xl shadow-2xl overflow-hidden border border-white/10 ${takeover ? 'bg-[linear-gradient(180deg,#170b29_0%,#401265_55%,#8B0000_100%)]' : ''}`}>
+      {takeover && twitch.presence && <StreamTakeover presence={twitch.presence} />}
+      <div className="flex flex-col items-center px-5 sm:px-7 pt-8 sm:pt-9 pb-6 sm:pb-7 gap-4">
+        {isModuleAvailable('announcement') && (preview || visibilityLoaded) && (toggles.announcement ?? true) && (preview || !hiddenModules.includes('announcement')) && <LiveAnnouncement />}
+        {/* Avatar */}
+        {toggles.profile && (preview || !hiddenModules.includes('profile')) && toggles.profile_avatar && showFeature('profile_avatar') && <div className="relative h-[88px] w-[88px] flex-shrink-0">
+          <div className="h-full w-full overflow-hidden rounded-full ring-4 ring-white/30 shadow-xl [clip-path:circle(50%)]">
+            <AvatarImage />
+          </div>
+          {toggles.seasons && <SeasonalHat />}
+        </div>}
 
-        {/* Social Links */}
-        {showGithub && <GithubWidget {...githubVisibility} />}
-        <SocialLinks />
+        {/* Username */}
+        <div className="text-center -mt-1">
+          <h1 className="text-[28px] font-bold text-white tracking-tight leading-tight title-soft-glow">{siteConfig.profile.username}</h1>
+          {toggles.profile && (preview || !hiddenModules.includes('profile')) && toggles.profile_bio && showFeature('profile_bio') && <p className="text-white/70 text-sm mt-1 leading-snug">{siteConfig.profile.bio}</p>}
+        </div>
+
+        {/* Location pill */}
+        {toggles.profile && (preview || !hiddenModules.includes('profile')) && toggles.profile_location && showFeature('profile_location') && <button
+          type="button"
+          onClick={onLocationTap}
+          className="flex items-center gap-1.5 bg-black/20 backdrop-blur-sm px-4 py-1.5 rounded-full border border-white/10"
+          aria-label="Location"
+        >
+          <span className="text-sm leading-none">&#x1F4CD;</span>
+          <span className="text-white/90 text-xs font-medium">{siteConfig.profile.location}</span>
+        </button>}
+
+        {Object.keys(siteConfig.modules).map((id) => modules[id] ? <div key={id} className="contents">{modules[id]}</div> : null)}
+        {toggles.socials && (preview || !hiddenModules.includes('socials')) && <SocialLinks />}
       </div>
     </div>
   )

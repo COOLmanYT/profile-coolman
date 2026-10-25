@@ -10,15 +10,8 @@ export type VisitorSimulation = {
   dateTime: string | null
   dateTimeSetAt: number | null
 }
-export type TemporaryModule = 'spotify' | 'twitch' | 'discord' | 'youtube' | 'roblox' | 'steam' | 'buymeacoffee' | 'github' | 'announcement'
-export type TemporaryFeature =
-  | 'github_status' | 'github_profile' | 'github_stats' | 'github_commits' | 'github_graph' | 'github_projects' | 'github_commit_titles' | 'github_language' | 'github_licence'
-  | `${'roblox' | 'steam' | 'buymeacoffee'}_${string}`
-  | 'roblox_stats' | 'steam_activity'
-  | 'spotify_widget' | 'spotify_position' | 'spotify_embed' | 'spotify_playlist' | 'spotify_history'
-  | 'twitch_profile' | 'twitch_stats' | 'twitch_live' | 'twitch_schedule' | 'twitch_takeover'
-  | 'discord_profile' | 'discord_banner' | 'discord_badges' | 'discord_decoration' | 'discord_devices'
-  | 'discord_status' | 'discord_music' | 'discord_video' | 'discord_games' | 'discord_other'
+export type TemporaryModule = string
+export type TemporaryFeature = string
 export type YoutubeFormat = 'both' | 'shorts' | 'videos'
 export type MediaPreferences = { showYoutube: boolean; showYoutubeStats: boolean; showLatestUpload: boolean; showYoutubeLive: boolean; youtubeFormat: YoutubeFormat; youtubeEmbed: 'default' | 'on' | 'off'; scheduleTimeZone: string | null }
 

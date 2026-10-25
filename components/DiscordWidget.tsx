@@ -1,5 +1,7 @@
 'use client'
 
+import { siteConfig } from '@/lib/site-config.mjs'
+
 import { startPolling } from '@/lib/widget-polling.mjs'
 import { getGameActivityLink } from '@/lib/game-activity.mjs'
 import { useLanyard } from '@/lib/use-lanyard'
@@ -308,7 +310,7 @@ function DiscordWidget({
     })),
   ])
   const serverTag = presence?.discord_user?.primary_guild?.tag ?? presence?.discord_user?.clan?.tag
-  const displayName = presence?.discord_user?.username ?? 'coolman_yt'
+  const displayName = presence?.discord_user?.username ?? siteConfig.providers.discord.username
   const deviceLabel = presence ? getDeviceLabel(presence, { showMobile, showWeb, showDesktop }) : null
   const customStatusEmoji = customStatus?.emoji
 

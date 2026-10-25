@@ -1,3 +1,4 @@
+import { siteConfig } from './site-config.mjs'
 export interface DiscordAchievementBadge {
   key: string
   label: string
@@ -7,21 +8,7 @@ export interface DiscordAchievementBadge {
 
 // Edit these owner-maintained values to update the profile's achievement badges.
 // null allows observed estimates; 0 means no unlocked badge. Lanyard KV overrides these defaults.
-export const DISCORD_BADGE_DEFAULTS = {
-  discord_nitro_started_at: '2025-01-26T00:00:00.000Z',
-  discord_booster_started_at: '2025-01-27T00:00:00.000Z',
-  discord_nitro_badge: true,
-  discord_booster_badge: true,
-  discord_account_created_at: '2025-11-08', // 8 November 2025, confirmed by the owner.
-  discord_account_age_minimum_years: 1, // Seed is already displayed in the supplied screenshots.
-  discord_game_time_hours: null as number | null,
-  discord_games_played: null as number | null,
-  discord_streaming_hours: 23 as number | null,
-  discord_game_time_baseline_hours: 5, // Confirmed in the supplied Badge Directory screenshot.
-  discord_game_time_baseline_at: '2026-10-23T09:54:43.000Z', // Count only new observed time after this snapshot.
-  discord_games_played_minimum: 8, // Known total; historical game identities are unavailable.
-  discord_last_meadow_badge: true, // Present in the supplied profile screenshot.
-}
+export const DISCORD_BADGE_DEFAULTS = siteConfig.providers.discord.badges
 
 // Left-to-right, then top-to-bottom in the supplied Discord profile screenshot.
 export const DISCORD_BADGE_ORDER = [

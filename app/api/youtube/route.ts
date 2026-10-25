@@ -1,9 +1,11 @@
+import { isModuleAvailable } from '@/lib/site-config.mjs'
+import { siteConfig } from '@/lib/site-config.mjs'
 import { NextRequest, NextResponse } from 'next/server'
 import { parseLatestYoutubeVideos, parseYoutubeChannel, parseYoutubeLive, parseYoutubeTab, enrichYoutubeVideo } from '@/lib/youtube-feed.mjs'
 import { monitoredFetch } from '@/lib/provider-monitor.mjs'
 import { limitPublicRequest } from '@/lib/rate-limit.mjs'
 
-const CHANNEL_ID = 'UCJr64JsgfMr8SHeUhLA3lKw'
+const CHANNEL_ID = siteConfig.providers.youtube.channelId
 const CHANNEL_URL = `https://www.youtube.com/channel/${CHANNEL_ID}`
 type Video = { id: string; title: string; url: string; thumbnailUrl: string; publishedAt?: string; views?: number; isShort?: boolean }
 
@@ -33,6 +35,7 @@ async function channelStats() {
 }
 
 export async function GET(req: NextRequest) {
+  if (!isModuleAvailable('youtube')) return NextResponse.json({ error: 'MODULE_DISABLED' }, { status: 404, headers: { 'Cache-Control': 'no-store' } })
   const rate = limitPublicRequest(req, 'youtube')
   if (!rate.allowed) return NextResponse.json({ error: 'RATE_LIMITED' }, { status: 429, headers: { 'Retry-After': String(rate.retryAfterSeconds) } })
   const [xml, channel, livePage, shortsPage, videosPage, streamsPage] = await Promise.all([

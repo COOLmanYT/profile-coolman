@@ -1,3 +1,6 @@
+import ColorModeProvider from '@/components/ColorModeProvider'
+import { getToggles } from '@/lib/toggles'
+import { siteConfig } from '@/lib/site-config.mjs'
 import type { Metadata } from 'next'
 import localFont from 'next/font/local'
 import './globals.css'
@@ -12,21 +15,22 @@ const geist = localFont({
 })
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://profile.coolmanyt.com'),
-  title: 'COOLman',
-  description: 'just a cool dude making content',
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || siteConfig.site.url),
+  title: siteConfig.profile.username,
+  description: siteConfig.profile.bio,
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const toggles = await getToggles()
   return (
-    <html lang="en">
+    <html lang={siteConfig.site.language} data-color-mode={siteConfig.appearance.defaultMode === 'light' ? 'light' : 'dark'} suppressHydrationWarning>
       <body className={`${geist.className} bg-black min-h-screen`}>
-        <Providers><ToastProvider><VisitorPreferencesProvider>{children}</VisitorPreferencesProvider></ToastProvider></Providers>
-        <Analytics />
+        <ColorModeProvider><Providers><ToastProvider><VisitorPreferencesProvider>{children}</VisitorPreferencesProvider></ToastProvider></Providers></ColorModeProvider>
+        {toggles.analytics && <Analytics />}
       </body>
     </html>
   )

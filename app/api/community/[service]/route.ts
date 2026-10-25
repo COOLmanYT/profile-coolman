@@ -1,3 +1,4 @@
+import { isModuleAvailable } from '@/lib/site-config.mjs'
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchCommunityProfile } from '@/lib/community-profiles.mjs'
 import { createTtlCache } from '@/lib/ttl-cache.mjs'
@@ -12,6 +13,7 @@ const caches = {
 export async function GET(req: NextRequest, context: { params: Promise<{ service: string }> }) {
   const { service } = await context.params
   if (service !== 'roblox' && service !== 'steam' && service !== 'buymeacoffee') return NextResponse.json({ error: 'NOT_FOUND' }, { status: 404 })
+  if (!isModuleAvailable(service)) return NextResponse.json({ error: 'MODULE_DISABLED' }, { status: 404, headers: { 'Cache-Control': 'no-store' } })
   const rate = limitPublicRequest(req, `community-${service}`)
   if (!rate.allowed) return NextResponse.json({ error: 'RATE_LIMITED' }, { status: 429, headers: { 'Retry-After': String(rate.retryAfterSeconds), 'Cache-Control': 'no-store' } })
   try {

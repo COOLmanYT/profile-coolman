@@ -1,5 +1,7 @@
 'use client'
 
+import { siteConfig } from '@/lib/site-config.mjs'
+
 import { useEffect, useState } from 'react'
 import { COMMUNITY_LINKS } from '@/lib/community-profiles.mjs'
 import { startPolling, fetchWidgetJson } from '@/lib/widget-polling.mjs'
@@ -27,7 +29,7 @@ export default function CommunityWidget({ service, visible }: { service: 'roblox
   const details = show(service === 'steam' ? 'activity' : 'stats')
   const stats = data?.stats.filter((_, index) => details && show((service === 'steam' ? ['hours', 'library'] : ['friends', 'followers', 'following'])[index])) ?? []
   return <section aria-label={title} className="profile-module w-full space-y-3 text-white">
-    <ModuleHeader service={service} title={title} href={COMMUNITY_LINKS[service]} name={data?.name ?? 'COOLman'} username={data?.username ?? (service === 'steam' ? 'coolmanyt1' : '@COOLmangamer768')} avatarUrl={data?.avatarUrl} visible={visible}>
+    <ModuleHeader service={service} title={title} href={COMMUNITY_LINKS[service]} name={data?.name ?? siteConfig.profile.username} username={data?.username ?? (service === 'steam' ? siteConfig.providers.steam.username : '')} avatarUrl={data?.avatarUrl} visible={visible}>
       {service === 'steam' && details && show('status') && <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ${status === 'in-game' ? 'bg-green-400/15 text-green-200' : status === 'online' ? 'bg-sky-400/15 text-sky-200' : 'bg-white/10 text-white/65'}`}>{statusLabel}</span>}
     </ModuleHeader>
     {!data && !failed && <p role="status" className="animate-pulse text-xs text-white/65">Loading {title}…</p>}

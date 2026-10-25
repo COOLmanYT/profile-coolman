@@ -1,5 +1,7 @@
 'use client'
 
+import { siteConfig } from '@/lib/site-config.mjs'
+
 import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import { COMMUNITY_LINKS } from '@/lib/community-profiles.mjs'
@@ -23,7 +25,7 @@ export default function BuyMeACoffeeWidget({ visible }: { visible: Record<string
   const money = (value: number) => new Intl.NumberFormat('en-AU', { style: 'currency', currency: data?.currency ?? 'AUD', currencyDisplay: 'code', maximumFractionDigits: 2 }).format(value)
   return <section aria-label="Buy Me a Coffee" className="profile-module w-full space-y-3 text-white">
     {show('cover') && data?.coverUrl && <div className="relative h-24 overflow-hidden rounded-xl"><Image src={data.coverUrl} alt="" fill sizes="(max-width: 640px) 320px, 400px" className="object-cover" unoptimized /></div>}
-    <ModuleHeader service="buymeacoffee" title="Buy Me a Coffee" href={COMMUNITY_LINKS.buymeacoffee} name={data?.name ?? 'COOLman'} username={data?.username} avatarUrl={data?.avatarUrl} visible={visible} />
+    <ModuleHeader service="buymeacoffee" title="Buy Me a Coffee" href={COMMUNITY_LINKS.buymeacoffee} name={data?.name ?? siteConfig.profile.username} username={data?.username} avatarUrl={data?.avatarUrl} visible={visible} />
     {!data && !failed && <p role="status" className="animate-pulse text-xs text-white/65">Loading creator page…</p>}
     {failed && <p role="status" className="text-xs text-white/65">Creator details could not refresh.{data ? ' Showing the last available details.' : ''}</p>}
     {show('bio') && data?.bio && <p className="whitespace-pre-line break-words text-xs leading-relaxed text-white/75">{data.bio}</p>}

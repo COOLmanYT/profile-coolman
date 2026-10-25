@@ -1,12 +1,14 @@
+import { isModuleAvailable } from '@/lib/site-config.mjs'
 import { NextRequest, NextResponse } from 'next/server'
 import { createGithubActivityLoader } from '@/lib/github-activity.mjs'
 import { monitoredFetch } from '@/lib/provider-monitor.mjs'
 import { limitPublicRequest } from '@/lib/rate-limit.mjs'
 
 export const dynamic = 'force-dynamic'
-const activity = createGithubActivityLoader({ fetcher: (url, init) => monitoredFetch('github', url, init) })
+const activity = createGithubActivityLoader({ token: process.env.GITHUB_TOKEN, fetcher: (url, init) => monitoredFetch('github', url, init) })
 
 export async function GET(req: NextRequest) {
+  if (!isModuleAvailable('github')) return NextResponse.json({ error: 'MODULE_DISABLED' }, { status: 404, headers: { 'Cache-Control': 'no-store' } })
   const rate = limitPublicRequest(req, 'github')
   if (!rate.allowed) return NextResponse.json({ error: 'RATE_LIMITED' }, { status: 429, headers: { 'Cache-Control': 'no-store', 'Retry-After': String(rate.retryAfterSeconds) } })
   try {

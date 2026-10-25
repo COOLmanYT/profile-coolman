@@ -1,4 +1,5 @@
 import './ttl-cache.test.mjs'
+import './site-config.test.mjs'
 import './community-profiles.test.mjs'
 import './visitor-preferences.test.mjs'
 import './youtube-feed.test.mjs'
