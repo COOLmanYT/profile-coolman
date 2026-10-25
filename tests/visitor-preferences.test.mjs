@@ -35,7 +35,7 @@ test('reset clears profile preferences while preserving likes, authentication an
 
 test('every community element control has an independent default and can be saved as hidden', () => {
   for (const { features } of COMMUNITY_CONTROLS) for (const [key] of features) {
-    assert.equal(DEFAULT_TOGGLES[key], true, key)
+    assert.equal(DEFAULT_TOGGLES[key], key !== 'buymeacoffee_bio', key)
     assert.deepEqual(normaliseVisibility({ hiddenFeatures: [key] }).hiddenFeatures, [key])
   }
 })

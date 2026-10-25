@@ -3,7 +3,7 @@
 import { signOut } from 'next-auth/react'
 import { useState } from 'react'
 import { responseErrorCode, useToast } from './ToastProvider'
-import { COMMUNITY_CONTROLS } from '@/lib/community-controls.mjs'
+import { DASHBOARD_LABELS, DASHBOARD_GROUPS, isControlDisabled } from '@/lib/dashboard-controls.mjs'
 
 interface DashboardClientProps {
   initialToggles: Record<string, boolean>
@@ -11,56 +11,6 @@ interface DashboardClientProps {
   onTogglesChange?: (toggles: Record<string, boolean>) => void
 }
 
-const TOGGLE_LABELS: Record<string, string> = {
-  ...Object.fromEntries(COMMUNITY_CONTROLS.flatMap(({ parentKey, features }) => [[parentKey, 'Entire module'], ...features])),
-  roblox: 'Entire module',
-  roblox_stats: 'Friends, followers and following counts',
-  steam: 'Entire module',
-  steam_activity: 'Status, current game and public activity',
-  buymeacoffee: 'Entire module',
-  spotify: 'Entire module',
-  spotify_widget: 'Now-playing widget',
-  spotify_position: 'Player position and duration',
-  spotify_embed: 'Embed Player',
-  spotify_playlist: 'Playlist Link',
-  spotify_history: 'Listening History',
-  twitch: 'Entire module',
-  twitch_profile: 'Channel profile and live status',
-  twitch_stats: 'Follower and subscriber totals',
-  twitch_live: 'Live stream widget',
-  twitch_schedule: 'Next scheduled stream',
-  youtube: 'Entire module',
-  youtube_stats: 'Subscribers, total views, video count and last upload',
-  youtube_latest: 'Latest upload (all formats)',
-  youtube_live: 'Live status and stream link',
-  youtube_shorts: 'Include Shorts',
-  youtube_videos: 'Include videos and stream uploads',
-  youtube_embed_default: 'Playable embed on by default for visitors',
-  discord: 'Entire module',
-  discord_profile: 'Profile and presence status',
-  discord_banner: 'Profile banner',
-  discord_badges: 'Profile badges',
-  discord_decoration: 'Avatar decoration and nameplate',
-  discord_devices: 'Device presence',
-  discord_music: 'Music',
-  discord_video: 'Video',
-  discord_games: 'Games',
-  discord_status: 'Custom Status',
-  discord_other: 'Other Activity',
-  discord_mobile: 'Mobile',
-  discord_web: 'Web',
-  discord_desktop: 'Desktop',
-}
-
-const TOGGLE_GROUPS = [
-  ...COMMUNITY_CONTROLS.map(({ title, description, parentKey, features }) => ({ title, description, parentKey, keys: [parentKey, ...features.map(([key]) => key)] })),
-  { title: 'Spotify', description: 'Control the entire Spotify module or its individual sections.', parentKey: 'spotify', keys: ['spotify', 'spotify_widget', 'spotify_position', 'spotify_embed', 'spotify_playlist', 'spotify_history'] },
-  { title: 'Twitch', description: 'Control the entire Twitch module or its channel, stats and stream sections.', parentKey: 'twitch', keys: ['twitch', 'twitch_profile', 'twitch_stats', 'twitch_live', 'twitch_schedule'] },
-  { title: 'YouTube', description: 'Choose channel sections and allowed upload formats. The embed default is off; visitors can override it in Options.', parentKey: 'youtube', keys: ['youtube', 'youtube_stats', 'youtube_latest', 'youtube_live', 'youtube_shorts', 'youtube_videos', 'youtube_embed_default'] },
-  { title: 'Discord profile', description: 'Control the entire Discord module or its profile details.', parentKey: 'discord', keys: ['discord', 'discord_profile', 'discord_banner', 'discord_badges', 'discord_decoration', 'discord_devices'] },
-  { title: 'Discord Activity', description: 'Choose which Discord activity types appear.', parentKey: 'discord', keys: ['discord_music', 'discord_video', 'discord_games', 'discord_status', 'discord_other'] },
-  { title: 'Discord Devices', description: 'Choose which active Discord devices appear.', parentKey: 'discord', keys: ['discord_mobile', 'discord_web', 'discord_desktop'] },
-]
 
 export default function DashboardClient({ initialToggles, signOutOnly, onTogglesChange }: DashboardClientProps) {
   const { showToast } = useToast()
@@ -110,31 +60,35 @@ export default function DashboardClient({ initialToggles, signOutOnly, onToggles
   }
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-white/70 text-sm font-semibold uppercase tracking-wider">Profile Controls</h2>
-      {TOGGLE_GROUPS.map(({ title, description, parentKey, keys }) => (
-        <section key={title}>
+    <div>
+      <h2 className="text-white/80 text-sm font-semibold uppercase tracking-wider">Global profile controls</h2>
+      <p className="mt-1 text-xs text-white/55">Saved for all visitors. Turn off an entire module or choose its individual elements. Visitor Options can hide enabled elements in their own browser.</p>
+      <div className="mt-5 grid items-start gap-5 lg:grid-cols-2">
+      {DASHBOARD_GROUPS.map(({ title, description, parentKey, keys }) => (
+        <section key={title} aria-label={`${title} global settings`} className="min-w-0 rounded-2xl border border-white/10 bg-white/[.03] p-4">
           <div className="mb-2 px-1">
             <h3 className="text-white text-sm font-semibold">{title}</h3>
             <p className="mt-0.5 text-xs text-white/45">{description}</p>
           </div>
           <div className="space-y-2">
             {keys.map((key) => {
-              const label = TOGGLE_LABELS[key]
-              const disabledByParent = key !== parentKey && toggles[parentKey] === false
+              const label = DASHBOARD_LABELS[key]
+              const disabledByParent = isControlDisabled(key, parentKey, toggles)
               return (
                 <div key={key} className={`flex items-center justify-between rounded-xl bg-white/5 px-4 py-3 transition-opacity ${disabledByParent ? 'opacity-45' : ''}`}>
                   <span className={`text-sm font-medium text-white ${key !== parentKey ? 'pl-3' : ''}`}>{key !== parentKey && <span aria-hidden className="mr-1.5 text-white/35">↳</span>}{label}</span>
-                  <div className="flex items-center gap-2">
+                  <div className="flex shrink-0 items-center gap-2">
                     {saved === key && <span className="text-green-400 text-xs">Saved!</span>}
                     <button
                       onClick={() => handleToggle(key)}
-                      disabled={saving === key || disabledByParent}
+                      disabled={saving !== null || disabledByParent}
+                      role="switch"
+                      aria-checked={toggles[key]}
                       aria-label={`${title} — ${label}: ${toggles[key] ? 'enabled' : 'disabled'}`}
                       title={`${label}: ${toggles[key] ? 'enabled' : 'disabled'}`}
                       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
                         toggles[key] ? 'bg-red-600' : 'bg-white/20'
-                      } ${saving === key || disabledByParent ? 'cursor-not-allowed opacity-50' : ''}`}
+                      } ${saving !== null || disabledByParent ? 'cursor-not-allowed opacity-50' : ''} shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white`}
                     >
                       <span
                         className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
@@ -149,10 +103,11 @@ export default function DashboardClient({ initialToggles, signOutOnly, onToggles
           </div>
         </section>
       ))}
+      </div>
     </div>
   )
 }
 
 function labelFor(key: string) {
-  return TOGGLE_LABELS[key] ?? 'Setting'
+  return DASHBOARD_LABELS[key] ?? 'Setting'
 }

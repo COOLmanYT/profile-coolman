@@ -111,4 +111,4 @@
 }
 
 /* Shared surface for every profile module; brand colours stay in icons and content. */
-.profile-module { border: 1px solid rgba(255,255,255,.14); border-radius: 1rem; padding: .75rem; background: rgba(15,15,20,.82); box-shadow: 0 8px 24px rgba(0,0,0,.12); }
+.profile-module { border: 1px solid rgba(255,255,255,.18); border-radius: 1rem; padding: .75rem; background: rgba(45,25,32,.62); box-shadow: 0 8px 24px rgba(0,0,0,.1); }

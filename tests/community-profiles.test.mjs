@@ -44,7 +44,7 @@ test('Coffee returns real creator details while respecting hidden supporter tota
   assert.equal(data.item, 'pizza')
   assert.equal(data.avatarUrl, undefined)
   assert.equal(data.memberships[0].price, 3)
-  assert.deepEqual(data.posts, [{ title: 'Public', url: `${COMMUNITY_LINKS.buymeacoffee}/public` }])
+  assert.equal(Object.hasOwn(data, 'posts'), false)
   assert.doesNotMatch(JSON.stringify(data), /SECRET|Members only/)
   assert.equal(parseCoffeeProfile(coffeePage({ supporter_count: true, public_supporter_count: 0 })).supporters, 0)
   assert.throws(() => parseCoffeeProfile('<html>Sign in</html>'))

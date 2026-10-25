@@ -32,8 +32,8 @@ export default async function DashboardPage() {
   const [toggles, twitchHealth, seasonalSettings, legalSettings] = await Promise.all([getToggles(), getTwitchHealth(), getSeasonalSettings(), getLegalSettings()])
 
   return (
-    <div className="min-h-screen bg-[#1a1a1a] p-8">
-      <div className="max-w-lg mx-auto">
+    <div className="min-h-screen bg-[#1a1a1a] p-4 sm:p-6 lg:p-8">
+      <div className="mx-auto max-w-6xl">
         <SeasonalThemeProvider settings={seasonalSettings}><div className="bg-[#2a2a2a] rounded-2xl p-6 shadow-xl">
           <div className="flex items-center justify-between mb-6">
             <div>
@@ -45,18 +45,26 @@ export default async function DashboardPage() {
             <DashboardClient initialToggles={toggles} signOutOnly />
           </div>
           <DashboardWorkspace initialToggles={toggles} />
-          <SeasonalSettingsClient initialSettings={seasonalSettings} />
-          <SeasonalSimulationControls compact />
-          <SeasonalPreview />
-          <LegalSettingsClient initialSettings={legalSettings} />
-          <ProviderHealthClient />
-          <TwitchConnectionStatus health={twitchHealth} />
+          <div className="mt-8 grid items-start gap-6 border-t border-white/10 pt-6 lg:grid-cols-2">
+          <div className="min-w-0">
+            <SeasonalSettingsClient initialSettings={seasonalSettings} />
+            <h2 className="mt-8 text-sm font-semibold uppercase tracking-wider text-white/80">Preview tools</h2>
+            <p className="mt-1 text-xs text-white/55">Simulations affect this visit. Use the seasonal settings above to change what visitors see.</p>
+            <SeasonalSimulationControls compact />
+            <SeasonalPreview />
+          </div>
+          <div className="min-w-0">
+            <LegalSettingsClient initialSettings={legalSettings} />
+            <ProviderHealthClient />
+            <TwitchConnectionStatus health={twitchHealth} />
           <a
             href="/api/twitch/connect"
             className="mt-6 flex items-center justify-center rounded-xl bg-[#9146ff] px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#7c36e1]"
           >
             {twitchHealth.state === 'connected' ? 'Reconnect Twitch' : 'Connect Twitch'}
           </a>
+          </div>
+          </div>
         </div></SeasonalThemeProvider>
       </div>
     </div>

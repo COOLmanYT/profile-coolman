@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import test, { beforeEach, afterEach } from 'node:test'
 import { DEFAULT_TOGGLES } from '../lib/toggle-defaults.mjs'
+import { DASHBOARD_GROUPS, DASHBOARD_LABELS, isControlDisabled } from '../lib/dashboard-controls.mjs'
 import { loadTypescript, nextServer } from './load-typescript.mjs'
 
 const keys = ['DISCORD_USER_ID', 'NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY']
@@ -50,13 +51,36 @@ test('YouTube module and section controls persist independently through owner se
 
 test('community modules and details persist independently through owner settings', async () => {
   for (const id of Object.keys(DEFAULT_TOGGLES).filter((key) => /^(roblox|steam|buymeacoffee)(_|$)/.test(key))) {
-    assert.equal(DEFAULT_TOGGLES[id], true)
+    assert.equal(DEFAULT_TOGGLES[id], id !== 'buymeacoffee_bio')
     const route = toggleRoute()
     assert.equal((await route.POST(request({ id, value: false }))).status, 200)
     assert.equal(route.writes[0].id, id)
     assert.equal(route.writes[0].value, false)
     assert.deepEqual(route.invalidations, ['/'])
   }
+})
+
+test('global dashboard exposes every supported toggle exactly once with a label and valid parent', () => {
+  const controls = DASHBOARD_GROUPS.flatMap(({ parentKey, keys }) => {
+    assert.ok(Object.hasOwn(DEFAULT_TOGGLES, parentKey), parentKey)
+    return keys
+  })
+  assert.equal(new Set(controls).size, controls.length)
+  assert.deepEqual([...controls].sort(), Object.keys(DEFAULT_TOGGLES).sort())
+  for (const id of controls) assert.ok(typeof DASHBOARD_LABELS[id] === 'string' && DASHBOARD_LABELS[id].length > 0, id)
+  assert.equal(controls.includes('buymeacoffee_posts'), false)
+})
+
+test('global bio defaults off, can be enabled explicitly, and section dependencies match rendering', async () => {
+  assert.equal(DEFAULT_TOGGLES.buymeacoffee_bio, false)
+  const route = toggleRoute()
+  assert.equal((await route.POST(request({ id: 'buymeacoffee_bio', value: true }))).status, 200)
+  assert.equal(route.writes[0].value, true)
+  assert.equal(isControlDisabled('steam_hours', 'steam', { steam_activity: false }), true)
+  assert.equal(isControlDisabled('steam_name', 'steam', { steam_activity: false }), false)
+  assert.equal(isControlDisabled('roblox_followers', 'roblox', { roblox_stats: false }), true)
+  assert.equal(isControlDisabled('steam_activity', 'steam', { steam: false }), true)
+  assert.equal(isControlDisabled('steam', 'steam', { steam: false }), false)
 })
 
 test('the embed default is off and changing it invalidates both the profile and visitor settings', async () => {

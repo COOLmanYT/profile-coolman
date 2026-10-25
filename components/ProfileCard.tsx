@@ -11,6 +11,7 @@ import YouTubeWidget from './YouTubeWidget'
 import CommunityWidget from './CommunityWidget'
 import BuyMeACoffeeWidget from './BuyMeACoffeeWidget'
 import { COMMUNITY_CONTROLS } from '@/lib/community-controls.mjs'
+import { DEFAULT_TOGGLES } from '@/lib/toggle-defaults.mjs'
 import SeasonalHat from './SeasonalHat'
 import { useVisitorPreferences, type TemporaryFeature } from './VisitorPreferencesProvider'
 
@@ -25,7 +26,7 @@ interface ProfileCardProps {
 export default function ProfileCard({ toggles, preview = false }: ProfileCardProps) {
   const { hiddenModules, hiddenFeatures, mediaPreferences } = useVisitorPreferences()
   const showFeature = (feature: TemporaryFeature) => preview || !hiddenFeatures.includes(feature)
-  const communityVisible = Object.fromEntries(COMMUNITY_CONTROLS.flatMap(({ features }) => features.map(([key]) => [key, toggles[key] !== false && showFeature(key as TemporaryFeature)])))
+  const communityVisible = Object.fromEntries(COMMUNITY_CONTROLS.flatMap(({ features }) => features.map(([key]) => [key, (toggles[key] ?? DEFAULT_TOGGLES[key]) && showFeature(key as TemporaryFeature)])))
   const router = useRouter()
   const locationTapCountRef = useRef(0)
   const locationTapResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
