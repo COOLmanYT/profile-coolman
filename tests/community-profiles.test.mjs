@@ -96,6 +96,13 @@ test('Steam XML entities are decoded once and invalid numeric entities stay lite
   assert.equal(data.name, 'A &lt; 🎮 &#1114112;')
 })
 
+test('Steam game titles remain literal text after removing the known presence prefix', () => {
+  const title = 'Cats < Dogs > Mice & Friends'
+  const data = parseSteamProfile(steamXml(`<privacyState>public</privacyState><onlineState>in-game</onlineState><stateMessage><![CDATA[In-Game<br/>${title}]]></stateMessage>`))
+  assert.equal(data.game, title)
+  assert.equal(data.gameUrl, undefined)
+})
+
 test('Roblox optional endpoint failures retain the verified profile with missing counts', async () => {
   const urls = []
   const data = await fetchCommunityProfile('roblox', async (url, options) => {
