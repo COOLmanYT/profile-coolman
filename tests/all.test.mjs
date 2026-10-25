@@ -1,4 +1,6 @@
 import './ttl-cache.test.mjs'
+import './community-profiles.test.mjs'
+import './visitor-preferences.test.mjs'
 import './youtube-feed.test.mjs'
 import './profile-likes.test.mjs'
 import './game-activity.test.mjs'
@@ -15,5 +17,3 @@ import './live-features.test.mjs'
 import './github.test.mjs'
 import './discord-achievements.test.mjs'
 import './discord-activity-estimates.test.mjs'
-
-import './visitor-preferences.test.mjs'

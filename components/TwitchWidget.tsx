@@ -30,7 +30,7 @@ function TwitchWidget({ state, showProfile = true, showStats = true, showLive = 
   const { presence, loaded, isUnavailable } = state
 
   return (
-    <div className="profile-module">
+    <div className="profile-module w-full">
       {isUnavailable && <p role="status" className="mb-2 text-xs text-white/55">Twitch temporarily unavailable</p>}
       {!loaded ? (
         <div className="h-24 animate-pulse rounded-xl bg-white/10" />

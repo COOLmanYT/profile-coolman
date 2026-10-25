@@ -8,6 +8,10 @@ import TwitchWidget from './TwitchWidget'
 import DiscordWidget from './DiscordWidget'
 import SocialLinks from './SocialLinks'
 import YouTubeWidget from './YouTubeWidget'
+import CommunityWidget from './CommunityWidget'
+import BuyMeACoffeeWidget from './BuyMeACoffeeWidget'
+import { COMMUNITY_CONTROLS } from '@/lib/community-controls.mjs'
+import { DEFAULT_TOGGLES } from '@/lib/toggle-defaults.mjs'
 import SeasonalHat from './SeasonalHat'
 import GithubWidget from './GithubWidget'
 import LiveAnnouncement from './LiveAnnouncement'
@@ -26,6 +30,7 @@ interface ProfileCardProps {
 export default function ProfileCard({ toggles, preview = false }: ProfileCardProps) {
   const { visibilityLoaded, hiddenModules, hiddenFeatures, mediaPreferences } = useVisitorPreferences()
   const showFeature = (feature: TemporaryFeature) => preview || !hiddenFeatures.includes(feature)
+  const communityVisible = Object.fromEntries(COMMUNITY_CONTROLS.flatMap(({ features }) => features.map(([key]) => [key, (toggles[key] ?? DEFAULT_TOGGLES[key]) && showFeature(key as TemporaryFeature)])))
   const githubVisibility = {
     showStatus: (toggles.github_status ?? true) && showFeature('github_status'),
     showProfile: (toggles.github_profile ?? true) && showFeature('github_profile'),
@@ -147,6 +152,10 @@ export default function ProfileCard({ toggles, preview = false }: ProfileCardPro
           includeVideos={(toggles.youtube_videos ?? true) && (preview || mediaPreferences.youtubeFormat !== 'shorts')}
           showEmbed={preview || mediaPreferences.youtubeEmbed === 'default' ? (toggles.youtube_embed_default ?? false) : mediaPreferences.youtubeEmbed === 'on'}
         />}
+
+        {(preview || visibilityLoaded) && toggles.roblox !== false && (preview || !hiddenModules.includes('roblox')) && <CommunityWidget service="roblox" visible={communityVisible} />}
+        {(preview || visibilityLoaded) && toggles.steam !== false && (preview || !hiddenModules.includes('steam')) && <CommunityWidget service="steam" visible={communityVisible} />}
+        {(preview || visibilityLoaded) && toggles.buymeacoffee !== false && (preview || !hiddenModules.includes('buymeacoffee')) && <BuyMeACoffeeWidget visible={communityVisible} />}
 
         {/* Social Links */}
         {showGithub && <GithubWidget {...githubVisibility} />}
