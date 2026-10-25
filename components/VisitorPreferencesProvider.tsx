@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 
 export type PerceivedLocation = 'auto' | 'australia' | 'outside-australia'
 export type VisitorSimulation = {
@@ -9,16 +9,18 @@ export type VisitorSimulation = {
   dateTime: string | null
   dateTimeSetAt: number | null
 }
-export type TemporaryModule = 'spotify' | 'twitch' | 'discord' | 'youtube'
+export type TemporaryModule = 'spotify' | 'twitch' | 'discord' | 'youtube' | 'github' | 'announcement'
 export type TemporaryFeature =
+  | 'github_status' | 'github_profile' | 'github_stats' | 'github_commits' | 'github_graph' | 'github_projects' | 'github_commit_titles' | 'github_language' | 'github_licence'
   | 'spotify_widget' | 'spotify_position' | 'spotify_embed' | 'spotify_playlist' | 'spotify_history'
-  | 'twitch_profile' | 'twitch_stats' | 'twitch_live' | 'twitch_schedule'
+  | 'twitch_profile' | 'twitch_stats' | 'twitch_live' | 'twitch_schedule' | 'twitch_takeover'
   | 'discord_profile' | 'discord_banner' | 'discord_badges' | 'discord_decoration' | 'discord_devices'
   | 'discord_status' | 'discord_music' | 'discord_video' | 'discord_games' | 'discord_other'
 export type YoutubeFormat = 'both' | 'shorts' | 'videos'
 export type MediaPreferences = { showYoutube: boolean; showYoutubeStats: boolean; showLatestUpload: boolean; showYoutubeLive: boolean; youtubeFormat: YoutubeFormat; youtubeEmbed: 'default' | 'on' | 'off'; scheduleTimeZone: string | null }
 
 type VisitorPreferencesValue = {
+  visibilityLoaded: boolean
   simulation: VisitorSimulation
   setSimulation: (next: VisitorSimulation) => void
   hiddenModules: TemporaryModule[]
@@ -31,6 +33,9 @@ type VisitorPreferencesValue = {
 
 const DEFAULT_SIMULATION: VisitorSimulation = { timeZone: null, location: 'auto', dateTime: null, dateTimeSetAt: null }
 const DEFAULT_MEDIA_PREFERENCES: MediaPreferences = { showYoutube: true, showYoutubeStats: true, showLatestUpload: true, showYoutubeLive: true, youtubeFormat: 'both', youtubeEmbed: 'default', scheduleTimeZone: null }
+const MODULES: TemporaryModule[] = ['spotify', 'twitch', 'discord', 'youtube', 'github', 'announcement']
+const FEATURES: TemporaryFeature[] = ['github_status', 'github_profile', 'github_stats', 'github_commits', 'github_graph', 'github_projects', 'github_commit_titles', 'github_language', 'github_licence', 'spotify_widget', 'spotify_position', 'spotify_embed', 'spotify_playlist', 'spotify_history', 'twitch_profile', 'twitch_stats', 'twitch_live', 'twitch_schedule', 'twitch_takeover', 'discord_profile', 'discord_banner', 'discord_badges', 'discord_decoration', 'discord_devices', 'discord_status', 'discord_music', 'discord_video', 'discord_games', 'discord_other']
+const VISIBILITY_KEY = 'coolman-module-visibility-v1'
 const MEDIA_PREFERENCES_KEY = 'coolman-media-preferences'
 const VisitorPreferencesContext = createContext<VisitorPreferencesValue | null>(null)
 
@@ -38,25 +43,43 @@ export default function VisitorPreferencesProvider({ children }: { children: Rea
   const [simulation, setSimulation] = useState(DEFAULT_SIMULATION)
   const [hiddenModules, setHiddenModules] = useState<TemporaryModule[]>([])
   const [hiddenFeatures, setHiddenFeatures] = useState<TemporaryFeature[]>([])
+  const [visibilityLoaded, setVisibilityLoaded] = useState(false)
+  const visibility = useRef({ hiddenModules: [] as TemporaryModule[], hiddenFeatures: [] as TemporaryFeature[] })
   const [mediaPreferences, setMediaPreferencesState] = useState<MediaPreferences>(DEFAULT_MEDIA_PREFERENCES)
   useEffect(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem(VISIBILITY_KEY) ?? '{}')
+      visibility.current = {
+        hiddenModules: MODULES.filter(item => Array.isArray(stored?.hiddenModules) && stored.hiddenModules.includes(item)),
+        hiddenFeatures: FEATURES.filter(item => Array.isArray(stored?.hiddenFeatures) && stored.hiddenFeatures.includes(item)),
+      }
+      setHiddenModules(visibility.current.hiddenModules)
+      setHiddenFeatures(visibility.current.hiddenFeatures)
+    } catch { /* Corrupt or unavailable storage uses visible defaults. */ }
+    setVisibilityLoaded(true)
     try {
       const stored = JSON.parse(localStorage.getItem(MEDIA_PREFERENCES_KEY) ?? '{}') as Partial<MediaPreferences>
       setMediaPreferencesState({ showYoutube: stored.showYoutube !== false, showYoutubeStats: stored.showYoutubeStats !== false, showLatestUpload: stored.showLatestUpload !== false, showYoutubeLive: stored.showYoutubeLive !== false, youtubeFormat: stored.youtubeFormat === 'shorts' || stored.youtubeFormat === 'videos' ? stored.youtubeFormat : 'both', youtubeEmbed: stored.youtubeEmbed === 'on' || stored.youtubeEmbed === 'off' ? stored.youtubeEmbed : 'default', scheduleTimeZone: typeof stored.scheduleTimeZone === 'string' ? stored.scheduleTimeZone : null })
     } catch { /* Storage is optional. */ }
   }, [])
   const setModuleHidden = (module: TemporaryModule, hidden: boolean) => {
-    setHiddenModules((current) => hidden ? [...new Set([...current, module])] : current.filter((item) => item !== module))
+    const next = hidden ? [...new Set([...visibility.current.hiddenModules, module])] : visibility.current.hiddenModules.filter(item => item !== module)
+    visibility.current = { ...visibility.current, hiddenModules: next }
+    setHiddenModules(next)
+    try { localStorage.setItem(VISIBILITY_KEY, JSON.stringify(visibility.current)) } catch { /* Keep working in memory if storage is blocked. */ }
   }
   const setFeatureHidden = (feature: TemporaryFeature, hidden: boolean) => {
-    setHiddenFeatures((current) => hidden ? [...new Set([...current, feature])] : current.filter((item) => item !== feature))
+    const next = hidden ? [...new Set([...visibility.current.hiddenFeatures, feature])] : visibility.current.hiddenFeatures.filter(item => item !== feature)
+    visibility.current = { ...visibility.current, hiddenFeatures: next }
+    setHiddenFeatures(next)
+    try { localStorage.setItem(VISIBILITY_KEY, JSON.stringify(visibility.current)) } catch { /* Keep working in memory if storage is blocked. */ }
   }
   const setMediaPreferences = (next: MediaPreferences) => {
     setMediaPreferencesState(next)
     try { localStorage.setItem(MEDIA_PREFERENCES_KEY, JSON.stringify(next)) } catch { /* Storage is optional. */ }
   }
 
-  return <VisitorPreferencesContext.Provider value={{ simulation, setSimulation, hiddenModules, setModuleHidden, hiddenFeatures, setFeatureHidden, mediaPreferences, setMediaPreferences }}>{children}</VisitorPreferencesContext.Provider>
+  return <VisitorPreferencesContext.Provider value={{ visibilityLoaded, simulation, setSimulation, hiddenModules, setModuleHidden, hiddenFeatures, setFeatureHidden, mediaPreferences, setMediaPreferences }}>{children}</VisitorPreferencesContext.Provider>
 }
 
 export function useVisitorPreferences() {

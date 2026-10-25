@@ -39,7 +39,7 @@ export default function YouTubeWidget({ showStats, showLatest, showLive, include
   const label = includeShorts && includeVideos ? 'Latest upload' : includeShorts ? 'Latest Short' : 'Latest video'
   const unavailable = failed || (includeShorts && includeVideos ? data?.uploadsUnavailable : includeShorts ? data?.formatsUnavailable?.shorts : data?.formatsUnavailable?.videos)
   return (
-    <section aria-label="YouTube" className="w-full space-y-3 rounded-2xl border border-red-400/35 bg-[#290b0b]/75 p-3 text-white shadow-lg shadow-red-500/10">
+    <section aria-label="YouTube" className="profile-module space-y-3 text-white">
       <div className="flex items-center justify-between gap-2">
         <a href={data?.channel?.url ?? 'https://www.youtube.com/channel/UCJr64JsgfMr8SHeUhLA3lKw'} target="_blank" rel="noopener noreferrer" className="flex min-w-0 flex-1 items-center gap-2.5 hover:underline">
           <span className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-red-500/15 text-red-200 ring-1 ring-red-300/30">{data?.channel?.avatarUrl ? <Image src={data.channel.avatarUrl} alt="" fill className="object-cover" unoptimized /> : <span aria-hidden>▶</span>}</span>

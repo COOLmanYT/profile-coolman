@@ -184,6 +184,33 @@ For example, `.set discord_game_time_hours 75` sent to the Lanyard bot displays 
 
 Badge meanings are documented in [Discord's profile badge guide](https://support.discord.com/hc/en-us/articles/44369363856663-Discord-Profile-Badges-What-Each-Badge-Means). Tier names, milestones, and Discord CDN artwork URLs are catalogued by [mezotv/discord-badges](https://github.com/mezotv/discord-badges#account-age-badges). Activity totals can lag behind recent activity in Discord.
 
+## Live profile features
+
+The compact **GitHub** module uses the same translucent card, small header/logo, stat tiles and tight rows as the other modules. It shows the account's contribution calendar, total stars earned across its owned public repositories, total public repository count, public commits made in the past year, and three recently updated original projects. Totals include public forks and archived repositories; the recent-project list excludes those. Projects include their primary language and GitHub-detected licence, or an explicit not-listed label. They are ordered by their latest push date, with a separate linked title for the latest default-branch commit. The repeated branch label is omitted from the card. Commit titles show the first line only; author emails and commit message bodies are omitted. Repository names, commit links, stats and the graph link directly to GitHub. The stars count is stars earned by these repositories, not repositories the account has starred.
+
+The yearly commit count uses one cached GitHub commit-search query for `author:COOLmanYT`, a rolling year of author dates, and `is:public`, requesting just one result and reading `total_count`. [GitHub commit search indexes default branches](https://docs.github.com/en/search-github/searching-on-github/searching-commits); the count excludes private and unmerged branch-only commits and can lag indexing. Incomplete or failed search results stay unavailable rather than becoming zero. The count links to its exact GitHub search. Contribution totals are separate because the calendar also includes pull requests and other activity.
+
+Dashboard and visitor Options independently control the GitHub header, star/repo totals, yearly commits, contribution graph, recent projects, commit titles, project language and licence. Global Dashboard controls take priority. Module and feature visibility controls are stored in this browser across refreshes. Clearing site storage resets them; different site origins (including separate preview URLs) have separate preferences. Disabling the module or all its main sections unmounts it and stops its browser polling.
+
+The calendar reads [GitHub's own public contribution page](https://github.com/users/COOLmanYT/contributions), normalizes daily counts and levels, and renders its own responsive SVG. GitHub's calendar includes qualifying commits, pull requests and other contributions; it is not a commit-only count. No third-party graph service, raw provider HTML, GitHub token or new environment variable is needed. If GitHub changes that page's markup, the graph reports unavailable while repository data remains visible.
+
+GitHub public profile status (emoji and message) is read from the public profile HTML with the same hourly cache and ETags. No token is required. Only publicly visible status is shown; no online presence is inferred. A missing status adds no empty row, and a status-fetch failure does not block repository data or shorten its cache. Both Dashboard and browser Options can hide this status. Module cards share their surface, border, padding and shadow while retaining provider accents.
+
+Healthy snapshots are cached for one hour in the Vercel CDN and per server instance, with concurrent refreshes coalesced and ETags used on refresh. A normal refresh for this account uses one public repository-list request, one calendar page, one public profile page, one commit-count search and at most three latest-commit requests. Language and licence use existing repository metadata with no extra requests. Pagination is bounded at five repository pages (500 repos); if more pages exist, totals are marked unavailable rather than presenting partial sums. Partial snapshots report degraded status with a short CDN cache; upstream failures and rate limits use a shared retry cooldown. No request follows provider-supplied pagination URLs. Caches are per instance plus CDN, not a fleet-wide quota guarantee.
+
+To publish a **live announcement**, DM the [Lanyard bot](https://github.com/Phineas/lanyard#kv):
+
+```text
+.set announcement New video tonight!
+.set announcement_url https://www.youtube.com/@coolmangamer
+```
+
+The optional link must use HTTPS. The message is plain text, limited to 280 characters on the profile. To remove it, send `.del announcement`; remove the optional link with `.del announcement_url`. KV is public, so use it only for messages intended for everyone. Updates and deletion arrive on the same Lanyard WebSocket used by Discord and Spotify, with no additional polling, database or API key. While that connection is unavailable, the announcement is hidden. Clearing the message hides the whole announcement.
+
+**Stream takeover** adds a large Twitch preview, stream title, category, viewers, locally updated uptime and a **Watch the stream** button at the top of the profile when Twitch reports a live broadcast. It shares the channel card's existing 30-second poll and cached response; it makes no additional Twitch requests and loads no Twitch player. Offline and unavailable responses remove the takeover. This follows the existing Twitch polling/cache delay rather than providing instant stream detection.
+
+The Dashboard can disable GitHub, announcements or stream takeover globally. Takeover also respects the Twitch module and live-stream controls. Visitors can hide the new modules or takeover in this browser through **Options**. No schema migration, dependency or new environment variable is needed. CDN hits still count as edge requests, and process caches/cooldowns are per instance; these are cost reductions, not a fleet-wide quota guarantee.
+
 ## Connect Twitch
 
 Set `TWITCH_REDIRECT_URI` to the exact public URL of this profile deployment. Register that same URL in your Twitch Developer application, for example `https://profile.coolmanyt.com/api/twitch/callback`, plus `http://localhost:3000/api/twitch/callback` for local development. In Vercel, set `TWITCH_BROADCASTER_LOGIN=coolman_yt1` as well as the Twitch client credentials and redirect URI. After setting these values, sign in to the dashboard and select **Connect Twitch**. Approve the `moderator:read:followers` and `channel:read:subscriptions` scopes to display follower and subscriber totals.
