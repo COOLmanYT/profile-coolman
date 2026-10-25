@@ -21,6 +21,15 @@ const LABELS: Record<SeasonalTheme, string> = {
 const LEGAL_SIMPLE_MODE_KEY = 'coolman-legal-simple-mode'
 const TEMPORARY_FEATURES: Array<{ category: string; id: TemporaryFeature; label: string }> = [
   ...COMMUNITY_CONTROLS.flatMap(({ title, features }) => features.map(([id, label]) => ({ category: title, id: id as TemporaryFeature, label }))),
+  { category: 'GitHub', id: 'github_status', label: 'GitHub public status' },
+  { category: 'GitHub', id: 'github_profile', label: 'GitHub profile header' },
+  { category: 'GitHub', id: 'github_stats', label: 'Stars and public repository totals' },
+  { category: 'GitHub', id: 'github_commits', label: 'Commits made in past year' },
+  { category: 'GitHub', id: 'github_graph', label: 'Contribution graph' },
+  { category: 'GitHub', id: 'github_projects', label: 'Recently updated projects' },
+  { category: 'GitHub', id: 'github_commit_titles', label: 'Latest commit titles' },
+  { category: 'GitHub', id: 'github_language', label: 'Project languages' },
+  { category: 'GitHub', id: 'github_licence', label: 'Project licences' },
   { category: 'Spotify', id: 'spotify_widget', label: 'Now-playing widget' },
   { category: 'Spotify', id: 'spotify_position', label: 'Player position and duration' },
   { category: 'Spotify', id: 'spotify_embed', label: 'Embed player' },
@@ -29,6 +38,7 @@ const TEMPORARY_FEATURES: Array<{ category: string; id: TemporaryFeature; label:
   { category: 'Twitch', id: 'twitch_profile', label: 'Channel profile and live status' },
   { category: 'Twitch', id: 'twitch_stats', label: 'Follower and subscriber totals' },
   { category: 'Twitch', id: 'twitch_live', label: 'Live stream widget' },
+  { category: 'Twitch', id: 'twitch_takeover', label: 'Stream takeover at the top' },
   { category: 'Twitch', id: 'twitch_schedule', label: 'Next scheduled stream' },
   { category: 'Discord', id: 'discord_profile', label: 'Profile and presence status' },
   { category: 'Discord', id: 'discord_banner', label: 'Profile banner' },
@@ -101,7 +111,7 @@ export default function SeasonalOptionsClient({ legalSimpleModeDefault, youtubeE
         <section className="mt-8 border-t border-white/10 pt-5">
           <h2 className="text-base font-semibold">Hide modules</h2>
           <p className="mt-1 text-xs text-white/50">Saved in this browser, including after refresh. Dashboard settings still take priority.</p>
-          {([['spotify', 'Spotify listening'], ['twitch', 'Twitch presence'], ['youtube', 'YouTube channel'], ['discord', 'Discord presence'], ['roblox', 'Roblox profile'], ['steam', 'Steam profile'], ['buymeacoffee', 'Buy Me a Coffee']] as [TemporaryModule, string][]).map(([module, label]) => (
+          {([['spotify', 'Spotify listening'], ['twitch', 'Twitch presence'], ['youtube', 'YouTube channel'], ['discord', 'Discord presence'], ['github', 'GitHub activity'], ['announcement', 'Live announcement'], ['roblox', 'Roblox profile'], ['steam', 'Steam profile'], ['buymeacoffee', 'Buy Me a Coffee']] as [TemporaryModule, string][]).map(([module, label]) => (
             <label key={module} className="mt-3 flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-sm"><span>{label}</span><input type="checkbox" checked={hiddenModules.includes(module)} onChange={(event) => updateModule(module, event.target.checked)} className="h-4 w-4 accent-red-600" /></label>
           ))}
         </section>
@@ -122,7 +132,7 @@ export default function SeasonalOptionsClient({ legalSimpleModeDefault, youtubeE
         <section className="mt-8 border-t border-white/10 pt-5">
           <h2 className="text-base font-semibold">Hide module features</h2>
           <p className="mt-1 text-xs text-white/50">Fine-tune what you see. These settings are saved in this browser.</p>
-          {(['Spotify', 'Twitch', 'Discord', 'Roblox', 'Steam', 'Buy Me a Coffee'] as const).map((category) => (
+          {(['Spotify', 'Twitch', 'Discord', 'GitHub', 'Roblox', 'Steam', 'Buy Me a Coffee'] as const).map((category) => (
             <div key={category} className="mt-4"><h3 className="text-xs font-semibold uppercase tracking-wider text-white/45">{category}</h3><div className="mt-2 space-y-2">{TEMPORARY_FEATURES.filter((feature) => feature.category === category).map((feature) => (
               <label key={feature.id} className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-sm"><span>{feature.label}</span><input type="checkbox" checked={hiddenFeatures.includes(feature.id)} onChange={(event) => updateFeature(feature.id, event.target.checked)} className="h-4 w-4 accent-red-600" /></label>
             ))}</div></div>

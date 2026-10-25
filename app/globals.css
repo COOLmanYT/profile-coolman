@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer components {
+  .profile-module {
+    @apply w-full rounded-2xl p-3;
+    border: 1px solid rgba(255,255,255,.18);
+    background: rgba(45,25,32,.62);
+    box-shadow: 0 8px 24px rgba(0,0,0,.1);
+  }
+}
+
 @layer utilities {
   :focus-visible {
     outline: 2px solid rgb(252 165 165);
@@ -109,6 +118,3 @@
   .profile-like-spark { position: absolute; left: 8px; top: 7px; color: #fda4af; font-size: 10px; pointer-events: none; animation: profile-like-spark .8s ease-out forwards; }
   @media (prefers-reduced-motion: reduce) { .profile-like-pop, .profile-like-spark { animation: none; } .profile-like-spark { display: none; } }
 }
-
-/* Shared surface for every profile module; brand colours stay in icons and content. */
-.profile-module { border: 1px solid rgba(255,255,255,.18); border-radius: 1rem; padding: .75rem; background: rgba(45,25,32,.62); box-shadow: 0 8px 24px rgba(0,0,0,.1); }

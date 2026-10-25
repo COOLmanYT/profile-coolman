@@ -81,6 +81,8 @@ test('global bio defaults off, can be enabled explicitly, and section dependenci
   assert.equal(isControlDisabled('roblox_followers', 'roblox', { roblox_stats: false }), true)
   assert.equal(isControlDisabled('steam_activity', 'steam', { steam: false }), true)
   assert.equal(isControlDisabled('steam', 'steam', { steam: false }), false)
+  assert.equal(isControlDisabled('twitch_takeover', 'twitch', { twitch_live: false }), true)
+  assert.equal(isControlDisabled('github_commit_titles', 'github', { github_projects: false }), true)
 })
 
 test('the embed default is off and changing it invalidates both the profile and visitor settings', async () => {
@@ -156,5 +158,17 @@ test('seasonal settings invalidate public pages only after a successful save and
     assert.equal((await POST(request({ enabled: false }))).status, expected)
     assert.deepEqual(invalidations, expected === 200 ? ['/', '/options'] : [])
     if (expected === 401) assert.deepEqual(writes, [])
+  }
+})
+
+test('GitHub, announcement and stream takeover can be disabled through owner settings', async () => {
+  for (const id of ['github', 'github_status', 'github_profile', 'github_stats', 'github_commits', 'github_graph', 'github_projects', 'github_commit_titles', 'github_language', 'github_licence', 'announcement', 'twitch_takeover']) {
+    assert.equal(DEFAULT_TOGGLES[id], true)
+    const route = toggleRoute()
+    assert.equal((await route.POST(request({ id, value: false }))).status, 200)
+    assert.equal(route.writes.length, 1)
+    assert.equal(route.writes[0].id, id)
+    assert.equal(route.writes[0].value, false)
+    assert.deepEqual(route.invalidations, ['/'])
   }
 })
