@@ -203,6 +203,12 @@ test('compact GitHub card keeps real links and metadata, and each section contro
   assert.match(visible, /MIT/)
   assert.match(visible, /sample-project\/commit\//)
   assert.doesNotMatch(visible, /Latest on/)
+  const originalStatus = profile.status
+  profile.status = { emoji: '🎯', message: '<script>alert(1)</script>' }
+  const escaped = render()
+  assert.match(escaped, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/)
+  assert.doesNotMatch(escaped, /<script>/)
+  profile.status = originalStatus
   for (const [flag, text] of [['showStatus', 'Building &amp; learning'], ['showGraph', 'Contributions · past year'], ['showStats', 'Public repos'], ['showCommitCount', 'Commits · past year'], ['showProjects', 'sample-project'], ['showLanguage', 'TypeScript'], ['showLicence', 'MIT'], ['showCommitTitles', 'Improve the profile']]) {
     assert.equal(render({ [flag]: false }).includes(text), false, flag)
   }
@@ -213,6 +219,9 @@ test('compact GitHub card keeps real links and metadata, and each section contro
 test('public GitHub status is plain text, optional, and isolated from repository failures', async () => {
   assert.deepEqual(parseGithubStatus('<div class="vcard-names"></div><div class="user-status-message-wrapper"><div>&lt;b&gt;Hello&lt;/b&gt; &#x1f680;</div></div>'), { message: '<b>Hello</b> 🚀', emoji: '' })
   assert.equal(parseGithubStatus('<div class="vcard-names"></div>'), null)
+  assert.deepEqual(parseGithubStatus('<div class="vcard-names"></div><div class="user-status-message-wrapper"><span title="a > b">Building</span> &amp; learning</div>'), { message: 'Building & learning', emoji: '' })
+  const malformed = parseGithubStatus('<div class="vcard-names"></div><div class="user-status-message-wrapper"><scrip<script>t>hello</script></div>')
+  assert.equal(malformed.message.includes('<'), false)
   assert.throws(() => parseGithubStatus('<html>Sign in</html>'))
   const loader = createGithubActivityLoader({ fetcher: upstream([repo()], { handle: url => url === 'https://github.com/COOLmanYT' ? new Response(null, { status: 503 }) : undefined }) })
   const profile = await loader.get()
