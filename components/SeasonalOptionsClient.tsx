@@ -8,6 +8,7 @@ import { useVisitorPreferences, type TemporaryFeature, type TemporaryModule } fr
 import SeasonalPreview from './SeasonalPreview'
 import SeasonalSimulationControls from './SeasonalSimulationControls'
 import { useToast } from './ToastProvider'
+import { COMMUNITY_CONTROLS } from '@/lib/community-controls.mjs'
 
 const LABELS: Record<SeasonalTheme, string> = {
   christmas: 'Christmas',
@@ -19,8 +20,7 @@ const LABELS: Record<SeasonalTheme, string> = {
 
 const LEGAL_SIMPLE_MODE_KEY = 'coolman-legal-simple-mode'
 const TEMPORARY_FEATURES: Array<{ category: string; id: TemporaryFeature; label: string }> = [
-  { category: 'Roblox', id: 'roblox_stats', label: 'Friends, followers and following counts' },
-  { category: 'Steam', id: 'steam_activity', label: 'Status, current game and public activity' },
+  ...COMMUNITY_CONTROLS.flatMap(({ title, features }) => features.map(([id, label]) => ({ category: title, id: id as TemporaryFeature, label }))),
   { category: 'Spotify', id: 'spotify_widget', label: 'Now-playing widget' },
   { category: 'Spotify', id: 'spotify_position', label: 'Player position and duration' },
   { category: 'Spotify', id: 'spotify_embed', label: 'Embed player' },
@@ -45,15 +45,17 @@ const TEMPORARY_FEATURES: Array<{ category: string; id: TemporaryFeature; label:
 export default function SeasonalOptionsClient({ legalSimpleModeDefault, youtubeEmbedDefault = false }: { legalSimpleModeDefault: boolean; youtubeEmbedDefault?: boolean }) {
   const { showToast } = useToast()
   const { preference, setPreference, activateOnce, clearOnce, timeZone } = useSeasonalTheme()
-  const { hiddenModules, setModuleHidden, hiddenFeatures, setFeatureHidden, mediaPreferences, setMediaPreferences } = useVisitorPreferences()
+  const { hiddenModules, setModuleHidden, hiddenFeatures, setFeatureHidden, mediaPreferences, setMediaPreferences, resetPreferences } = useVisitorPreferences()
   const [theme, setTheme] = useState<SeasonalTheme | ''>(preference.theme ?? 'christmas')
   const [until, setUntil] = useState(preference.until ? preference.until.slice(0, 16) : '')
   const [legalSimpleMode, setLegalSimpleMode] = useState<'default' | 'simple' | 'standard'>('default')
 
   useEffect(() => {
-    const saved = window.localStorage.getItem(LEGAL_SIMPLE_MODE_KEY)
-    if (saved === 'true') setLegalSimpleMode('simple')
-    if (saved === 'false') setLegalSimpleMode('standard')
+    try {
+      const saved = window.localStorage.getItem(LEGAL_SIMPLE_MODE_KEY)
+      if (saved === 'true') setLegalSimpleMode('simple')
+      if (saved === 'false') setLegalSimpleMode('standard')
+    } catch { /* Storage is optional. */ }
   }, [])
 
   const saveUntil = () => {
@@ -67,8 +69,8 @@ export default function SeasonalOptionsClient({ legalSimpleModeDefault, youtubeE
     else window.localStorage.setItem(LEGAL_SIMPLE_MODE_KEY, String(value === 'simple'))
     showToast({ variant: 'success', title: 'Legal reading preference saved' })
   }
-  const updateModule = (module: TemporaryModule, hidden: boolean) => { setModuleHidden(module, hidden); showToast({ variant: 'success', title: `${module} ${hidden ? 'hidden' : 'shown'} for this visit` }) }
-  const updateFeature = (feature: TemporaryFeature, hidden: boolean) => { setFeatureHidden(feature, hidden); showToast({ variant: 'success', title: `${feature.replaceAll('_', ' ')} ${hidden ? 'hidden' : 'shown'} for this visit` }) }
+  const updateModule = (module: TemporaryModule, hidden: boolean) => { setModuleHidden(module, hidden); showToast({ variant: 'success', title: `${module} ${hidden ? 'hidden' : 'shown'} in this browser` }) }
+  const updateFeature = (feature: TemporaryFeature, hidden: boolean) => { setFeatureHidden(feature, hidden); showToast({ variant: 'success', title: `${feature.replaceAll('_', ' ')} ${hidden ? 'hidden' : 'shown'} in this browser` }) }
   const updateMedia = (next: typeof mediaPreferences, title: string) => { setMediaPreferences(next); showToast({ variant: 'success', title }) }
 
   return (
@@ -76,6 +78,8 @@ export default function SeasonalOptionsClient({ legalSimpleModeDefault, youtubeE
       <main className="mx-auto max-w-md rounded-2xl border border-white/10 bg-white/5 p-5">
         <Link href="/" className="text-xs text-white/45 hover:text-white">← Back to profile</Link>
         <h1 className="mt-4 text-2xl font-bold">Options</h1>
+        <button onClick={() => { resetPreferences(); window.location.reload() }} className="mt-3 rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-xs font-semibold hover:bg-white/10">Reset to default</button>
+        <p className="mt-1 text-[11px] text-white/45">Resets your browser preferences, including hidden modules, features, media, themes and reading mode.</p>
         <p className="mt-1 text-sm text-white/55">Automatic dates use your browser time zone: {timeZone}.</p>
         <label className="mt-6 block text-sm font-medium">Theme</label>
         <select value={theme} onChange={(event) => { const next = event.target.value as SeasonalTheme | ''; setTheme(next); if (!next) clearOnce() }} className="mt-2 w-full rounded-lg border border-white/15 bg-black/25 px-3 py-2 text-sm">
@@ -95,8 +99,8 @@ export default function SeasonalOptionsClient({ legalSimpleModeDefault, youtubeE
         <SeasonalSimulationControls />
         <SeasonalPreview />
         <section className="mt-8 border-t border-white/10 pt-5">
-          <h2 className="text-base font-semibold">Hide modules for this visit</h2>
-          <p className="mt-1 text-xs text-white/50">These only affect your browser and clear after refresh.</p>
+          <h2 className="text-base font-semibold">Hide modules</h2>
+          <p className="mt-1 text-xs text-white/50">Saved in this browser, including after refresh. Dashboard settings still take priority.</p>
           {([['spotify', 'Spotify listening'], ['twitch', 'Twitch presence'], ['youtube', 'YouTube channel'], ['discord', 'Discord presence'], ['roblox', 'Roblox profile'], ['steam', 'Steam profile'], ['buymeacoffee', 'Buy Me a Coffee']] as [TemporaryModule, string][]).map(([module, label]) => (
             <label key={module} className="mt-3 flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-sm"><span>{label}</span><input type="checkbox" checked={hiddenModules.includes(module)} onChange={(event) => updateModule(module, event.target.checked)} className="h-4 w-4 accent-red-600" /></label>
           ))}
@@ -116,9 +120,9 @@ export default function SeasonalOptionsClient({ legalSimpleModeDefault, youtubeE
           <label className="mt-4 block text-xs text-white/60">Twitch schedule time zone<select value={mediaPreferences.scheduleTimeZone ?? ''} onChange={(event) => updateMedia({ ...mediaPreferences, scheduleTimeZone: event.target.value || null }, 'Twitch schedule time zone saved')} className="mt-1 w-full rounded bg-black/25 px-2 py-2 text-sm text-white"><option value="">Use your local time zone</option><option value="Australia/Sydney">Australia/Sydney</option><option value="UTC">UTC</option><option value="America/Los_Angeles">America/Los Angeles</option><option value="America/New_York">America/New York</option><option value="Europe/London">Europe/London</option></select></label>
         </section>
         <section className="mt-8 border-t border-white/10 pt-5">
-          <h2 className="text-base font-semibold">Hide module features for this visit</h2>
-          <p className="mt-1 text-xs text-white/50">Fine-tune what you see without changing the Dashboard. These settings clear after refresh.</p>
-          {(['Spotify', 'Twitch', 'Discord', 'Roblox', 'Steam'] as const).map((category) => (
+          <h2 className="text-base font-semibold">Hide module features</h2>
+          <p className="mt-1 text-xs text-white/50">Fine-tune what you see. These settings are saved in this browser.</p>
+          {(['Spotify', 'Twitch', 'Discord', 'Roblox', 'Steam', 'Buy Me a Coffee'] as const).map((category) => (
             <div key={category} className="mt-4"><h3 className="text-xs font-semibold uppercase tracking-wider text-white/45">{category}</h3><div className="mt-2 space-y-2">{TEMPORARY_FEATURES.filter((feature) => feature.category === category).map((feature) => (
               <label key={feature.id} className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-sm"><span>{feature.label}</span><input type="checkbox" checked={hiddenFeatures.includes(feature.id)} onChange={(event) => updateFeature(feature.id, event.target.checked)} className="h-4 w-4 accent-red-600" /></label>
             ))}</div></div>

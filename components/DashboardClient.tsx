@@ -3,6 +3,7 @@
 import { signOut } from 'next-auth/react'
 import { useState } from 'react'
 import { responseErrorCode, useToast } from './ToastProvider'
+import { COMMUNITY_CONTROLS } from '@/lib/community-controls.mjs'
 
 interface DashboardClientProps {
   initialToggles: Record<string, boolean>
@@ -11,6 +12,7 @@ interface DashboardClientProps {
 }
 
 const TOGGLE_LABELS: Record<string, string> = {
+  ...Object.fromEntries(COMMUNITY_CONTROLS.flatMap(({ parentKey, features }) => [[parentKey, 'Entire module'], ...features])),
   roblox: 'Entire module',
   roblox_stats: 'Friends, followers and following counts',
   steam: 'Entire module',
@@ -51,9 +53,7 @@ const TOGGLE_LABELS: Record<string, string> = {
 }
 
 const TOGGLE_GROUPS = [
-  { title: 'Roblox', description: 'Show your Roblox profile and public social counts.', parentKey: 'roblox', keys: ['roblox', 'roblox_stats'] },
-  { title: 'Steam', description: 'Show your Steam profile, public status and game activity.', parentKey: 'steam', keys: ['steam', 'steam_activity'] },
-  { title: 'Buy Me a Coffee', description: 'Show the optional support card linking to your existing page.', parentKey: 'buymeacoffee', keys: ['buymeacoffee'] },
+  ...COMMUNITY_CONTROLS.map(({ title, description, parentKey, features }) => ({ title, description, parentKey, keys: [parentKey, ...features.map(([key]) => key)] })),
   { title: 'Spotify', description: 'Control the entire Spotify module or its individual sections.', parentKey: 'spotify', keys: ['spotify', 'spotify_widget', 'spotify_position', 'spotify_embed', 'spotify_playlist', 'spotify_history'] },
   { title: 'Twitch', description: 'Control the entire Twitch module or its channel, stats and stream sections.', parentKey: 'twitch', keys: ['twitch', 'twitch_profile', 'twitch_stats', 'twitch_live', 'twitch_schedule'] },
   { title: 'YouTube', description: 'Choose channel sections and allowed upload formats. The embed default is off; visitors can override it in Options.', parentKey: 'youtube', keys: ['youtube', 'youtube_stats', 'youtube_latest', 'youtube_live', 'youtube_shorts', 'youtube_videos', 'youtube_embed_default'] },

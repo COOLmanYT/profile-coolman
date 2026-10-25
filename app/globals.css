@@ -109,3 +109,6 @@
   .profile-like-spark { position: absolute; left: 8px; top: 7px; color: #fda4af; font-size: 10px; pointer-events: none; animation: profile-like-spark .8s ease-out forwards; }
   @media (prefers-reduced-motion: reduce) { .profile-like-pop, .profile-like-spark { animation: none; } .profile-like-spark { display: none; } }
 }
+
+/* Shared surface for every profile module; brand colours stay in icons and content. */
+.profile-module { border: 1px solid rgba(255,255,255,.14); border-radius: 1rem; padding: .75rem; background: rgba(15,15,20,.82); box-shadow: 0 8px 24px rgba(0,0,0,.12); }

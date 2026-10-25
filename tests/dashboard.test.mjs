@@ -49,7 +49,7 @@ test('YouTube module and section controls persist independently through owner se
 })
 
 test('community modules and details persist independently through owner settings', async () => {
-  for (const id of ['roblox', 'roblox_stats', 'steam', 'steam_activity', 'buymeacoffee']) {
+  for (const id of Object.keys(DEFAULT_TOGGLES).filter((key) => /^(roblox|steam|buymeacoffee)(_|$)/.test(key))) {
     assert.equal(DEFAULT_TOGGLES[id], true)
     const route = toggleRoute()
     assert.equal((await route.POST(request({ id, value: false }))).status, 200)

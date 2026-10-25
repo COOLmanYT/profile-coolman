@@ -10,6 +10,7 @@ import SocialLinks from './SocialLinks'
 import YouTubeWidget from './YouTubeWidget'
 import CommunityWidget from './CommunityWidget'
 import BuyMeACoffeeWidget from './BuyMeACoffeeWidget'
+import { COMMUNITY_CONTROLS } from '@/lib/community-controls.mjs'
 import SeasonalHat from './SeasonalHat'
 import { useVisitorPreferences, type TemporaryFeature } from './VisitorPreferencesProvider'
 
@@ -24,6 +25,7 @@ interface ProfileCardProps {
 export default function ProfileCard({ toggles, preview = false }: ProfileCardProps) {
   const { hiddenModules, hiddenFeatures, mediaPreferences } = useVisitorPreferences()
   const showFeature = (feature: TemporaryFeature) => preview || !hiddenFeatures.includes(feature)
+  const communityVisible = Object.fromEntries(COMMUNITY_CONTROLS.flatMap(({ features }) => features.map(([key]) => [key, toggles[key] !== false && showFeature(key as TemporaryFeature)])))
   const router = useRouter()
   const locationTapCountRef = useRef(0)
   const locationTapResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -123,9 +125,9 @@ export default function ProfileCard({ toggles, preview = false }: ProfileCardPro
           showEmbed={preview || mediaPreferences.youtubeEmbed === 'default' ? (toggles.youtube_embed_default ?? false) : mediaPreferences.youtubeEmbed === 'on'}
         />}
 
-        {toggles.roblox !== false && (preview || !hiddenModules.includes('roblox')) && <CommunityWidget service="roblox" showDetails={(toggles.roblox_stats ?? true) && showFeature('roblox_stats')} />}
-        {toggles.steam !== false && (preview || !hiddenModules.includes('steam')) && <CommunityWidget service="steam" showDetails={(toggles.steam_activity ?? true) && showFeature('steam_activity')} />}
-        {toggles.buymeacoffee !== false && (preview || !hiddenModules.includes('buymeacoffee')) && <BuyMeACoffeeWidget />}
+        {toggles.roblox !== false && (preview || !hiddenModules.includes('roblox')) && <CommunityWidget service="roblox" visible={communityVisible} />}
+        {toggles.steam !== false && (preview || !hiddenModules.includes('steam')) && <CommunityWidget service="steam" visible={communityVisible} />}
+        {toggles.buymeacoffee !== false && (preview || !hiddenModules.includes('buymeacoffee')) && <BuyMeACoffeeWidget visible={communityVisible} />}
 
         {/* Social Links */}
         <SocialLinks />
