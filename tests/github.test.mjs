@@ -207,7 +207,7 @@ test('compact GitHub card keeps real links and metadata, and each section contro
   profile.status = { emoji: '🎯', message: '<script>alert(1)</script>' }
   const escaped = render()
   assert.match(escaped, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/)
-  assert.doesNotMatch(escaped, /<script>/)
+  assert.doesNotMatch(escaped, /<script>/i)
   profile.status = originalStatus
   for (const [flag, text] of [['showStatus', 'Building &amp; learning'], ['showGraph', 'Contributions · past year'], ['showStats', 'Public repos'], ['showCommitCount', 'Commits · past year'], ['showProjects', 'sample-project'], ['showLanguage', 'TypeScript'], ['showLicence', 'MIT'], ['showCommitTitles', 'Improve the profile']]) {
     assert.equal(render({ [flag]: false }).includes(text), false, flag)
