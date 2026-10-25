@@ -1,28 +1,30 @@
 'use client'
 
+import { siteConfig } from '@/lib/site-config.mjs'
+
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 
 type DocumentKind = 'terms' | 'privacy'
 const STORAGE_KEY = 'coolman-legal-simple-mode'
-const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL || 'support@coolmanyt.com'
+const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL || siteConfig.site.contactEmail
 
 type Section = { title: string; body: string[] }
 
 const TERMS: Record<'simple' | 'standard', Section[]> = {
   simple: [
     { title: 'Using this site', body: ['Please use the site respectfully and lawfully. Do not try to break it, overload it, impersonate anyone, or interfere with other people using it.'] },
-    { title: 'Content and links', body: ['COOLman owns the original site content unless something says otherwise. You can share links to the site, but do not copy or reuse content as your own without permission.', 'Links to Twitch, Spotify, Discord, X, YouTube and other services are their own services. Their rules apply when you use them.'] },
+    { title: 'Content and links', body: [`${siteConfig.profile.username} owns the original site content unless something says otherwise. You can share links to the site, but do not copy or reuse content as your own without permission.`, 'Links to Twitch, Spotify, Discord, X, YouTube and other services are their own services. Their rules apply when you use them.'] },
     { title: 'No promises', body: ['The profile, presence information and links are provided as they are. They may be unavailable, incomplete or change without notice.'] },
     { title: 'Changes and contact', body: [`These terms may change as the site changes. Continuing to use the site after a change means you accept the updated terms. For questions, email ${CONTACT_EMAIL}.`] },
   ],
   standard: [
     { title: 'Acceptance', body: ['By accessing or using this website, you agree to these Terms of Service. If you do not agree, please do not use the website.'] },
     { title: 'Permitted use', body: ['You may use the website for personal, lawful purposes. You must not attempt to disrupt, damage, reverse engineer, scrape at a harmful rate, bypass access controls, or use the website in a way that infringes another person’s rights.'] },
-    { title: 'Intellectual property', body: ['Unless otherwise stated, the website design, original text, graphics and branding are owned by COOLman or used with permission. You may share a link to the website. Any other use requires prior permission, except where permitted by law.'] },
-    { title: 'Third-party services', body: ['The website includes or links to third-party services, including Discord, Spotify, Twitch, Vercel, Supabase, YouTube and social platforms. Those services are governed by their own terms and policies. COOLman is not responsible for third-party content, availability or practices.'] },
-    { title: 'Availability and liability', body: ['The website is provided on an “as is” and “as available” basis. To the extent permitted by law, COOLman does not make warranties about accuracy, availability or fitness for a particular purpose. Nothing in these terms excludes rights that cannot legally be excluded.'] },
-    { title: 'Changes and contact', body: [`COOLman may update these terms from time to time by publishing a revised version here. Your continued use after publication indicates acceptance of the revised terms. For questions, contact ${CONTACT_EMAIL}.`] },
+    { title: 'Intellectual property', body: [`Unless otherwise stated, the website design, original text, graphics and branding are owned by ${siteConfig.profile.username} or used with permission. You may share a link to the website. Any other use requires prior permission, except where permitted by law.`] },
+    { title: 'Third-party services', body: [`The website includes or links to third-party services, including Discord, Spotify, Twitch, Vercel, Supabase, YouTube and social platforms. Those services are governed by their own terms and policies. ${siteConfig.profile.username} is not responsible for third-party content, availability or practices.`] },
+    { title: 'Availability and liability', body: [`The website is provided on an “as is” and “as available” basis. To the extent permitted by law, ${siteConfig.profile.username} does not make warranties about accuracy, availability or fitness for a particular purpose. Nothing in these terms excludes rights that cannot legally be excluded.`] },
+    { title: 'Changes and contact', body: [`${siteConfig.profile.username} may update these terms from time to time by publishing a revised version here. Your continued use after publication indicates acceptance of the revised terms. For questions, contact ${CONTACT_EMAIL}.`] },
   ],
 }
 
@@ -34,7 +36,7 @@ const PRIVACY: Record<'simple' | 'standard', Section[]> = {
     { title: 'Your choices', body: [`You can clear cookies and browser storage in your browser settings. You can use Simple Mode without giving us any extra information. For privacy questions or requests, email ${CONTACT_EMAIL}.`] },
   ],
   standard: [
-    { title: 'Scope', body: ['This Privacy Policy explains how COOLman’s profile website handles personal information and related technical data. It should be read with the privacy policies of third-party services linked from or integrated into the website.'] },
+    { title: 'Scope', body: [`This Privacy Policy explains how ${siteConfig.profile.username}’s profile website handles personal information and related technical data. It should be read with the privacy policies of third-party services linked from or integrated into the website.`] },
     { title: 'Information we collect', body: ['The public website does not require a visitor account or contact form. It sets a first-party cookie named profile_view_counted to prevent repeated view counts for 24 hours. Options such as module visibility and legal reading mode are stored locally in the visitor’s browser.', 'The site records an anonymous outbound-link event containing only the selected platform name (for example, YouTube or Twitch). It does not include a visitor account, email address or user ID.', 'Dashboard sign-in uses Discord OAuth. For the authorised owner, authentication information supplied by Discord is used to verify access. The public presence widgets retrieve creator information from Discord/Lanyard, Spotify and Twitch; they are not intended to identify visitors.'] },
     { title: 'How information is used and stored', body: ['Cookie and local browser settings are used for site operation and preferences. Aggregated view totals and site configuration are stored through Supabase. Vercel may collect technical analytics and operational logs to provide and secure the website.'] },
     { title: 'Likes and optional players', body: ['The profile_like_browser cookie and local browser storage retain a randomly generated browser token and a liked marker to prevent repeated likes. The server stores a SHA-256 hash of the token, the time of the like and an aggregate total through Supabase. The cookie has a rolling maximum age of 400 days, subject to browser retention limits; local storage has no application expiry. This token is not derived from your account or device fingerprint. Clearing both cookie and local storage or changing browsers can allow another like.', 'The optional YouTube player is off by default unless the site owner changes the default or you enable it in Options. Enabling it loads a YouTube privacy-enhanced embed, which connects your browser to YouTube and is governed by its policies.'] },

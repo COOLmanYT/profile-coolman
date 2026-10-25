@@ -1,3 +1,4 @@
+import { isModuleAvailable } from '@/lib/site-config.mjs'
 import { getServerSession } from 'next-auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { authOptions } from '@/lib/auth'
@@ -7,6 +8,7 @@ const ALLOWED_DISCORD_ID = process.env.DISCORD_USER_ID
 const STATE_COOKIE = 'twitch_oauth_state'
 
 export async function GET(req: NextRequest) {
+  if (!isModuleAvailable('twitch')) return NextResponse.json({ error: 'MODULE_DISABLED' }, { status: 404, headers: { 'Cache-Control': 'no-store' } })
   const session = await getServerSession(authOptions)
   const userId = (session?.user as { id?: string } | undefined)?.id
   const code = req.nextUrl.searchParams.get('code')

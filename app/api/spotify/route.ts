@@ -1,3 +1,4 @@
+import { isModuleAvailable, isControlAvailable } from '@/lib/site-config.mjs'
 import { NextRequest, NextResponse } from 'next/server'
 import { monitoredFetch } from '@/lib/provider-monitor.mjs'
 import { limitPublicRequest } from '@/lib/rate-limit.mjs'
@@ -268,9 +269,13 @@ async function loadSpotify(history: boolean) {
 
 // Only public playback is cached. History and errors always stay out of the CDN.
 export async function GET(req: NextRequest) {
+  if (!isModuleAvailable('spotify')) return NextResponse.json({ error: 'MODULE_DISABLED' }, { status: 404, headers: { 'Cache-Control': 'no-store' } })
   const rate = limitPublicRequest(req, 'spotify')
   if (!rate.allowed) return NextResponse.json({ error: 'RATE_LIMITED' }, { status: 429, headers: { 'Cache-Control': 'no-store', 'Retry-After': String(rate.retryAfterSeconds) } })
-  if (req.nextUrl.searchParams.get('history') === '1') return loadSpotify(true)
+  if (req.nextUrl.searchParams.get('history') === '1') {
+    if (!isControlAvailable('spotify_history')) return NextResponse.json({ error: 'FEATURE_DISABLED' }, { status: 404, ...noStore })
+    return loadSpotify(true)
+  }
   try {
     const body = await playbackCache.get(async () => {
       const response = await loadSpotify(false)

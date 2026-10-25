@@ -13,6 +13,10 @@ A Next.js profile site with advanced Spotify mini-player, rich Discord presence,
 - 🥚 Easter egg: type `rm -rf /` on the page
 - 🔗 Social links: Website, YouTube, Ko-fi, GitHub, Discord, Roblox
 
+## Customisation and forks
+
+Edit [`site.config.json`](site.config.json) for profile identity, public accounts, social links, module availability, feature defaults, colour mode and backgrounds. See [CONFIGURATION.md](CONFIGURATION.md) for the full reference, background examples, BYO credentials and the module extension guide. Keep secrets in environment variables.
+
 ## Getting Started
 
 1. Copy `.env.example` to `.env.local` and fill in values
@@ -146,7 +150,7 @@ The heart button sits opposite the view count in normal layout beneath the statu
 
 The Discord widget supports all ten tiers of the new **Account Age**, **Game Time**, **Game Variety**, and **Streaming** badges, using Discord-hosted artwork. Existing Nitro, Server Booster, Quest, Orbs, and Gifting badges remain visible.
 
-Update the `DISCORD_BADGE_DEFAULTS` variables near the top of [`lib/discord-achievements.ts`](lib/discord-achievements.ts) for manual updates without a database or Lanyard setup. Set `discord_game_time_hours`, `discord_games_played`, and `discord_streaming_hours` to your totals from Discord's Badge Directory. `null` allows observed game estimates when available; `0` hides that badge. Changes take effect after deploying the updated code.
+Update the `DISCORD_BADGE_DEFAULTS` values in `providers.discord.badges` in [`site.config.json`](site.config.json) for manual updates without a database or Lanyard setup. Set `discord_game_time_hours`, `discord_games_played`, and `discord_streaming_hours` to your totals from Discord's Badge Directory. `null` allows observed game estimates when available; `0` hides that badge. Changes take effect after deploying the updated code.
 
 Game Time and Game Variety can also use **estimates from observed Playing activities**. The server saves aggregate playing time and distinct application IDs in the existing, private `site_settings` table under `discord_activity_estimates:v2:<DISCORD_USER_ID>`. No schema migration is required. The current counter imports the legacy owner row once, then uses its own versioned row so older preview tabs cannot overwrite it. Older snapshot requests cannot reset a newer period. A revision check prevents concurrent visitors/server instances from counting the same time twice, and requests are coalesced for 15 seconds per server instance. Storage failures leave presence available and fall back to manual values.
 

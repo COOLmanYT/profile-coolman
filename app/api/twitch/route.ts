@@ -1,3 +1,5 @@
+import { isModuleAvailable } from '@/lib/site-config.mjs'
+import { siteConfig } from '@/lib/site-config.mjs'
 import { NextRequest, NextResponse } from 'next/server'
 import { getTwitchAccessToken, getTwitchConfig } from '@/lib/twitch'
 import { createTtlCache } from '@/lib/ttl-cache.mjs'
@@ -49,6 +51,7 @@ async function twitchFetch<T>(path: string, accessToken: string, clientId: strin
 }
 
 export async function GET(req: NextRequest) {
+  if (!isModuleAvailable('twitch')) return NextResponse.json({ error: 'MODULE_DISABLED' }, { status: 404, headers: { 'Cache-Control': 'no-store' } })
   const rate = limitPublicRequest(req, 'twitch')
   if (!rate.allowed) return NextResponse.json({ error: 'RATE_LIMITED' }, { status: 429, headers: { 'Retry-After': String(rate.retryAfterSeconds) } })
   try {
@@ -62,7 +65,7 @@ export async function GET(req: NextRequest) {
 async function getTwitchPresence() {
   const config = getTwitchConfig()
   const accessToken = await getTwitchAccessToken()
-  const login = process.env.TWITCH_BROADCASTER_LOGIN
+  const login = (process.env.TWITCH_BROADCASTER_LOGIN || siteConfig.providers.twitch.login)
   if (!config || !accessToken || !login || login === 'placeholder') throw new Error('Twitch unavailable')
 
   try {

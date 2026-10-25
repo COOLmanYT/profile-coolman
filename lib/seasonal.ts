@@ -1,3 +1,4 @@
+import { siteConfig } from './site-config.mjs'
 export const SEASONAL_THEMES = ['christmas', 'halloween', 'easter', 'new-year', 'birthday'] as const
 export type SeasonalTheme = (typeof SEASONAL_THEMES)[number]
 export type ThemeLocation = 'anywhere' | 'australia' | 'outside-australia'
@@ -86,7 +87,7 @@ export function automaticThemeAt(date: Date, timeZone: string): SeasonalTheme | 
   if (current.month === 12 && current.day === 31 && current.hour === 23 && current.minute === 59 && current.second >= 50) return 'new-year'
   if (current.month === 12 && current.day >= 22 && current.day <= 28) return 'christmas'
   if (current.month === 10 && current.day === 31) return 'halloween'
-  if (current.month === 11 && current.day === 28) return 'birthday'
+  if (current.month === siteConfig.profile.birthday.month && current.day === siteConfig.profile.birthday.day) return 'birthday'
 
   const today = Date.UTC(current.year, current.month - 1, current.day)
   const daysFromEaster = Math.round((today - easterSunday(current.year)) / 86_400_000)

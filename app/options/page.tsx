@@ -6,5 +6,5 @@ import { getToggles } from '@/lib/toggles'
 
 export default async function OptionsPage() {
   const [settings, legalSettings, toggles] = await Promise.all([getSeasonalSettings(), getLegalSettings(), getToggles()])
-  return <SeasonalThemeProvider settings={settings}><SeasonalOptionsClient legalSimpleModeDefault={legalSettings.simpleModeDefault} youtubeEmbedDefault={toggles.youtube_embed_default ?? false} /></SeasonalThemeProvider>
+  return <SeasonalThemeProvider settings={settings} enabled={toggles.seasons}><SeasonalOptionsClient legalSimpleModeDefault={legalSettings.simpleModeDefault} youtubeEmbedDefault={toggles.youtube_embed_default ?? false} /></SeasonalThemeProvider>
 }

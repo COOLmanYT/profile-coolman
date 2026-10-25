@@ -1,3 +1,4 @@
+import { isModuleAvailable } from '@/lib/site-config.mjs'
 import { NextRequest, NextResponse } from 'next/server'
 import { monitoredFetch } from '@/lib/provider-monitor.mjs'
 import { limitPublicRequest } from '@/lib/rate-limit.mjs'
@@ -9,6 +10,7 @@ const noStore = { headers: { 'Cache-Control': 'no-store' } }
 const presenceCache = createTtlCache({ ttlMs: 15_000, staleOnError: false })
 
 export async function GET(req: NextRequest) {
+  if (!isModuleAvailable('discord') && !isModuleAvailable('spotify') && !isModuleAvailable('announcement')) return NextResponse.json({ error: 'MODULE_DISABLED' }, { status: 404, headers: { 'Cache-Control': 'no-store' } })
   const rate = limitPublicRequest(req, 'discord')
   if (!rate.allowed) return NextResponse.json({ error: 'RATE_LIMITED' }, { status: 429, headers: { 'Cache-Control': 'no-store', 'Retry-After': String(rate.retryAfterSeconds) } })
   if (!DISCORD_USER_ID || DISCORD_USER_ID === 'placeholder') {

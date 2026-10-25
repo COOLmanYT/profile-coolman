@@ -1,3 +1,4 @@
+import { siteConfig } from './site-config.mjs'
 import { getSupabase } from './supabase-server'
 
 const TWITCH_TOKEN_URL = 'https://id.twitch.tv/oauth2/token'
@@ -44,7 +45,7 @@ export function getTwitchConfig(): TwitchConfig | null {
 export async function getTwitchHealth(): Promise<TwitchHealth> {
   const missing = [
     !getTwitchConfig() && 'client credentials',
-    !process.env.TWITCH_BROADCASTER_LOGIN && 'broadcaster login',
+    !(process.env.TWITCH_BROADCASTER_LOGIN || siteConfig.providers.twitch.login) && 'broadcaster login',
     !process.env.TWITCH_REDIRECT_URI && 'redirect URI',
   ].filter(Boolean)
   if (missing.length > 0) {

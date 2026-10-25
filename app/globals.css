@@ -118,3 +118,28 @@
   .profile-like-spark { position: absolute; left: 8px; top: 7px; color: #fda4af; font-size: 10px; pointer-events: none; animation: profile-like-spark .8s ease-out forwards; }
   @media (prefers-reduced-motion: reduce) { .profile-like-pop, .profile-like-spark { animation: none; } .profile-like-spark { display: none; } }
 }
+
+/* Colour mode is independent of seasonal effects and owner-selected backgrounds. */
+:root { color-scheme: dark; }
+:root[data-color-mode="light"] { color-scheme: light; }
+[data-color-mode="light"] body { background: #f3f4f6; color: #17202e; }
+[data-color-mode="light"] .profile-card { background: linear-gradient(180deg, #fff, #eef0f4) !important; border-color: #cbd0da; }
+[data-color-mode="light"] .profile-module { background: rgba(255,255,255,.85); border-color: #cbd0da; }
+[data-color-mode="light"] .min-h-screen:not(body):not(main) { background-color: #f3f4f6; }
+[data-color-mode="light"] :is(main, section, article, div)[class*="bg-[#"] { background-color: #f3f4f6; }
+[data-color-mode="light"] .social-links img { filter: invert(1); }
+[data-color-mode="light"] .bg-gradient-to-r { background-image: linear-gradient(90deg, #fff, #eef0f4); }
+[data-color-mode="light"] [class*="text-white"],
+[data-color-mode="light"] [class*="text-red-200"],
+[data-color-mode="light"] [class*="text-white/"] { color: #344054; }
+[data-color-mode="light"] [class*="text-green-1"], [data-color-mode="light"] [class*="text-green-2"],
+[data-color-mode="light"] [class*="text-emerald-1"] { color: #14532d; }
+[data-color-mode="light"] [class*="text-sky-1"], [data-color-mode="light"] [class*="text-sky-2"] { color: #075985; }
+[data-color-mode="light"] [class*="text-amber-1"] { color: #854d0e; }
+[data-color-mode="light"] [class*="text-red-300"] { color: #9f1239; }
+[data-color-mode="light"] [class*="text-[#bf94ff]"] { color: #6b21a8; }
+[data-color-mode="light"] h1, [data-color-mode="light"] h2 { color: #17202e; text-shadow: none; }
+[data-color-mode="light"] [class*="border-white/"] { border-color: rgba(23,32,46,.18); }
+[data-color-mode="light"] select { background-color: #fff; color: #17202e; }
+[data-color-mode="light"] [class*="bg-red-6"], [data-color-mode="light"] [class*="bg-[#9146ff]"] { color: #fff; }
+[data-color-mode="light"] footer { background: rgba(255,255,255,.92); border-radius: 1rem; padding: .75rem; color: #344054; }

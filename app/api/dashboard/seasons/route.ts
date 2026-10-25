@@ -1,3 +1,4 @@
+import { isModuleAvailable } from '@/lib/site-config.mjs'
 import { revalidatePath } from 'next/cache'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
@@ -8,6 +9,7 @@ import { saveSeasonalSettings } from '@/lib/site-settings'
 const ALLOWED_DISCORD_ID = process.env.DISCORD_USER_ID
 
 export async function POST(req: NextRequest) {
+  if (!isModuleAvailable('seasons')) return NextResponse.json({ error: 'MODULE_DISABLED' }, { status: 404, headers: { 'Cache-Control': 'no-store' } })
   const session = await getServerSession(authOptions)
   const userId = (session?.user as { id?: string } | undefined)?.id
   if (!userId || !ALLOWED_DISCORD_ID || userId !== ALLOWED_DISCORD_ID) {

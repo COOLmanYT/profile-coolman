@@ -1,6 +1,7 @@
+import { siteConfig } from '@/lib/site-config.mjs'
 import Link from 'next/link'
 
-const REPOSITORY_URL = 'https://github.com/COOLmanYT/profile-coolman'
+const REPOSITORY_URL = siteConfig.site.repository
 type Commit = { sha: string; html_url: string; commit: { message: string; author: { date: string } } }
 
 function releaseStyle(message: string) {
@@ -14,7 +15,7 @@ function releaseStyle(message: string) {
 async function getCommits(): Promise<Commit[]> {
   try {
     const response = await fetch(`${REPOSITORY_URL.replace('https://github.com', 'https://api.github.com/repos')}/commits?per_page=12`, {
-      headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'COOLmanYT-profile-site' }, next: { revalidate: 3600 },
+      headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'profile-site' }, next: { revalidate: 3600 },
     })
     if (!response.ok) return []
     return await response.json() as Commit[]
@@ -23,7 +24,7 @@ async function getCommits(): Promise<Commit[]> {
   }
 }
 
-export const metadata = { title: 'Changelog | COOLman' }
+export const metadata = { title: `Changelog | ${siteConfig.profile.username}` }
 
 export default async function ChangelogPage() {
   const commits = await getCommits()

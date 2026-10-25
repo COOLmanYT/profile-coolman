@@ -1,5 +1,7 @@
 'use client'
 
+import { isModuleAvailable } from '@/lib/site-config.mjs'
+
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { isAustralia, isSeasonalTheme, resolveGlobalTheme, type SeasonalSettings, type SeasonalTheme } from '@/lib/seasonal'
 import { useVisitorPreferences } from './VisitorPreferencesProvider'
@@ -59,7 +61,7 @@ function readOnceTheme() {
   }
 }
 
-export default function SeasonalThemeProvider({ settings, children }: { settings: SeasonalSettings; children: ReactNode }) {
+export default function SeasonalThemeProvider({ settings, children, enabled = true }: { settings: SeasonalSettings; children: ReactNode; enabled?: boolean }) {
   const [now, setNow] = useState(() => new Date())
   const [preference, setPreferenceState] = useState<PersonalThemePreference>({ theme: null, until: null })
   const [onceTheme, setOnceTheme] = useState<SeasonalTheme | null>(null)
@@ -103,10 +105,11 @@ export default function SeasonalThemeProvider({ settings, children }: { settings
   const australian = simulation.location === 'auto' ? isAustralia(effectiveTimeZone) : simulation.location === 'australia'
 
   const theme = useMemo(() => {
+    if (!enabled || !isModuleAvailable('seasons')) return null
     if (onceTheme) return onceTheme
     if (preference.theme && preference.until && Date.parse(preference.until) > effectiveNow.getTime()) return preference.theme
     return resolveGlobalTheme(settings, effectiveNow, effectiveTimeZone, perceivedLocation)
-  }, [effectiveNow, effectiveTimeZone, onceTheme, perceivedLocation, preference, settings])
+  }, [enabled, effectiveNow, effectiveTimeZone, onceTheme, perceivedLocation, preference, settings])
 
   return (
     <SeasonalThemeContext.Provider value={{ theme, timeZone: effectiveTimeZone, australian, preference, setPreference, activateOnce, clearOnce: () => { setOnceTheme(null); try { sessionStorage.removeItem(ONCE_KEY) } catch {} } }}>
