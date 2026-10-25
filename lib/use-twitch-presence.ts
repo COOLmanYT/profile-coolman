@@ -29,7 +29,7 @@ export interface TwitchState { presence: TwitchPresence | null; loaded: boolean;
 export function useTwitchPresence(enabled: boolean): TwitchState {
   const [state, setState] = useState<TwitchState>(EMPTY)
   useEffect(() => {
-    if (!enabled) return
+    if (!enabled) { setState(EMPTY); return }
     const clearHiddenSnapshot = () => { if (document.hidden) setState(EMPTY) }
     document.addEventListener('visibilitychange', clearHiddenSnapshot)
     const stop = startPolling({

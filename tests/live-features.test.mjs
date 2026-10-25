@@ -11,3 +11,41 @@ test('announcements disappear when cleared, cap text, and reject unsafe optional
   }
   assert.equal(readAnnouncement({ announcement: '<b>plain text</b>' }).message, '<b>plain text</b>')
 })
+
+
+test('hiding then showing Twitch does not restore an old live stream before fresh data arrives', async () => {
+  const { loadTypescript } = await import('./load-typescript.mjs')
+  const previousDocument = globalThis.document
+  const listeners = new Set(), polls = []
+  globalThis.document = { hidden: false, addEventListener: (_event, listener) => listeners.add(listener), removeEventListener: (_event, listener) => listeners.delete(listener) }
+  let state, previousEnabled, nextEffect, cleanup, stops = 0
+  let upstream = { isLive: true, title: 'Earlier live stream' }
+  const { useTwitchPresence: readPresence } = loadTypescript('lib/use-twitch-presence.ts', {
+    react: {
+      useState: initial => { state ??= initial; return [state, next => { state = typeof next === 'function' ? next(state) : next }] },
+      useEffect: (effect, [enabled]) => { if (enabled !== previousEnabled) { previousEnabled = enabled; nextEffect = effect } },
+    },
+    './widget-polling.mjs': { fetchWidgetJson: async () => upstream, startPolling: options => { polls.push(options); return () => { stops++ } } },
+  })
+  function render(enabled) {
+    const result = readPresence(enabled)
+    if (nextEffect) { const effect = nextEffect; nextEffect = undefined; cleanup?.(); cleanup = effect() }
+    return result
+  }
+  try {
+    render(true)
+    await polls[0].poll(new AbortController().signal)
+    assert.equal(render(true).presence.title, 'Earlier live stream')
+    assert.equal(render(false).presence, null)
+    assert.equal(stops, 1)
+    assert.equal(listeners.size, 0)
+    assert.equal(render(true).presence, null, 'must wait for a fresh response after being hidden')
+    upstream = { isLive: false }
+    await polls[1].poll(new AbortController().signal)
+    assert.equal(render(true).presence.isLive, false)
+  } finally {
+    cleanup?.()
+    if (previousDocument === undefined) delete globalThis.document
+    else globalThis.document = previousDocument
+  }
+})
