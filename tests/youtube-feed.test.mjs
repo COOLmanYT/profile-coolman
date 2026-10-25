@@ -127,6 +127,50 @@ test('embed checks accept only video IDs, use oEmbed and never return provider H
   assert.deepEqual(await (await GET(request('video123456'))).json(), { available: true })
 })
 
+test('latest upload recovers from a failed RSS feed and compares dated channel-tab uploads', async () => {
+  const tab = (format, id) => `var ytInitialData = ${JSON.stringify({ metadata: { channelMetadataRenderer: { externalId: 'UCJr64JsgfMr8SHeUhLA3lKw' } }, contents: { tabs: [{ tabRenderer: { selected: true, title: format, content: { [format === 'shorts' ? 'reelItemRenderer' : 'videoRenderer']: { videoId: id, title: { simpleText: id } } } } }] } })};`
+  for (const feedMode of ['failed', 'invalid', 'older']) for (const newestId of ['short123456', 'video123456', 'stream12345']) {
+    const { GET } = loadTypescript('app/api/youtube/route.ts', {
+      'next/server': nextServer,
+      '@/lib/youtube-feed.mjs': parsers,
+      '@/lib/rate-limit.mjs': { limitPublicRequest: () => ({ allowed: true }) },
+      '@/lib/provider-monitor.mjs': { monitoredFetch: async (_provider, url) => {
+        if (url.includes('/feeds/')) {
+          if (feedMode === 'failed') throw new Error('RSS unavailable')
+          return new Response(feedMode === 'invalid' ? 'Consent required' : '<feed><entry><yt:videoId>old12345678</yt:videoId><title>Older feed entry</title><published>2026-01-01</published><media:statistics views="0"/></entry></feed>')
+        }
+        if (url.includes('/shorts?')) return new Response(tab('shorts', 'short123456'))
+        if (url.includes('/videos?')) return new Response(tab('videos', 'video123456'))
+        if (url.includes('/streams?')) return new Response(tab('streams', 'stream12345'))
+        if (url.includes('/watch?')) {
+          const id = new URL(url).searchParams.get('v')
+          return new Response(`var ytInitialPlayerResponse = ${JSON.stringify({ videoDetails: { videoId: id, title: id, viewCount: '42' }, microformat: { playerMicroformatRenderer: { publishDate: id === newestId ? '2026-01-04' : '2026-01-03' } } })};`)
+        }
+        return new Response('Unavailable', { status: 503 })
+      } },
+    })
+    const data = await (await GET({})).json()
+    assert.equal(data.latest?.id, newestId, `${feedMode}: ${newestId}`)
+    assert.equal(data.latest.views, 42)
+    assert.equal(data.latest.publishedAt, '2026-01-04')
+    assert.equal(data.uploadsUnavailable, false)
+  }
+})
+
+test('complete upload failure is not cached as a successful empty result', async () => {
+  const { GET } = loadTypescript('app/api/youtube/route.ts', {
+    'next/server': nextServer,
+    '@/lib/youtube-feed.mjs': parsers,
+    '@/lib/rate-limit.mjs': { limitPublicRequest: () => ({ allowed: true }) },
+    '@/lib/provider-monitor.mjs': { monitoredFetch: async () => { throw new Error('Unavailable') } },
+  })
+  const response = await GET({})
+  const data = await response.json()
+  assert.equal(data.latest, undefined)
+  assert.equal(data.uploadsUnavailable, true)
+  assert.equal(response.headers.get('Cache-Control'), 'no-store')
+})
+
 test('official channel stats preserve zero counts, hide private subscribers and fall back on API failures', async () => {
   const original = process.env.YOUTUBE_API_KEY
   process.env.YOUTUBE_API_KEY = 'test-only-key'

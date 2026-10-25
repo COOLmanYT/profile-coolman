@@ -56,14 +56,20 @@ export async function GET(req: NextRequest) {
     if (!metadata.has(video.id)) metadata.set(video.id, page(`https://www.youtube.com/watch?v=${video.id}`))
     return metadata.get(video.id)!.then((html) => html ? enrichYoutubeVideo(video, html) : video)
   }
-  const [latest, short, regular, stream] = await Promise.all([enrich(videos.latest), enrich(shortCandidate ?? videos.short), enrich(videoCandidate), enrich(streamCandidate)])
+  const [feedLatest, short, regular, stream] = await Promise.all([enrich(videos.latest), enrich(shortCandidate ?? videos.short), enrich(videoCandidate), enrich(streamCandidate)])
   const longform = [regular, stream].filter((video): video is Video => !!video).sort((a, b) => (Date.parse(b.publishedAt ?? '') || 0) - (Date.parse(a.publishedAt ?? '') || 0))[0]
+  // The feed can fail or lag behind a channel tab. Compare known publication
+  // dates from every source instead of making the whole card depend on RSS.
+  const latest = [short, regular, stream, feedLatest]
+    .filter((video): video is Video => !!video && Number.isFinite(Date.parse(video.publishedAt ?? '')))
+    .sort((a, b) => Date.parse(b.publishedAt!) - Date.parse(a.publishedAt!))[0] ?? feedLatest
+  const uploadsUnavailable = !latest && (!xml || !/<feed\b/.test(xml) || !!(short || longform))
   return NextResponse.json({
     latest, short, longform,
     formatsUnavailable: { shorts: shortCandidate === null && !videos.short, videos: videoCandidate === null && streamCandidate === null },
     channel: { ...channel, url: CHANNEL_URL },
     live: livePage ? parseYoutubeLive(livePage, CHANNEL_ID) : { status: 'unknown' },
-    uploadsUnavailable: !xml || !/<feed\b/.test(xml),
+    uploadsUnavailable,
     updatedAt: new Date().toISOString(),
-  }, { headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=60' } })
+  }, { headers: { 'Cache-Control': uploadsUnavailable ? 'no-store' : 'public, s-maxage=60, stale-while-revalidate=60' } })
 }
