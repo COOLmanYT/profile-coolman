@@ -24,9 +24,10 @@ interface ProfileCardProps {
 }
 
 export default function ProfileCard({ toggles, preview = false }: ProfileCardProps) {
-  const { hiddenModules, hiddenFeatures, mediaPreferences } = useVisitorPreferences()
+  const { visibilityLoaded, hiddenModules, hiddenFeatures, mediaPreferences } = useVisitorPreferences()
   const showFeature = (feature: TemporaryFeature) => preview || !hiddenFeatures.includes(feature)
   const githubVisibility = {
+    showStatus: (toggles.github_status ?? true) && showFeature('github_status'),
     showProfile: (toggles.github_profile ?? true) && showFeature('github_profile'),
     showStats: (toggles.github_stats ?? true) && showFeature('github_stats'),
     showCommitCount: (toggles.github_commits ?? true) && showFeature('github_commits'),
@@ -36,9 +37,9 @@ export default function ProfileCard({ toggles, preview = false }: ProfileCardPro
     showLanguage: (toggles.github_language ?? true) && showFeature('github_language'),
     showLicence: (toggles.github_licence ?? true) && showFeature('github_licence'),
   }
-  const showGithub = (toggles.github ?? true) && (preview || !hiddenModules.includes('github'))
-    && (githubVisibility.showProfile || githubVisibility.showStats || githubVisibility.showCommitCount || githubVisibility.showGraph || githubVisibility.showProjects)
-  const showTwitch = toggles.twitch && (preview || !hiddenModules.includes('twitch'))
+  const showGithub = (preview || visibilityLoaded) && (toggles.github ?? true) && (preview || !hiddenModules.includes('github'))
+    && (githubVisibility.showStatus || githubVisibility.showProfile || githubVisibility.showStats || githubVisibility.showCommitCount || githubVisibility.showGraph || githubVisibility.showProjects)
+  const showTwitch = (preview || visibilityLoaded) && toggles.twitch && (preview || !hiddenModules.includes('twitch'))
   const showTwitchProfile = (toggles.twitch_profile ?? true) && showFeature('twitch_profile')
   const showTwitchStats = (toggles.twitch_stats ?? true) && showFeature('twitch_stats')
   const showTwitchLive = (toggles.twitch_live ?? true) && showFeature('twitch_live')
@@ -80,7 +81,7 @@ export default function ProfileCard({ toggles, preview = false }: ProfileCardPro
     <div className={`relative w-full rounded-3xl shadow-2xl overflow-hidden border border-white/10 ${takeover ? 'bg-[linear-gradient(180deg,#170b29_0%,#401265_55%,#8B0000_100%)]' : 'bg-[linear-gradient(180deg,#ff0000_0%,#8B0000_100%)]'}`}>
       {takeover && twitch.presence && <StreamTakeover presence={twitch.presence} />}
       <div className="flex flex-col items-center px-5 sm:px-7 pt-8 sm:pt-9 pb-6 sm:pb-7 gap-4">
-        {(toggles.announcement ?? true) && (preview || !hiddenModules.includes('announcement')) && <LiveAnnouncement />}
+        {(preview || visibilityLoaded) && (toggles.announcement ?? true) && (preview || !hiddenModules.includes('announcement')) && <LiveAnnouncement />}
         {/* Avatar */}
         <div className="relative h-[88px] w-[88px] flex-shrink-0">
           <div className="h-full w-full overflow-hidden rounded-full ring-4 ring-white/30 shadow-xl [clip-path:circle(50%)]">
@@ -107,7 +108,7 @@ export default function ProfileCard({ toggles, preview = false }: ProfileCardPro
         </button>
 
         {/* Spotify Widget */}
-        {toggles.spotify && (preview || !hiddenModules.includes('spotify')) && (
+        {(preview || visibilityLoaded) && toggles.spotify && (preview || !hiddenModules.includes('spotify')) && (
           <SpotifyWidget
             showWidget={(toggles.spotify_widget ?? true) && showFeature('spotify_widget')}
             showPosition={(toggles.spotify_position ?? true) && showFeature('spotify_position')}
@@ -120,7 +121,7 @@ export default function ProfileCard({ toggles, preview = false }: ProfileCardPro
         {twitchEnabled && (showTwitchProfile || showTwitchStats || (showTwitchLive && !takeover) || showTwitchSchedule) && <TwitchWidget state={twitch} showProfile={showTwitchProfile} showStats={showTwitchStats} showLive={showTwitchLive && !takeover} showSchedule={showTwitchSchedule} scheduleTimeZone={mediaPreferences.scheduleTimeZone ?? undefined} />}
 
         {/* Discord Widget */}
-        {toggles.discord !== false && (preview || !hiddenModules.includes('discord')) && ((toggles.discord_profile ?? true) || toggles.discord_music || toggles.discord_video || toggles.discord_games || toggles.discord_status || toggles.discord_other) && (
+        {(preview || visibilityLoaded) && toggles.discord !== false && (preview || !hiddenModules.includes('discord')) && ((toggles.discord_profile ?? true) || toggles.discord_music || toggles.discord_video || toggles.discord_games || toggles.discord_status || toggles.discord_other) && (
           <DiscordWidget
             showProfile={(toggles.discord_profile ?? true) && showFeature('discord_profile')}
             showBanner={(toggles.discord_banner ?? true) && showFeature('discord_banner')}
@@ -138,7 +139,7 @@ export default function ProfileCard({ toggles, preview = false }: ProfileCardPro
           />
         )}
 
-        {toggles.youtube !== false && (preview || (mediaPreferences.showYoutube && !hiddenModules.includes('youtube'))) && <YouTubeWidget
+        {(preview || visibilityLoaded) && toggles.youtube !== false && (preview || (mediaPreferences.showYoutube && !hiddenModules.includes('youtube'))) && <YouTubeWidget
           showStats={(toggles.youtube_stats ?? true) && (preview || mediaPreferences.showYoutubeStats)}
           showLatest={(toggles.youtube_latest ?? true) && (preview || mediaPreferences.showLatestUpload)}
           showLive={(toggles.youtube_live ?? true) && (preview || mediaPreferences.showYoutubeLive)}

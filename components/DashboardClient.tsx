@@ -12,6 +12,7 @@ interface DashboardClientProps {
 
 const TOGGLE_LABELS: Record<string, string> = {
   github: 'Entire module',
+  github_status: 'GitHub public status',
   github_profile: 'GitHub profile header',
   github_stats: 'Star and public repository totals',
   github_commits: 'Commits made in past year',
@@ -57,7 +58,7 @@ const TOGGLE_LABELS: Record<string, string> = {
 }
 
 const TOGGLE_GROUPS = [
-  { title: 'GitHub', description: 'Control the entire GitHub module or its individual sections.', parentKey: 'github', keys: ['github', 'github_profile', 'github_stats', 'github_commits', 'github_graph', 'github_projects', 'github_commit_titles', 'github_language', 'github_licence'] },
+  { title: 'GitHub', description: 'Control the entire GitHub module or its individual sections.', parentKey: 'github', keys: ['github', 'github_status', 'github_profile', 'github_stats', 'github_commits', 'github_graph', 'github_projects', 'github_commit_titles', 'github_language', 'github_licence'] },
   { title: 'Announcement', description: 'Message the Lanyard bot: .set announcement Your message. Clear it with .del announcement. Optional link: .set announcement_url https://example.com', parentKey: 'announcement', keys: ['announcement'] },
   { title: 'Spotify', description: 'Control the entire Spotify module or its individual sections.', parentKey: 'spotify', keys: ['spotify', 'spotify_widget', 'spotify_position', 'spotify_embed', 'spotify_playlist', 'spotify_history'] },
   { title: 'Twitch', description: 'Control the channel, stats and stream sections. Stream takeover also requires the live stream widget to be enabled.', parentKey: 'twitch', keys: ['twitch', 'twitch_profile', 'twitch_stats', 'twitch_live', 'twitch_takeover', 'twitch_schedule'] },

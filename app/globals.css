@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer components {
+  .profile-module {
+    @apply w-full rounded-2xl border border-white/10 bg-black/25 p-3 shadow-lg;
+  }
+}
+
 @layer utilities {
   :focus-visible {
     outline: 2px solid rgb(252 165 165);

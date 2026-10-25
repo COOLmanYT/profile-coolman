@@ -15,3 +15,5 @@ import './live-features.test.mjs'
 import './github.test.mjs'
 import './discord-achievements.test.mjs'
 import './discord-activity-estimates.test.mjs'
+
+import './visitor-preferences.test.mjs'

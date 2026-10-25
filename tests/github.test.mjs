@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { createGithubActivityLoader, GITHUB_CACHE_MS, parseContributionCalendar, summarizeCommit, yearlyCommitQuery } from '../lib/github-activity.mjs'
+import { createGithubActivityLoader, GITHUB_CACHE_MS, parseContributionCalendar, parseGithubStatus, summarizeCommit, yearlyCommitQuery } from '../lib/github-activity.mjs'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import * as jsxRuntime from 'react/jsx-runtime'
@@ -18,6 +18,7 @@ function upstream(repos = [repo()], changes = {}) {
   return async (url, init) => {
     assert.equal(init.headers.Authorization, undefined)
     if (changes.handle) { const response = changes.handle(url, init); if (response) return response }
+    if (url === 'https://github.com/COOLmanYT') return new Response('<div class="vcard-names"></div><div class="user-status-emoji-container"><div>🎯</div></div><div class="user-status-message-wrapper"><div>Building &amp; learning</div></div>', { headers: { ETag: '"profile"' } })
     if (url.includes('/search/commits?')) return json({ total_count: 522, incomplete_results: false, items: [{ author: { email: 'private@example.invalid' } }] }, { ETag: '"year"' })
     if (url.includes('/contributions')) return new Response(calendarHtml, { headers: { ETag: '"calendar"' } })
     if (url.includes('/commits?')) return json(commit(), { ETag: '"commit"' })
@@ -95,14 +96,14 @@ test('concurrent visitors share one hourly snapshot and ETags revalidate all res
     return upstream()(url, init)
   } })
   const results = await Promise.all(Array.from({ length: 20 }, () => loader.get()))
-  assert.equal(calls.length, 4)
+  assert.equal(calls.length, 5)
   now += GITHUB_CACHE_MS - 1
   assert.deepEqual(await loader.get(), results[0])
-  assert.equal(calls.length, 4)
+  assert.equal(calls.length, 5)
   now++
   assert.deepEqual((await loader.get()).projects, results[0].projects)
-  assert.equal(calls.length, 8)
-  assert.equal(calls.slice(4).every(call => Boolean(call.init.headers['If-None-Match'])), true)
+  assert.equal(calls.length, 10)
+  assert.equal(calls.slice(5).every(call => Boolean(call.init.headers['If-None-Match'])), true)
 })
 
 test('partial provider failures retain real stats and projects while missing graph/commits stay unavailable', async () => {
@@ -202,8 +203,40 @@ test('compact GitHub card keeps real links and metadata, and each section contro
   assert.match(visible, /MIT/)
   assert.match(visible, /sample-project\/commit\//)
   assert.doesNotMatch(visible, /Latest on/)
-  for (const [flag, text] of [['showGraph', 'Contributions · past year'], ['showStats', 'Public repos'], ['showCommitCount', 'Commits · past year'], ['showProjects', 'sample-project'], ['showLanguage', 'TypeScript'], ['showLicence', 'MIT'], ['showCommitTitles', 'Improve the profile']]) {
+  for (const [flag, text] of [['showStatus', 'Building &amp; learning'], ['showGraph', 'Contributions · past year'], ['showStats', 'Public repos'], ['showCommitCount', 'Commits · past year'], ['showProjects', 'sample-project'], ['showLanguage', 'TypeScript'], ['showLicence', 'MIT'], ['showCommitTitles', 'Improve the profile']]) {
     assert.equal(render({ [flag]: false }).includes(text), false, flag)
   }
   assert.equal(render({ showProfile: false }).includes('@COOLmanYT'), false)
+})
+
+
+test('public GitHub status is plain text, optional, and isolated from repository failures', async () => {
+  assert.deepEqual(parseGithubStatus('<div class="vcard-names"></div><div class="user-status-message-wrapper"><div>&lt;b&gt;Hello&lt;/b&gt; &#x1f680;</div></div>'), { message: '<b>Hello</b> 🚀', emoji: '' })
+  assert.equal(parseGithubStatus('<div class="vcard-names"></div>'), null)
+  assert.throws(() => parseGithubStatus('<html>Sign in</html>'))
+  const loader = createGithubActivityLoader({ fetcher: upstream([repo()], { handle: url => url === 'https://github.com/COOLmanYT' ? new Response(null, { status: 503 }) : undefined }) })
+  const profile = await loader.get()
+  assert.equal(profile.status, null)
+  assert.equal(profile.statusUnavailable, true)
+  assert.equal(profile.providerStatus, 'healthy')
+  assert.equal(profile.projects[0].commit.title, 'Improve the profile')
+})
+
+
+test('optional profile status rate limits honor their cooldown without blocking repository refreshes', async () => {
+  let now = 0, profileCalls = 0
+  const loader = createGithubActivityLoader({ now: () => now, fetcher: upstream([repo()], { handle: url => {
+    if (url !== 'https://github.com/COOLmanYT') return
+    profileCalls++
+    return new Response(null, { status: 429, headers: { 'Retry-After': '7200' } })
+  } }) })
+  await loader.get()
+  now += GITHUB_CACHE_MS
+  const result = await loader.get()
+  assert.equal(profileCalls, 1)
+  assert.equal(result.statusUnavailable, true)
+  assert.equal(result.projects[0].commit.title, 'Improve the profile')
+  now += GITHUB_CACHE_MS
+  await loader.get()
+  assert.equal(profileCalls, 2)
 })

@@ -19,6 +19,7 @@ const LABELS: Record<SeasonalTheme, string> = {
 
 const LEGAL_SIMPLE_MODE_KEY = 'coolman-legal-simple-mode'
 const TEMPORARY_FEATURES: Array<{ category: string; id: TemporaryFeature; label: string }> = [
+  { category: 'GitHub', id: 'github_status', label: 'GitHub public status' },
   { category: 'GitHub', id: 'github_profile', label: 'GitHub profile header' },
   { category: 'GitHub', id: 'github_stats', label: 'Stars and public repository totals' },
   { category: 'GitHub', id: 'github_commits', label: 'Commits made in past year' },
@@ -74,8 +75,8 @@ export default function SeasonalOptionsClient({ legalSimpleModeDefault, youtubeE
     else window.localStorage.setItem(LEGAL_SIMPLE_MODE_KEY, String(value === 'simple'))
     showToast({ variant: 'success', title: 'Legal reading preference saved' })
   }
-  const updateModule = (module: TemporaryModule, hidden: boolean) => { setModuleHidden(module, hidden); showToast({ variant: 'success', title: `${module} ${hidden ? 'hidden' : 'shown'} for this visit` }) }
-  const updateFeature = (feature: TemporaryFeature, hidden: boolean) => { setFeatureHidden(feature, hidden); showToast({ variant: 'success', title: `${feature.replaceAll('_', ' ')} ${hidden ? 'hidden' : 'shown'} for this visit` }) }
+  const updateModule = (module: TemporaryModule, hidden: boolean) => { setModuleHidden(module, hidden); showToast({ variant: 'success', title: `${module} ${hidden ? 'hidden' : 'shown'} in this browser` }) }
+  const updateFeature = (feature: TemporaryFeature, hidden: boolean) => { setFeatureHidden(feature, hidden); showToast({ variant: 'success', title: `${feature.replaceAll('_', ' ')} ${hidden ? 'hidden' : 'shown'} in this browser` }) }
   const updateMedia = (next: typeof mediaPreferences, title: string) => { setMediaPreferences(next); showToast({ variant: 'success', title }) }
 
   return (
@@ -102,8 +103,8 @@ export default function SeasonalOptionsClient({ legalSimpleModeDefault, youtubeE
         <SeasonalSimulationControls />
         <SeasonalPreview />
         <section className="mt-8 border-t border-white/10 pt-5">
-          <h2 className="text-base font-semibold">Hide modules for this visit</h2>
-          <p className="mt-1 text-xs text-white/50">These only affect your browser and clear after refresh.</p>
+          <h2 className="text-base font-semibold">Hide modules</h2>
+          <p className="mt-1 text-xs text-white/50">Saved in this browser, including after refresh. Global Dashboard settings take priority.</p>
           {([['spotify', 'Spotify listening'], ['twitch', 'Twitch presence'], ['youtube', 'YouTube channel'], ['discord', 'Discord presence'], ['github', 'GitHub activity'], ['announcement', 'Live announcement']] as [TemporaryModule, string][]).map(([module, label]) => (
             <label key={module} className="mt-3 flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-sm"><span>{label}</span><input type="checkbox" checked={hiddenModules.includes(module)} onChange={(event) => updateModule(module, event.target.checked)} className="h-4 w-4 accent-red-600" /></label>
           ))}
@@ -123,8 +124,8 @@ export default function SeasonalOptionsClient({ legalSimpleModeDefault, youtubeE
           <label className="mt-4 block text-xs text-white/60">Twitch schedule time zone<select value={mediaPreferences.scheduleTimeZone ?? ''} onChange={(event) => updateMedia({ ...mediaPreferences, scheduleTimeZone: event.target.value || null }, 'Twitch schedule time zone saved')} className="mt-1 w-full rounded bg-black/25 px-2 py-2 text-sm text-white"><option value="">Use your local time zone</option><option value="Australia/Sydney">Australia/Sydney</option><option value="UTC">UTC</option><option value="America/Los_Angeles">America/Los Angeles</option><option value="America/New_York">America/New York</option><option value="Europe/London">Europe/London</option></select></label>
         </section>
         <section className="mt-8 border-t border-white/10 pt-5">
-          <h2 className="text-base font-semibold">Hide module features for this visit</h2>
-          <p className="mt-1 text-xs text-white/50">Fine-tune what you see without changing the Dashboard. These settings clear after refresh.</p>
+          <h2 className="text-base font-semibold">Hide module features</h2>
+          <p className="mt-1 text-xs text-white/50">Fine-tune what you see without changing the Dashboard. These settings are saved in this browser.</p>
           {(['Spotify', 'Twitch', 'Discord', 'GitHub'] as const).map((category) => (
             <div key={category} className="mt-4"><h3 className="text-xs font-semibold uppercase tracking-wider text-white/45">{category}</h3><div className="mt-2 space-y-2">{TEMPORARY_FEATURES.filter((feature) => feature.category === category).map((feature) => (
               <label key={feature.id} className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-sm"><span>{feature.label}</span><input type="checkbox" checked={hiddenFeatures.includes(feature.id)} onChange={(event) => updateFeature(feature.id, event.target.checked)} className="h-4 w-4 accent-red-600" /></label>

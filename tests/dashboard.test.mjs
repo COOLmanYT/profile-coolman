@@ -49,7 +49,7 @@ test('YouTube module and section controls persist independently through owner se
 })
 
 test('GitHub, announcement and stream takeover can be disabled through owner settings', async () => {
-  for (const id of ['github', 'github_profile', 'github_stats', 'github_commits', 'github_graph', 'github_projects', 'github_commit_titles', 'github_language', 'github_licence', 'announcement', 'twitch_takeover']) {
+  for (const id of ['github', 'github_status', 'github_profile', 'github_stats', 'github_commits', 'github_graph', 'github_projects', 'github_commit_titles', 'github_language', 'github_licence', 'announcement', 'twitch_takeover']) {
     assert.equal(DEFAULT_TOGGLES[id], true)
     const route = toggleRoute()
     assert.equal((await route.POST(request({ id, value: false }))).status, 200)
