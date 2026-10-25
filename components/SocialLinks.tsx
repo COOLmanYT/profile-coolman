@@ -5,7 +5,7 @@ import { track } from '@vercel/analytics'
 import { siteConfig, isModuleAvailable } from '@/lib/site-config.mjs'
 import type { ReactNode } from 'react'
 
-export default function SocialLinks() {
+export default function SocialLinks({ analyticsEnabled = true }: { analyticsEnabled?: boolean }) {
   const icons: Record<string, ReactNode> = {
     globe: (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
@@ -76,7 +76,7 @@ export default function SocialLinks() {
   }
   if (!isModuleAvailable('socials')) return null
   return (
-    <div className="flex gap-2.5 sm:gap-3 flex-wrap justify-center pt-1">
+    <div className="social-links flex gap-2.5 sm:gap-3 flex-wrap justify-center pt-1">
       {siteConfig.socials.filter((link) => link.enabled).map((link) => (
         <a
           key={link.label}
@@ -85,7 +85,7 @@ export default function SocialLinks() {
           rel="noopener noreferrer"
           aria-label={`Open ${siteConfig.profile.username} on ${link.label}`}
           title={link.label}
-          onClick={() => { if (isModuleAvailable('analytics')) track('outbound_link', { destination: link.label }) }}
+          onClick={() => { if (analyticsEnabled && isModuleAvailable('analytics')) track('outbound_link', { destination: link.label }) }}
           className="w-9 h-9 sm:w-10 sm:h-10 bg-black/25 hover:bg-black/40 border border-white/10 hover:border-white/20 rounded-xl flex items-center justify-center text-white transition-all duration-200 ease-out hover:scale-110 hover:shadow-lg"
         >
           {icons[link.icon] ?? icons.globe}

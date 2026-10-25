@@ -41,6 +41,12 @@ test('configuration rejects executable URLs, secret fields and malformed setting
     [c => { c.modules.spotify.enabled = 'false' }, /modules.spotify.enabled/],
     [c => { c.modules.spotify.features.history.default = 0 }, /history.default/],
     [c => { c.appearance.background.speed = 99 }, /background.speed/],
+    [c => { c.profile.birthday = { month: 2, day: 30 } }, /profile.birthday/],
+    [c => { c.profile.birthday.day = 1.5 }, /profile.birthday/],
+    [c => { c.providers.roblox.userId = 12345 }, /providers.roblox.userId/],
+    [c => { c.modules.spotify = null }, /modules.spotify/],
+    [c => { c.modules.spotify.features.history = null }, /features.history/],
+    [c => { c.socials[0] = null }, /socials\[0\]/],
   ]) {
     const config = structuredClone(siteConfig); modify(config)
     assert.throws(() => validateSiteConfig(config), pattern)
@@ -56,6 +62,8 @@ test('media policy allows exact configured HTTPS origins and every supported bac
     config.appearance.background.type = type
     assert.doesNotThrow(() => validateSiteConfig(config))
   }
+  assert.deepEqual(configuredMediaOrigins(config), ['https://avatars.example.test', 'https://media.example.test'])
+  config.profile.avatar = 'HTTPS://AVATARS.EXAMPLE.TEST/me.png'
   assert.deepEqual(configuredMediaOrigins(config), ['https://avatars.example.test', 'https://media.example.test'])
 })
 
@@ -109,7 +117,7 @@ test('a fork fetches and verifies its own Roblox, Steam and Coffee identities', 
     const calls = []
     const roblox = await community.fetchCommunityProfile('roblox', async (url) => {
       calls.push(url)
-      return Response.json(url.includes('users.roblox.com') ? { id: 12345, name: 'ForkUser' } : {})
+      return Response.json(new URL(url).hostname === 'users.roblox.com' ? { id: 12345, name: 'ForkUser' } : {})
     })
     assert.equal(roblox.username, '@ForkUser')
     assert.ok(calls.every(url => url.includes('12345')))

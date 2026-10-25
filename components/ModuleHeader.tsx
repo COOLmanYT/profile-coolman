@@ -5,7 +5,7 @@ export default function ModuleHeader({ service, title, href, name, username, ava
   service: string; title: string; href: string; name: string; username?: string; avatarUrl?: string
   visible: Record<string, boolean>; children?: ReactNode
 }) {
-  const show = (part: string) => visible[`${service}_${part}`] !== false
+  const show = (part: string) => visible[`${service}_${part}`] === true
   return <div className="flex items-center justify-between gap-2">
     <a href={href} target="_blank" rel="noopener noreferrer" className="group flex min-w-0 flex-1 items-center gap-2.5 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">
       {show('avatar') && avatarUrl && <span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-white/10 ring-1 ring-white/20"><Image src={avatarUrl} alt="" fill sizes="40px" className="object-cover" unoptimized /></span>}

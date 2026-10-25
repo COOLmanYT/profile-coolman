@@ -17,7 +17,7 @@ type CoffeeProfile = {
 export default function BuyMeACoffeeWidget({ visible }: { visible: Record<string, boolean> }) {
   const [data, setData] = useState<CoffeeProfile | null>(null)
   const [failed, setFailed] = useState(false)
-  const show = (part: string) => visible[`buymeacoffee_${part}`] !== false
+  const show = (part: string) => visible[`buymeacoffee_${part}`] === true
   useEffect(() => startPolling({ intervalMs: 300_000, poll: async (signal: AbortSignal) => {
     const next = await fetchWidgetJson('/api/community/buymeacoffee', signal) as CoffeeProfile
     if (!signal.aborted) { setData(next); setFailed(false) }

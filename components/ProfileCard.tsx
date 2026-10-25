@@ -13,8 +13,6 @@ import SocialLinks from './SocialLinks'
 import YouTubeWidget from './YouTubeWidget'
 import CommunityWidget from './CommunityWidget'
 import BuyMeACoffeeWidget from './BuyMeACoffeeWidget'
-import { configuredGroups } from '@/lib/site-config.mjs'
-import { DEFAULT_TOGGLES } from '@/lib/toggle-defaults.mjs'
 import SeasonalHat from './SeasonalHat'
 import GithubWidget from './GithubWidget'
 import LiveAnnouncement from './LiveAnnouncement'
@@ -34,7 +32,7 @@ export default function ProfileCard({ toggles: savedToggles, preview = false }: 
   const toggles = applyModulePolicy(savedToggles)
   const { visibilityLoaded, hiddenModules, hiddenFeatures, mediaPreferences } = useVisitorPreferences()
   const showFeature = (feature: TemporaryFeature) => isControlAvailable(feature) && (preview || !hiddenFeatures.includes(feature))
-  const communityVisible = Object.fromEntries(configuredGroups().flatMap(({ parentKey, keys }) => keys.filter((key) => key !== parentKey).map((key) => [key, (toggles[key] ?? DEFAULT_TOGGLES[key]) && showFeature(key as TemporaryFeature)])))
+  const communityVisible = Object.fromEntries(Object.entries(toggles).map(([key, enabled]) => [key, enabled && showFeature(key)]))
   const githubVisibility = {
     showStatus: (toggles.github_status ?? true) && showFeature('github_status'),
     showProfile: (toggles.github_profile ?? true) && showFeature('github_profile'),
@@ -118,8 +116,8 @@ export default function ProfileCard({ toggles: savedToggles, preview = false }: 
           showStats={(toggles.youtube_stats ?? true) && (preview || mediaPreferences.showYoutubeStats) && showFeature('youtube_stats')}
           showLatest={(toggles.youtube_latest ?? true) && (preview || mediaPreferences.showLatestUpload) && showFeature('youtube_latest')}
           showLive={(toggles.youtube_live ?? true) && (preview || mediaPreferences.showYoutubeLive) && showFeature('youtube_live')}
-          includeShorts={(toggles.youtube_shorts ?? true) && (preview || mediaPreferences.youtubeFormat !== 'videos')}
-          includeVideos={(toggles.youtube_videos ?? true) && (preview || mediaPreferences.youtubeFormat !== 'shorts')}
+          includeShorts={!!toggles.youtube_shorts && showFeature('youtube_shorts') && (preview || mediaPreferences.youtubeFormat !== 'videos')}
+          includeVideos={!!toggles.youtube_videos && showFeature('youtube_videos') && (preview || mediaPreferences.youtubeFormat !== 'shorts')}
           showEmbed={isControlAvailable('youtube_embed_default') && (preview || mediaPreferences.youtubeEmbed === 'default' ? (toggles.youtube_embed_default ?? false) : mediaPreferences.youtubeEmbed === 'on')}
         />),
     roblox: ((preview || visibilityLoaded) && toggles.roblox !== false && (preview || !hiddenModules.includes('roblox')) && <CommunityWidget service="roblox" visible={communityVisible} />),
@@ -159,7 +157,7 @@ export default function ProfileCard({ toggles: savedToggles, preview = false }: 
         </button>}
 
         {Object.keys(siteConfig.modules).map((id) => modules[id] ? <div key={id} className="contents">{modules[id]}</div> : null)}
-        {toggles.socials && (preview || !hiddenModules.includes('socials')) && <SocialLinks />}
+        {toggles.socials && (preview || !hiddenModules.includes('socials')) && <SocialLinks analyticsEnabled={toggles.analytics} />}
       </div>
     </div>
   )

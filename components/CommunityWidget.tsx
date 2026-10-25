@@ -17,7 +17,7 @@ type Profile = {
 export default function CommunityWidget({ service, visible }: { service: 'roblox' | 'steam'; visible: Record<string, boolean> }) {
   const [data, setData] = useState<Profile | null>(null)
   const [failed, setFailed] = useState(false)
-  const show = (part: string) => visible[`${service}_${part}`] !== false
+  const show = (part: string) => visible[`${service}_${part}`] === true
   const title = service === 'steam' ? 'Steam' : 'Roblox'
   useEffect(() => startPolling({ intervalMs: 60_000, poll: async (signal: AbortSignal) => {
     const next = await fetchWidgetJson(`/api/community/${service}`, signal) as Profile
