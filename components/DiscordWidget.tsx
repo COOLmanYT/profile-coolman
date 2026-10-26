@@ -1,5 +1,7 @@
 'use client'
 
+import FeatureLayout, { FeatureSlot } from './FeatureLayout'
+
 import { siteConfig } from '@/lib/site-config.mjs'
 
 import { startPolling } from '@/lib/widget-polling.mjs'
@@ -315,7 +317,7 @@ function DiscordWidget({
   const customStatusEmoji = customStatus?.emoji
 
   return (
-    <div className="profile-module w-full">
+    <FeatureLayout module="discord"><div className="profile-module w-full">
       <div className="flex items-center gap-1.5 mb-2.5">
         <svg className="w-3 h-3 text-[#5865F2]" viewBox="0 0 24 24" fill="currentColor">
           <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057.1 18.101.12 18.143.149 18.17a19.9 19.9 0 0 0 5.993 3.03.077.077 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.107a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
@@ -333,21 +335,21 @@ function DiscordWidget({
         )
       ) : (
         <div className="space-y-2">
-          {showProfile && showBanner && bannerUrl && (
+          <FeatureSlot data-feature="discord_banner">{showProfile && showBanner && bannerUrl && (
             <div className="relative w-full h-[74px] rounded-xl overflow-hidden border border-white/10 bg-white/5">
               <Image src={bannerUrl} alt="Discord banner" fill className="object-cover" unoptimized />
             </div>
-          )}
-          {showProfile && <div className="flex items-start gap-2.5">
+          )}</FeatureSlot>
+          <FeatureSlot data-feature="discord_profile">{showProfile && <div className="flex items-start gap-2.5">
             <div className="relative w-9 h-9 rounded-full overflow-hidden border border-white/15 bg-white/10 flex-shrink-0">
               {avatarUrl ? (
                 <Image src={avatarUrl} alt="Discord avatar" fill className="object-cover" unoptimized />
               ) : (
                 <span aria-label="Discord avatar placeholder" className="w-full h-full flex items-center justify-center text-[10px] text-white/60">DC</span>
               )}
-              {showDecoration && avatarDecorationUrl && (
+              <FeatureSlot data-feature="discord_decoration">{showDecoration && avatarDecorationUrl && (
                 <Image src={avatarDecorationUrl} alt="" aria-hidden="true" fill className="object-cover pointer-events-none" unoptimized />
-              )}
+              )}</FeatureSlot>
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-white text-sm font-semibold leading-tight truncate">{displayName}</p>
@@ -360,7 +362,7 @@ function DiscordWidget({
                   </span>
                 )}
               </div>
-              {showBadges && badges.length > 0 && (
+              <FeatureSlot data-feature="discord_badges">{showBadges && badges.length > 0 && (
                 <div role="list" aria-label="Discord profile badges" className="relative mt-1.5 grid w-[152px] max-w-full grid-cols-6 gap-1">
                   {badges.map((badge) => (
                     <BadgeTooltip key={badge.key} label={badge.label} details={badge.details}>
@@ -368,30 +370,30 @@ function DiscordWidget({
                     </BadgeTooltip>
                   ))}
                 </div>
-              )}
-              {showDevices && deviceLabel && <p className="mt-1 text-[10px] text-white/50">Active on: {deviceLabel}</p>}
-              {showDecoration && nameplateUrl && (
+              )}</FeatureSlot>
+              <FeatureSlot data-feature="discord_devices">{showDevices && deviceLabel && <p className="mt-1 text-[10px] text-white/50">Active on: {deviceLabel}</p>}</FeatureSlot>
+              <FeatureSlot data-feature="discord_decoration">{showDecoration && nameplateUrl && (
                 <div className="mt-1.5 w-[120px] h-5 relative">
                   <Image src={nameplateUrl} alt="Discord nameplate" fill className="object-contain" unoptimized />
                 </div>
-              )}
+              )}</FeatureSlot>
             </div>
-          </div>}
+          </div>}</FeatureSlot>
 
           {/* Custom status row */}
-          {showStatus && customStatus && (customStatus.state || customStatusEmoji) && (
+          <FeatureSlot data-feature="discord_status">{showStatus && customStatus && (customStatus.state || customStatusEmoji) && (
             <div className="flex items-center gap-2">
               <CustomStatusEmoji emoji={customStatusEmoji} />
               {customStatus.state && <span className="min-w-0 text-white/40 text-xs truncate">{customStatus.state}</span>}
             </div>
-          )}
+          )}</FeatureSlot>
 
           {/* Activity rows */}
           {visibleActivities.map((activity, idx) => {
             const gameLink = getGameActivityLink(activity)
             const activityName = <>{activity.type === 0 && 'Playing '}{activity.type === 2 && 'Listening to '}{activity.type === 3 && 'Watching '}{activity.name}</>
             return (
-            <div key={idx} className="flex items-center gap-2">
+            <div key={idx} data-feature={`discord_${activity.type === 0 ? 'games' : activity.type === 2 ? 'music' : activity.type === 3 ? 'video' : 'other'}`} className="flex items-center gap-2">
               <div className="flex-shrink-0 w-7 h-7 bg-white/10 rounded-lg flex items-center justify-center text-xs">
                 {activity.type === 0 && '🎮'}
                 {activity.type === 1 && '📺'}
@@ -414,7 +416,7 @@ function DiscordWidget({
           )}
         </div>
       )}
-    </div>
+    </div></FeatureLayout>
   )
 }
 

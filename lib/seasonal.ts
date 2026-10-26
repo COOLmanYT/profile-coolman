@@ -1,9 +1,11 @@
 import { siteConfig } from './site-config.mjs'
-export const SEASONAL_THEMES = ['christmas', 'halloween', 'easter', 'new-year', 'birthday'] as const
-export type SeasonalTheme = (typeof SEASONAL_THEMES)[number]
+const ALL_THEMES = ['christmas', 'halloween', 'easter', 'new-year', 'birthday'] as const
+export type SeasonalTheme = (typeof ALL_THEMES)[number]
+export const SEASONAL_THEMES = ALL_THEMES.filter(theme => siteConfig.seasonal.availableThemes[theme])
 export type ThemeLocation = 'anywhere' | 'australia' | 'outside-australia'
 
 export type SeasonalSettings = {
+  enabledThemes: SeasonalTheme[]
   automaticEnabled: boolean
   scheduledTheme: SeasonalTheme | null
   scheduledStartsAt: string | null
@@ -12,11 +14,12 @@ export type SeasonalSettings = {
 }
 
 export const DEFAULT_SEASONAL_SETTINGS: SeasonalSettings = {
-  automaticEnabled: true,
-  scheduledTheme: null,
-  scheduledStartsAt: null,
-  scheduledEndsAt: null,
-  scheduledLocation: 'anywhere',
+  enabledThemes: SEASONAL_THEMES.filter(theme => siteConfig.seasonal.defaults.enabledThemes.includes(theme)),
+  automaticEnabled: siteConfig.seasonal.defaults.automaticEnabled,
+  scheduledTheme: siteConfig.seasonal.defaults.scheduledTheme as SeasonalTheme | null,
+  scheduledStartsAt: siteConfig.seasonal.defaults.scheduledStartsAt,
+  scheduledEndsAt: siteConfig.seasonal.defaults.scheduledEndsAt,
+  scheduledLocation: siteConfig.seasonal.defaults.scheduledLocation as ThemeLocation,
 }
 
 export function isSeasonalTheme(value: unknown): value is SeasonalTheme {
@@ -29,12 +32,16 @@ export function isThemeLocation(value: unknown): value is ThemeLocation {
 
 export function normaliseSeasonalSettings(value: unknown): SeasonalSettings {
   const record = value && typeof value === 'object' ? value as Record<string, unknown> : {}
+  const enabledThemes = record.enabledThemes
+  const allowed = Array.isArray(enabledThemes) ? SEASONAL_THEMES.filter(theme => enabledThemes.includes(theme)) : [...DEFAULT_SEASONAL_SETTINGS.enabledThemes]
+  const scheduled = record.scheduledTheme === undefined ? DEFAULT_SEASONAL_SETTINGS.scheduledTheme : isSeasonalTheme(record.scheduledTheme) ? record.scheduledTheme : null
   return {
-    automaticEnabled: record.automaticEnabled !== false,
-    scheduledTheme: isSeasonalTheme(record.scheduledTheme) ? record.scheduledTheme : null,
-    scheduledStartsAt: typeof record.scheduledStartsAt === 'string' ? record.scheduledStartsAt : null,
-    scheduledEndsAt: typeof record.scheduledEndsAt === 'string' ? record.scheduledEndsAt : null,
-    scheduledLocation: isThemeLocation(record.scheduledLocation) ? record.scheduledLocation : 'anywhere',
+    enabledThemes: allowed,
+    automaticEnabled: typeof record.automaticEnabled === 'boolean' ? record.automaticEnabled : DEFAULT_SEASONAL_SETTINGS.automaticEnabled,
+    scheduledTheme: scheduled && allowed.includes(scheduled) ? scheduled : null,
+    scheduledStartsAt: record.scheduledStartsAt === null ? null : typeof record.scheduledStartsAt === 'string' ? record.scheduledStartsAt : DEFAULT_SEASONAL_SETTINGS.scheduledStartsAt,
+    scheduledEndsAt: record.scheduledEndsAt === null ? null : typeof record.scheduledEndsAt === 'string' ? record.scheduledEndsAt : DEFAULT_SEASONAL_SETTINGS.scheduledEndsAt,
+    scheduledLocation: isThemeLocation(record.scheduledLocation) ? record.scheduledLocation : DEFAULT_SEASONAL_SETTINGS.scheduledLocation,
   }
 }
 
@@ -103,6 +110,8 @@ export function resolveGlobalTheme(settings: SeasonalSettings, date: Date, timeZ
     && date.getTime() >= startsAt
     && date.getTime() <= endsAt
     && matchesLocation(settings.scheduledLocation, timeZone, perceivedLocation)
-  if (scheduledActive) return settings.scheduledTheme
-  return settings.automaticEnabled ? automaticThemeAt(date, timeZone) : null
+  const allowed = (settings.enabledThemes ?? DEFAULT_SEASONAL_SETTINGS.enabledThemes).filter(isSeasonalTheme)
+  if (scheduledActive && allowed.includes(settings.scheduledTheme!)) return settings.scheduledTheme
+  const automatic = settings.automaticEnabled ? automaticThemeAt(date, timeZone) : null
+  return automatic && allowed.includes(automatic) ? automatic : null
 }

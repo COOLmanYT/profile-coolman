@@ -1,3 +1,4 @@
+import { getLayoutSettings, getManagedAnnouncement } from '@/lib/dashboard-settings'
 import VisitorModule from '@/components/VisitorModule'
 import EasterEgg from '@/components/EasterEgg'
 import ViewCounter from '@/components/ViewCounter'
@@ -12,7 +13,7 @@ import ShareCard from '@/components/ShareCard'
 import StatusWidget from '@/components/StatusWidget'
 import LikeCounter from '@/components/LikeCounter'
 export default async function Home() {
-  const [toggles, seasonalSettings] = await Promise.all([getToggles(), getSeasonalSettings()])
+  const [toggles, seasonalSettings, layout, announcement] = await Promise.all([getToggles(), getSeasonalSettings(), getLayoutSettings(), getManagedAnnouncement()])
   return (
     <SeasonalThemeProvider settings={seasonalSettings} enabled={toggles.seasons}>
       <AnimatedBackground />
@@ -20,7 +21,7 @@ export default async function Home() {
         {toggles.easterEgg && <EasterEgg />}
         {toggles.seasons && <SeasonalEffects />}
         <div className="relative w-full max-w-[390px] lg:max-w-[460px]">
-          <ProfileCard toggles={toggles} />
+          <ProfileCard toggles={toggles} layout={layout} announcement={announcement} />
           {toggles.status && <VisitorModule id="status"><StatusWidget /></VisitorModule>}
           <div className="mt-4 flex min-h-8 items-center justify-between gap-4 px-1">
             {toggles.views && <VisitorModule id="views"><ViewCounter /></VisitorModule>}

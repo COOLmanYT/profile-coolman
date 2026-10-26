@@ -1,5 +1,7 @@
 'use client'
 
+import FeatureLayout, { FeatureSlot } from './FeatureLayout'
+
 import { siteConfig, providerLinks } from '@/lib/site-config.mjs'
 
 import Image from 'next/image'
@@ -32,14 +34,13 @@ function TwitchWidget({ state, showProfile = true, showStats = true, showLive = 
   const { presence, loaded, isUnavailable } = state
 
   return (
-    <div className="profile-module w-full">
+    <FeatureLayout module="twitch"><div className="profile-module w-full">
       {isUnavailable && <p role="status" className="mb-2 text-xs text-white/55">Twitch temporarily unavailable</p>}
       {!loaded ? (
         <div className="h-24 animate-pulse rounded-xl bg-white/10" />
       ) : (
         <div className="group">
-          <a href={presence?.channelUrl ?? providerLinks.twitch} target="_blank" rel="noopener noreferrer" className="block">
-          {showProfile && <div className="flex items-center gap-2.5">
+          <FeatureSlot data-feature="twitch_profile">{showProfile && <a href={presence?.channelUrl ?? providerLinks.twitch} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5">
             <div className="relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-full bg-white/10 ring-1 ring-[#bf94ff]/40">
               {presence?.profileImageUrl && <Image src={presence.profileImageUrl} alt={`${presence.channelName ?? 'Twitch'} profile`} fill className="object-cover" unoptimized />}
             </div>
@@ -51,13 +52,13 @@ function TwitchWidget({ state, showProfile = true, showStats = true, showLive = 
               </div>
               <p className="truncate text-[11px] text-[#bf94ff]">{presence?.channelLogin ? `twitch.tv/${presence.channelLogin}` : `twitch.tv/${siteConfig.providers.twitch.login}`}</p>
             </div>
-          </div>}
-          {showStats && <div className={`${showProfile ? 'mt-3 ' : ''}grid grid-cols-2 gap-2 text-center text-[11px]`}>
+          </a>}</FeatureSlot>
+          <FeatureSlot data-feature="twitch_stats">{showStats && <a href={presence?.channelUrl ?? providerLinks.twitch} target="_blank" rel="noopener noreferrer" className={`${showProfile ? 'mt-3 ' : ''}grid grid-cols-2 gap-2 text-center text-[11px]`}>
             <div className="rounded-lg bg-white/5 px-2 py-1.5 text-white/75"><span className="block text-sm font-semibold text-white">{presence?.followers?.toLocaleString() ?? '—'}</span>Followers</div>
             <div className="rounded-lg bg-white/5 px-2 py-1.5 text-white/75"><span className="block text-sm font-semibold text-white">{presence?.subscribers?.toLocaleString() ?? '—'}</span>Subscribers</div>
-          </div>}
-          {showLive && !isUnavailable && presence?.isLive && (
-            <div className={`${showProfile || showStats ? 'mt-3' : ''}`}>
+          </a>}</FeatureSlot>
+          <FeatureSlot data-feature="twitch_live">{showLive && !isUnavailable && presence?.isLive && (
+            <a href={presence?.channelUrl ?? providerLinks.twitch} target="_blank" rel="noopener noreferrer" className={`${showProfile || showStats ? 'mt-3' : ''}`}>
               <div className="mb-1.5 flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" aria-hidden="true" />
                 <span className="text-[#bf94ff] text-[10px] font-bold tracking-widest uppercase">Live on Twitch</span>
@@ -73,20 +74,19 @@ function TwitchWidget({ state, showProfile = true, showStats = true, showLive = 
                   <p className="mt-2 text-[10px] text-white/65">👁 {presence.viewers?.toLocaleString() ?? 0} watching</p>
                 </div>
               </div>
-            </div>
-          )}
-          {showSchedule && !presence?.isLive && presence?.nextStream && (
-            <div className={`${showProfile || showStats ? 'mt-3 ' : ''}rounded-lg border border-[#bf94ff]/20 bg-white/5 px-3 py-2`}>
+            </a>
+          )}</FeatureSlot>
+          <FeatureSlot data-feature="twitch_schedule">{showSchedule && !presence?.isLive && presence?.nextStream && (
+            <div><a href={presence?.channelUrl ?? providerLinks.twitch} target="_blank" rel="noopener noreferrer" className={`block ${showProfile || showStats ? 'mt-3 ' : ''}rounded-lg border border-[#bf94ff]/20 bg-white/5 px-3 py-2`}>
               <p className="text-[10px] font-bold uppercase tracking-widest text-[#bf94ff]">Next stream</p>
               <p className="mt-1 truncate text-xs font-semibold text-white">{presence.nextStream.title ?? 'Scheduled stream'}</p>
               <p className="mt-0.5 text-[10px] text-white/55">{new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short', ...(scheduleTimeZone ? { timeZone: scheduleTimeZone } : {}) }).format(new Date(presence.nextStream.startsAt))}{presence.nextStream.category ? ` · ${presence.nextStream.category}` : ''}</p>
-            </div>
-          )}
-          </a>
-          {showSchedule && !presence?.isLive && presence?.nextStream && <button type="button" onClick={() => downloadCalendarEvent(presence.nextStream!)} className="mt-2 w-full rounded-lg border border-[#bf94ff]/25 bg-[#9146ff]/15 px-3 py-1.5 text-[11px] font-semibold text-[#dec8ff] transition-colors hover:bg-[#9146ff]/25">Add to calendar</button>}
+            </a><button type="button" onClick={() => downloadCalendarEvent(presence.nextStream!)} className="mt-2 w-full rounded-lg border border-[#bf94ff]/25 bg-[#9146ff]/15 px-3 py-1.5 text-[11px] font-semibold text-[#dec8ff] transition-colors hover:bg-[#9146ff]/25">Add to calendar</button></div>
+          )}</FeatureSlot>
+
         </div>
       )}
-    </div>
+    </div></FeatureLayout>
   )
 }
 

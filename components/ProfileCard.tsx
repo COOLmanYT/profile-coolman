@@ -2,6 +2,9 @@
 
 import { siteConfig, applyModulePolicy, isControlAvailable, isModuleAvailable } from '@/lib/site-config.mjs'
 import type { ReactNode } from 'react'
+import FeatureLayout, { LayoutOrderProvider, type LayoutSettings } from './FeatureLayout'
+import { normaliseLayout } from '@/lib/layout-order.mjs'
+import type { Announcement } from '@/lib/dashboard-settings'
 
 import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
@@ -26,9 +29,11 @@ const LOCATION_TAP_THRESHOLD = 10
 interface ProfileCardProps {
   toggles: Record<string, boolean>
   preview?: boolean
+  layout?: LayoutSettings
+  announcement?: Announcement | null
 }
 
-export default function ProfileCard({ toggles: savedToggles, preview = false }: ProfileCardProps) {
+export default function ProfileCard({ toggles: savedToggles, preview = false, layout = normaliseLayout(null), announcement }: ProfileCardProps) {
   const toggles = applyModulePolicy(savedToggles)
   const { visibilityLoaded, hiddenModules, hiddenFeatures, mediaPreferences } = useVisitorPreferences()
   const showFeature = (feature: TemporaryFeature) => isControlAvailable(feature) && (preview || !hiddenFeatures.includes(feature))
@@ -85,6 +90,35 @@ export default function ProfileCard({ toggles: savedToggles, preview = false }: 
   }
 
   const modules: Record<string, ReactNode> = {
+    profile: <FeatureLayout module="profile">
+        {/* Avatar */}
+        {toggles.profile && (preview || !hiddenModules.includes('profile')) && toggles.profile_avatar && showFeature('profile_avatar') && <div data-feature="profile_avatar" className="relative h-[88px] w-[88px] flex-shrink-0">
+          <div className="h-full w-full overflow-hidden rounded-full ring-4 ring-white/30 shadow-xl [clip-path:circle(50%)]">
+            <AvatarImage />
+          </div>
+          {toggles.seasons && <SeasonalHat />}
+        </div>}
+
+        {/* Username */}
+        <div data-feature="profile_bio" className="text-center -mt-1">
+          <h1 className="text-[28px] font-bold text-white tracking-tight leading-tight title-soft-glow">{siteConfig.profile.username}</h1>
+          {toggles.profile && (preview || !hiddenModules.includes('profile')) && toggles.profile_bio && showFeature('profile_bio') && <p data-feature="profile_bio" className="text-white/70 text-sm mt-1 leading-snug">{siteConfig.profile.bio}</p>}
+        </div>
+
+        {/* Location pill */}
+        {toggles.profile && (preview || !hiddenModules.includes('profile')) && toggles.profile_location && showFeature('profile_location') && <button data-feature="profile_location"
+          type="button"
+          onClick={onLocationTap}
+          className="flex items-center gap-1.5 bg-black/20 backdrop-blur-sm px-4 py-1.5 rounded-full border border-white/10"
+          aria-label="Location"
+        >
+          <span className="text-sm leading-none">&#x1F4CD;</span>
+          <span className="text-white/90 text-xs font-medium">{siteConfig.profile.location}</span>
+        </button>}
+
+      </FeatureLayout>,
+    announcement: isModuleAvailable('announcement') && (preview || visibilityLoaded) && toggles.announcement && (preview || !hiddenModules.includes('announcement')) && <LiveAnnouncement managed={announcement} />,
+    socials: toggles.socials && (preview || !hiddenModules.includes('socials')) && <SocialLinks analyticsEnabled={toggles.analytics} />,
     spotify: ((preview || visibilityLoaded) && toggles.spotify && (preview || !hiddenModules.includes('spotify')) && (
           <SpotifyWidget
             showWidget={(toggles.spotify_widget ?? true) && showFeature('spotify_widget')}
@@ -127,38 +161,13 @@ export default function ProfileCard({ toggles: savedToggles, preview = false }: 
   }
 
   return (
-    <div style={takeover ? undefined : { background: `linear-gradient(180deg,${siteConfig.appearance.card.from},${siteConfig.appearance.card.to})` }} className={`relative profile-card w-full rounded-3xl shadow-2xl overflow-hidden border border-white/10 ${takeover ? 'bg-[linear-gradient(180deg,#170b29_0%,#401265_55%,#8B0000_100%)]' : ''}`}>
+    <LayoutOrderProvider layout={layout}><div style={takeover ? undefined : { background: `linear-gradient(180deg,${siteConfig.appearance.card.from},${siteConfig.appearance.card.to})` }} className={`relative profile-card w-full rounded-3xl shadow-2xl overflow-hidden border border-white/10 ${takeover ? 'bg-[linear-gradient(180deg,#170b29_0%,#401265_55%,#8B0000_100%)]' : ''}`}>
       {takeover && twitch.presence && <StreamTakeover presence={twitch.presence} />}
       <div className="flex flex-col items-center px-5 sm:px-7 pt-8 sm:pt-9 pb-6 sm:pb-7 gap-4">
-        {isModuleAvailable('announcement') && (preview || visibilityLoaded) && (toggles.announcement ?? true) && (preview || !hiddenModules.includes('announcement')) && <LiveAnnouncement />}
-        {/* Avatar */}
-        {toggles.profile && (preview || !hiddenModules.includes('profile')) && toggles.profile_avatar && showFeature('profile_avatar') && <div className="relative h-[88px] w-[88px] flex-shrink-0">
-          <div className="h-full w-full overflow-hidden rounded-full ring-4 ring-white/30 shadow-xl [clip-path:circle(50%)]">
-            <AvatarImage />
-          </div>
-          {toggles.seasons && <SeasonalHat />}
-        </div>}
 
-        {/* Username */}
-        <div className="text-center -mt-1">
-          <h1 className="text-[28px] font-bold text-white tracking-tight leading-tight title-soft-glow">{siteConfig.profile.username}</h1>
-          {toggles.profile && (preview || !hiddenModules.includes('profile')) && toggles.profile_bio && showFeature('profile_bio') && <p className="text-white/70 text-sm mt-1 leading-snug">{siteConfig.profile.bio}</p>}
-        </div>
+        {layout.moduleOrder.map((id) => Object.hasOwn(modules, id) && modules[id] ? <div key={id} className="contents">{modules[id]}</div> : null)}
 
-        {/* Location pill */}
-        {toggles.profile && (preview || !hiddenModules.includes('profile')) && toggles.profile_location && showFeature('profile_location') && <button
-          type="button"
-          onClick={onLocationTap}
-          className="flex items-center gap-1.5 bg-black/20 backdrop-blur-sm px-4 py-1.5 rounded-full border border-white/10"
-          aria-label="Location"
-        >
-          <span className="text-sm leading-none">&#x1F4CD;</span>
-          <span className="text-white/90 text-xs font-medium">{siteConfig.profile.location}</span>
-        </button>}
-
-        {Object.keys(siteConfig.modules).map((id) => modules[id] ? <div key={id} className="contents">{modules[id]}</div> : null)}
-        {toggles.socials && (preview || !hiddenModules.includes('socials')) && <SocialLinks analyticsEnabled={toggles.analytics} />}
       </div>
-    </div>
+    </div></LayoutOrderProvider>
   )
 }

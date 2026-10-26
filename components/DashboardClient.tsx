@@ -4,15 +4,17 @@ import { signOut } from 'next-auth/react'
 import { useState } from 'react'
 import { responseErrorCode, useToast } from './ToastProvider'
 import { DASHBOARD_LABELS, DASHBOARD_GROUPS, isControlDisabled } from '@/lib/dashboard-controls.mjs'
+import type { LayoutSettings } from './FeatureLayout'
 
 interface DashboardClientProps {
   initialToggles: Record<string, boolean>
   signOutOnly?: boolean
   onTogglesChange?: (toggles: Record<string, boolean>) => void
+  layout?: LayoutSettings
 }
 
 
-export default function DashboardClient({ initialToggles, signOutOnly, onTogglesChange }: DashboardClientProps) {
+export default function DashboardClient({ initialToggles, signOutOnly, onTogglesChange, layout }: DashboardClientProps) {
   const { showToast } = useToast()
   const [toggles, setToggles] = useState(initialToggles)
   const [saving, setSaving] = useState<string | null>(null)
@@ -63,9 +65,14 @@ export default function DashboardClient({ initialToggles, signOutOnly, onToggles
     <div>
       <h2 className="text-white/80 text-sm font-semibold uppercase tracking-wider">Global profile controls</h2>
       <p className="mt-1 text-xs text-white/55">Saved for all visitors. Turn off an entire module or choose its individual elements. Visitor Options can hide enabled elements in their own browser.</p>
-      <div className="mt-5 grid items-start gap-5 lg:grid-cols-2">
-      {DASHBOARD_GROUPS.map(({ title, description, parentKey, keys }) => (
-        <section key={title} aria-label={`${title} global settings`} className="min-w-0 rounded-2xl border border-white/10 bg-white/[.03] p-4">
+      <div className="mt-4 columns-1 gap-4 md:columns-2">
+      {[...DASHBOARD_GROUPS].sort((a, b) => {
+        const rank = (id: string) => { const index = layout?.moduleOrder.indexOf(id) ?? -1; return index < 0 ? DASHBOARD_GROUPS.length : index }
+        return rank(a.parentKey) - rank(b.parentKey)
+      }).map(({ title, description, parentKey, keys: originalKeys }) => {
+        const keys = [...new Set([parentKey, ...(layout?.featureOrder[parentKey] ?? []), ...originalKeys])].filter(key => originalKeys.includes(key))
+        return (
+        <section key={title} aria-label={`${title} global settings`} className="mb-4 break-inside-avoid min-w-0 rounded-2xl border border-white/10 bg-white/[.03] p-4">
           <div className="mb-2 px-1">
             <h3 className="text-white text-sm font-semibold">{title}</h3>
             <p className="mt-0.5 text-xs text-white/45">{description}</p>
@@ -75,7 +82,7 @@ export default function DashboardClient({ initialToggles, signOutOnly, onToggles
               const label = DASHBOARD_LABELS[key]
               const disabledByParent = isControlDisabled(key, parentKey, toggles)
               return (
-                <div key={key} className={`flex items-center justify-between rounded-xl bg-white/5 px-4 py-3 transition-opacity ${disabledByParent ? 'opacity-45' : ''}`}>
+                <div key={key} className={`flex items-center justify-between rounded-xl bg-white/5 px-3 py-2 transition-opacity ${disabledByParent ? 'opacity-45' : ''}`}>
                   <span className={`text-sm font-medium text-white ${key !== parentKey ? 'pl-3' : ''}`}>{key !== parentKey && <span aria-hidden className="mr-1.5 text-white/35">↳</span>}{label}</span>
                   <div className="flex shrink-0 items-center gap-2">
                     {saved === key && <span className="text-green-400 text-xs">Saved!</span>}
@@ -102,7 +109,7 @@ export default function DashboardClient({ initialToggles, signOutOnly, onToggles
             })}
           </div>
         </section>
-      ))}
+      )})}
       </div>
     </div>
   )

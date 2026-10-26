@@ -86,6 +86,7 @@ test('normaliseSeasonalSettings keeps valid values and falls back to defaults fo
       extra: 'ignored',
     }),
     {
+      enabledThemes: DEFAULT_SEASONAL_SETTINGS.enabledThemes,
       automaticEnabled: false,
       scheduledTheme: 'halloween',
       scheduledStartsAt: '2026-10-01T00:00:00Z',
@@ -95,6 +96,7 @@ test('normaliseSeasonalSettings keeps valid values and falls back to defaults fo
   )
   // Unknown theme / location are reset; non-string timestamps become null; automaticEnabled stays true unless explicitly false.
   assert.deepEqual(normaliseSeasonalSettings({ scheduledTheme: 'summer', scheduledLocation: 'moon', scheduledStartsAt: 123 }), {
+    enabledThemes: DEFAULT_SEASONAL_SETTINGS.enabledThemes,
     automaticEnabled: true,
     scheduledTheme: null,
     scheduledStartsAt: null,

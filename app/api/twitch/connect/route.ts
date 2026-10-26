@@ -1,17 +1,17 @@
+import { dashboardAccess } from '@/lib/dashboard-access'
 import { isModuleAvailable } from '@/lib/site-config.mjs'
 import { getServerSession } from 'next-auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { authOptions } from '@/lib/auth'
 import { getTwitchConfig, getTwitchRedirectUri } from '@/lib/twitch'
 
-const ALLOWED_DISCORD_ID = process.env.DISCORD_USER_ID
 const STATE_COOKIE = 'twitch_oauth_state'
 
 export async function GET(req: NextRequest) {
   if (!isModuleAvailable('twitch')) return NextResponse.json({ error: 'MODULE_DISABLED' }, { status: 404, headers: { 'Cache-Control': 'no-store' } })
   const session = await getServerSession(authOptions)
-  const userId = (session?.user as { id?: string } | undefined)?.id
-  if (!userId || userId !== ALLOWED_DISCORD_ID) return NextResponse.redirect(new URL('/auth/signin', req.url))
+  const access = await dashboardAccess(session)
+  if (!access?.owner) return NextResponse.redirect(new URL('/auth/signin', req.url))
 
   const config = getTwitchConfig()
   if (!config) return NextResponse.json({ error: 'Twitch credentials are not configured' }, { status: 500 })
