@@ -26,12 +26,21 @@ const LEGAL_SIMPLE_MODE_KEY = 'coolman-legal-simple-mode'
 const GROUPS = configuredGroups()
 const TEMPORARY_FEATURES = GROUPS.flatMap(({ title, parentKey, keys }) => keys.filter((key) => key !== parentKey).map((id) => ({ category: title, id: id as TemporaryFeature, label: DASHBOARD_LABELS[id] })))
 
+function localInputTime(value: string | null) {
+  if (!value || !Number.isFinite(Date.parse(value))) return ''
+  const date = new Date(value)
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16)
+}
+
 export default function SeasonalOptionsClient({ legalSimpleModeDefault, youtubeEmbedDefault = false }: { legalSimpleModeDefault: boolean; youtubeEmbedDefault?: boolean }) {
   const { showToast } = useToast()
   const { preference, setPreference, activateOnce, clearOnce, timeZone, allowedThemes } = useSeasonalTheme()
   const { hiddenModules, setModuleHidden, hiddenFeatures, setFeatureHidden, mediaPreferences, setMediaPreferences, resetPreferences } = useVisitorPreferences()
-  const [theme, setTheme] = useState<SeasonalTheme | ''>(preference.theme && allowedThemes.includes(preference.theme) ? preference.theme : '')
-  const [until, setUntil] = useState(preference.until ? preference.until.slice(0, 16) : '')
+  const [themeDraft, setTheme] = useState<SeasonalTheme | '' | null>(null)
+  const [untilDraft, setUntil] = useState<string | null>(null)
+  const selectedTheme = themeDraft ?? preference.theme ?? ''
+  const theme = selectedTheme && allowedThemes.includes(selectedTheme) ? selectedTheme : ''
+  const until = untilDraft ?? localInputTime(preference.until)
   const [legalSimpleMode, setLegalSimpleMode] = useState<'default' | 'simple' | 'standard'>('default')
 
   useEffect(() => {
@@ -68,7 +77,7 @@ export default function SeasonalOptionsClient({ legalSimpleModeDefault, youtubeE
         {isModuleAvailable('seasons') && <>
         <p className="mt-1 text-sm text-white/55">Automatic dates use your browser time zone: {timeZone}.</p>
         <label className="mt-6 block text-sm font-medium">Theme</label>
-        <select value={theme} onChange={(event) => { const next = event.target.value as SeasonalTheme | ''; setTheme(next); if (!next) clearOnce() }} className="mt-2 w-full rounded-lg border border-white/15 bg-black/25 px-3 py-2 text-sm">
+        <select aria-label="Theme" value={theme} onChange={(event) => { const next = event.target.value as SeasonalTheme | ''; setTheme(next); if (!next) clearOnce() }} className="mt-2 w-full rounded-lg border border-white/15 bg-black/25 px-3 py-2 text-sm">
           <option value="">None</option>
           {allowedThemes.map((item) => <option key={item} value={item}>{LABELS[item]}</option>)}
         </select>

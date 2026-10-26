@@ -97,7 +97,7 @@ The public Supabase URL and legacy anon/publishable key are not privileged secre
 
 `layout.moduleOrder` is an array of module IDs. `layout.featureOrder` maps module IDs to arrays of full feature IDs, such as `github_graph`. Unknown or duplicate IDs fail configuration validation. Omitted available IDs are appended, so adding a feature does not hide it. Code-disabled items are removed even when a database order includes them. Saved dashboard ordering overrides JSON ordering; set `dashboard.features.ordering: false` to use JSON only.
 
-Features move within their logical parent: cards’ sections, statistics within their row, and name/username within a header. Behaviour settings (upload format, embed defaults, device filters and live takeover) stay visibility/settings switches. Avatar overlays remain attached to their avatar. The profile’s username moves with its bio/details group. The dashboard shows separate ordering groups for these relationships.
+Features move within their logical parent: cards’ sections, statistics within their row, and name/username within a header. Moving one group preserves the order chosen in other groups. Behaviour settings (upload format, embed defaults, device filters and live takeover) stay visibility/settings switches. Avatar overlays remain attached to their avatar. The profile’s username moves with its bio/details group. The dashboard shows separate ordering groups for these relationships.
 
 ## Announcements
 

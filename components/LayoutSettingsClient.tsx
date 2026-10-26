@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { siteConfig, configuredGroups } from '@/lib/site-config.mjs'
 import { DASHBOARD_LABELS } from '@/lib/dashboard-controls.mjs'
-import { FEATURE_ORDER_GROUPS } from '@/lib/layout-order.mjs'
+import { featureOrderGroups, reorderFeatures } from '@/lib/layout-order.mjs'
 import type { LayoutSettings } from './FeatureLayout'
 import { useToast } from './ToastProvider'
 
@@ -40,13 +40,13 @@ export default function LayoutSettingsClient({ initialLayout, onChange }: { init
     <div className="min-w-0"><h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/60">Modules</h3><ol className="space-y-1.5">{rows(layout.moduleOrder, moduleOrder => update({ ...layout, moduleOrder }), labels)}</ol></div>
     <div className="min-w-0"><h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/60">Module features</h3><div className="space-y-2">{layout.moduleOrder.map(id => {
       const order = layout.featureOrder[id] ?? []
-      const groups = FEATURE_ORDER_GROUPS[id as keyof typeof FEATURE_ORDER_GROUPS] ?? { Features: order.map(key => key.slice(id.length + 1)) }
+      const groups = featureOrderGroups(id, order)
       return Object.entries(groups).map(([label, parts]) => {
         const items = order.filter(key => (parts as string[]).some(part => key === `${id}_${part}`))
         if (items.length < 2) return null
         return <details key={`${id}-${label}`} className="rounded-lg border border-white/10 p-3"><summary className="cursor-pointer text-sm text-white/80">{labels[id]} · {label}</summary><ol className="mt-3 space-y-1.5">{rows(items, next => {
-          let index = 0
-          const combined = order.map(key => items.includes(key) ? next[index++] : key)
+          const fullGroups = Object.values(groups).map(parts => (parts as string[]).map(part => `${id}_${part}`))
+          const combined = reorderFeatures(order, next, fullGroups)
           update({ ...layout, featureOrder: { ...layout.featureOrder, [id]: combined } })
         }, DASHBOARD_LABELS)}</ol></details>
       })

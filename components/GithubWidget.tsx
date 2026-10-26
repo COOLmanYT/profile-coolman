@@ -2,7 +2,7 @@
 
 import FeatureLayout, { FeatureSlot } from './FeatureLayout'
 
-import { siteConfig, providerLinks } from '@/lib/site-config.mjs'
+import { siteConfig, providerLinks, isControlAvailable } from '@/lib/site-config.mjs'
 
 import { useEffect, useState } from 'react'
 import { fetchWidgetJson, startPolling } from '@/lib/widget-polling.mjs'
@@ -89,7 +89,7 @@ export default function GithubWidget({ showStatus = true, showProfile = true, sh
         : <>
           <FeatureSlot data-feature="github_status">{showStatus && activity.status && <a href={PROFILE_URL} target="_blank" rel="noopener noreferrer" aria-label="GitHub public status" className="mt-2 flex items-start gap-2 rounded-lg bg-white/5 px-2.5 py-2 text-xs text-white/75"><span aria-hidden>{activity.status.emoji}</span><span className="min-w-0 break-words">{activity.status.message || 'GitHub status'}</span></a>}</FeatureSlot>
           <FeatureSlot data-feature="github_status">{showStatus && activity.statusUnavailable && <p className="mt-2 text-[10px] text-white/45">GitHub status unavailable.</p>}</FeatureSlot>
-          {stats.length > 0 && <div data-feature="github_stats" className={`mt-2.5 grid gap-2 text-center ${stats.length === 3 ? 'grid-cols-3' : stats.length === 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>{stats.map(stat => <a key={stat.label} data-feature={stat.label === 'Commits · past year' ? 'github_commits' : 'github_stats'} href={stat.href} target="_blank" rel="noopener noreferrer" aria-label={`${stat.value?.toLocaleString() ?? 'Unavailable'} ${stat.description}`} title={stat.description} className="rounded-lg bg-white/5 px-1.5 py-1.5 hover:bg-white/10"><span className="block text-sm font-semibold text-white">{stat.value?.toLocaleString() ?? '—'}</span><span className="text-[9px] text-white/55">{stat.label}</span></a>)}</div>}
+          {stats.length > 0 && <div data-feature={isControlAvailable('github_stats') ? 'github_stats' : 'github_commits'} className={`mt-2.5 grid gap-2 text-center ${stats.length === 3 ? 'grid-cols-3' : stats.length === 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>{stats.map(stat => <a key={stat.label} data-feature={stat.label === 'Commits · past year' ? 'github_commits' : 'github_stats'} href={stat.href} target="_blank" rel="noopener noreferrer" aria-label={`${stat.value?.toLocaleString() ?? 'Unavailable'} ${stat.description}`} title={stat.description} className="rounded-lg bg-white/5 px-1.5 py-1.5 hover:bg-white/10"><span className="block text-sm font-semibold text-white">{stat.value?.toLocaleString() ?? '—'}</span><span className="text-[9px] text-white/55">{stat.label}</span></a>)}</div>}
           <FeatureSlot data-feature="github_graph">{showGraph && (activity.calendar ? <ContributionGraph calendar={activity.calendar} /> : <p className="mt-2 text-[10px] text-white/45">Graph unavailable. <a href={PROFILE_URL} target="_blank" rel="noopener noreferrer" className="underline">View on GitHub ↗</a></p>)}</FeatureSlot>
           <FeatureSlot data-feature="github_projects">{showProjects && <div className="mt-2.5 border-t border-white/10 pt-2">
             <h3 className="text-[9px] font-semibold uppercase tracking-wider text-white/50">Recently updated</h3>

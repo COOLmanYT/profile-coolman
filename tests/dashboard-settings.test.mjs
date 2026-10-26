@@ -4,7 +4,7 @@ import * as react from 'react'
 import * as jsxRuntime from 'react/jsx-runtime'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { siteConfig } from '../lib/site-config.mjs'
-import { normaliseLayout, validLayout } from '../lib/layout-order.mjs'
+import { normaliseLayout, validLayout, featureOrderGroups, reorderFeatures } from '../lib/layout-order.mjs'
 import { readAnnouncement } from '../lib/live-announcement.mjs'
 import { normaliseSeasonalSettings, resolveGlobalTheme } from '../lib/seasonal.ts'
 import { validateSiteConfig } from '../lib/config-validation.mjs'
@@ -276,6 +276,7 @@ test('dashboard ordering buttons update the preview and save the new module and 
   button('Move Contribution graph up').props.onClick()
   assert.equal(previews.at(-1).moduleOrder[1], 'github')
   assert.ok(previews.at(-1).featureOrder.github.indexOf('github_graph') < previews.at(-1).featureOrder.github.indexOf('github_stats'))
+  assert.ok(previews.at(-1).featureOrder.github.indexOf('github_stats') < previews.at(-1).featureOrder.github.indexOf('github_commits'), 'Moving a section must preserve the separate statistics order')
   const previous = globalThis.fetch
   globalThis.fetch = async (url, options) => { requests.push({ url, body: JSON.parse(options.body) }); return { ok: true } }
   try {
@@ -284,12 +285,68 @@ test('dashboard ordering buttons update the preview and save the new module and 
   } finally { globalThis.fetch = previous }
 })
 
+test('section and statistic ordering remain independent in both directions', () => {
+  const order = normaliseLayout(null).featureOrder.github
+  const groups = Object.values(featureOrderGroups('github', order)).map(parts => parts.map(part => `github_${part}`))
+  for (const changed of groups) {
+    const current = order.filter(key => changed.includes(key))
+    const updated = reorderFeatures(order, [...current].reverse(), groups)
+    assert.deepEqual(updated.filter(key => changed.includes(key)), [...current].reverse())
+    for (const other of groups.filter(group => group !== changed)) assert.deepEqual(updated.filter(key => other.includes(key)), order.filter(key => other.includes(key)))
+    assert.deepEqual([...updated].sort(), [...order].sort())
+  }
+})
+
+test('commit-only GitHub statistics keep an orderable section when star totals are code-disabled', () => {
+  const config = structuredClone(siteConfig)
+  config.modules.github.features.stats.enabled = false
+  const layout = normaliseLayout({ featureOrder: { github: ['github_commits', 'github_graph'] } }, config)
+  assert.ok(featureOrderGroups('github', layout.featureOrder.github).Sections.includes('commits'))
+  const features = featureLayout()
+  let index = 0
+  const Widget = loadTypescript('components/GithubWidget.tsx', {
+    'react/jsx-runtime': jsxRuntime, './FeatureLayout': features,
+    react: { useEffect: () => {}, useState: () => [index++ === 0 ? { status: null, commitsPastYear: 12, commitsUrl: 'https://github.com/search', calendar: null, projects: [] } : false, () => {}] },
+    '@/lib/site-config.mjs': { siteConfig: config, providerLinks: { github: 'https://github.com/example' }, isControlAvailable: key => key !== 'github_stats' },
+    '@/lib/widget-polling.mjs': { startPolling: () => () => {}, fetchWidgetJson: () => {} },
+  }).default
+  const html = renderToStaticMarkup(h(features.LayoutOrderProvider, { layout }, h(Widget, { showStats: false, showProfile: false, showProjects: false })))
+  assert.ok(html.includes('Commits · past year'))
+  assert.ok(html.indexOf('Commits · past year') < html.indexOf('Graph unavailable'))
+})
+
+test('visitor options reflect restored seasonal preferences and stop offering a disabled selection', () => {
+  const state = []
+  let cursor = 0, preference = { theme: null, until: null }, allowedThemes = ['halloween', 'christmas']
+  const Component = loadTypescript('components/SeasonalOptionsClient.tsx', {
+    'react/jsx-runtime': jsxRuntime, 'next/link': { default: () => null },
+    react: { useEffect() {}, useState: initial => { const index = cursor++; if (!(index in state)) state[index] = initial; return [state[index], value => { state[index] = value }] } },
+    '@/lib/dashboard-controls.mjs': controls,
+    './ToastProvider': { useToast: () => ({ showToast() {} }) }, './ColorModeProvider': { ColorModeControl: () => null },
+    './SeasonalThemeProvider': { useSeasonalTheme: () => ({ preference, allowedThemes, timeZone: 'UTC' }) },
+    './VisitorPreferencesProvider': { useVisitorPreferences: () => ({ hiddenModules: [], hiddenFeatures: [], mediaPreferences: {} }) },
+    './SeasonalPreview': { default: () => null }, './SeasonalSimulationControls': { default: () => null },
+  }).default
+  const render = () => { cursor = 0; return Component({ legalSimpleModeDefault: false }) }
+  const find = (node, predicate) => Array.isArray(node) ? node.map(item => find(item, predicate)).find(Boolean) : react.isValidElement(node) ? predicate(node) ? node : find(node.props.children, predicate) : null
+  render()
+  preference = { theme: 'halloween', until: '2030-10-31T12:00:00Z' }
+  assert.equal(find(render(), node => node.type === 'select').props.value, 'halloween')
+  const date = new Date(preference.until)
+  assert.equal(find(render(), node => node.type === 'input' && node.props.type === 'datetime-local').props.value, new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16))
+  find(render(), node => node.type === 'select').props.onChange({ target: { value: 'christmas' } })
+  assert.equal(find(render(), node => node.type === 'select').props.value, 'christmas')
+  allowedThemes = ['halloween']
+  assert.equal(find(render(), node => node.type === 'select').props.value, '')
+  assert.equal(find(render(), node => node.type === 'button' && node.props.children === 'Save timed theme').props.disabled, true)
+})
+
 test('new JSON controls reject invalid defaults and the repository keeps Discord and fixed dark mode', () => {
   assert.deepEqual(siteConfig.dashboard.auth.providers, { discord: true, github: false, google: false })
   assert.equal(siteConfig.dashboard.features.accessManagement, false)
   assert.equal(siteConfig.appearance.defaultMode, 'dark')
   assert.equal(siteConfig.appearance.allowModeSwitch, false)
-  for (const modify of [c => { c.layout.moduleOrder.push('not-a-module') }, c => { c.layout.featureOrder.github = ['github_profile', 'github_profile'] }, c => { c.dashboard.auth.providers.discord = false }, c => { c.announcement.url = 'javascript:alert(1)' }, c => { c.seasonal.defaults.enabledThemes = ['unknown'] }, c => { c.seasonal.defaults.scheduledTheme = 'halloween' }]) {
+  for (const modify of [c => { c.layout.moduleOrder.push('not-a-module') }, c => { c.layout.featureOrder.github = ['github_profile', 'github_profile'] }, c => { c.dashboard.auth.providers.discord = false }, c => { c.dashboard.auth.providers = { discord: false, github: false, google: false, unsupported: true } }, c => { c.announcement.url = 'javascript:alert(1)' }, c => { c.seasonal.defaults.enabledThemes = ['unknown'] }, c => { c.seasonal.defaults.scheduledTheme = 'halloween' }, c => { c.seasonal.defaults.scheduledStartsAt = 123 }, c => { c.seasonal.defaults.scheduledEndsAt = 'invalid' }]) {
     const config = structuredClone(siteConfig); modify(config)
     assert.throws(() => validateSiteConfig(config), /site.config.json:/)
   }
