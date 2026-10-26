@@ -46,12 +46,15 @@ export default function SeasonalSettingsClient({ initialSettings }: { initialSet
       <label className="mt-4 flex items-center justify-between text-sm text-white/85">Automatic calendar events
         <input type="checkbox" checked={settings.automaticEnabled} onChange={(event) => update('automaticEnabled', event.target.checked)} className="h-4 w-4 accent-red-600" />
       </label>
-      <fieldset className="mt-4 space-y-2"><legend className="mb-2 text-xs text-white/60">Enabled events</legend>{SEASONAL_THEMES.map(theme => <label key={theme} className="flex items-center justify-between text-sm text-white/80">{LABELS[theme]}<input type="checkbox" checked={settings.enabledThemes.includes(theme)} onChange={event => update('enabledThemes', event.target.checked ? [...settings.enabledThemes, theme] : settings.enabledThemes.filter(item => item !== theme))} className="h-4 w-4 accent-red-600" /></label>)}</fieldset>
+      <fieldset className="mt-4 space-y-2"><legend className="mb-2 text-xs text-white/60">Enabled events</legend>{SEASONAL_THEMES.map(theme => <label key={theme} className="flex items-center justify-between text-sm text-white/80">{LABELS[theme]}<input type="checkbox" checked={settings.enabledThemes.includes(theme)} onChange={event => {
+        const checked = event.target.checked
+        setSettings(current => ({ ...current, enabledThemes: checked ? [...current.enabledThemes, theme] : current.enabledThemes.filter(item => item !== theme), scheduledTheme: !checked && current.scheduledTheme === theme ? null : current.scheduledTheme }))
+      }} className="h-4 w-4 accent-red-600" /></label>)}</fieldset>
       <div className="mt-4 grid gap-3">
         <label className="text-xs text-white/60">Scheduled event
           <select value={settings.scheduledTheme ?? ''} onChange={(event) => update('scheduledTheme', event.target.value ? event.target.value as SeasonalTheme : null)} className="mt-1 w-full rounded bg-black/25 px-2 py-2 text-sm text-white">
             <option value="">No scheduled event</option>
-            {SEASONAL_THEMES.map((theme) => <option value={theme} key={theme}>{LABELS[theme]}</option>)}
+            {settings.enabledThemes.map((theme) => <option value={theme} key={theme}>{LABELS[theme]}</option>)}
           </select>
         </label>
         <div className="grid grid-cols-2 gap-2">

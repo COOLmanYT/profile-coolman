@@ -199,12 +199,25 @@ test('disabled seasonal events cannot run through automatic dates or a saved sch
 test('JSON seasonal availability overrides stale saved values and personal choices', () => {
   const config = structuredClone(siteConfig)
   config.seasonal.availableThemes.halloween = false
+  assert.doesNotThrow(() => validateSiteConfig(config))
   const seasonal = loadTypescript('lib/seasonal.ts', { './site-config.mjs': { siteConfig: config } })
   const settings = { ...seasonal.DEFAULT_SEASONAL_SETTINGS, enabledThemes: ['halloween'] }
   assert.ok(!seasonal.SEASONAL_THEMES.includes('halloween'))
   assert.equal(seasonal.isSeasonalTheme('halloween'), false)
   assert.deepEqual(seasonal.normaliseSeasonalSettings(settings).enabledThemes, [])
   assert.equal(seasonal.resolveGlobalTheme(settings, new Date('2026-10-31T12:00:00Z'), 'UTC'), null)
+})
+
+test('seasonal defaults can be explicitly cleared and disabled events lose their old schedule', () => {
+  const config = structuredClone(siteConfig)
+  Object.assign(config.seasonal.defaults, { scheduledTheme: 'halloween', scheduledStartsAt: '2026-10-01T00:00:00Z', scheduledEndsAt: '2026-11-01T00:00:00Z' })
+  const seasonal = loadTypescript('lib/seasonal.ts', { './site-config.mjs': { siteConfig: config } })
+  assert.equal(seasonal.normaliseSeasonalSettings({}).scheduledStartsAt, config.seasonal.defaults.scheduledStartsAt)
+  const cleared = seasonal.normaliseSeasonalSettings({ scheduledTheme: null, scheduledStartsAt: null, scheduledEndsAt: null })
+  assert.equal(cleared.scheduledTheme, null)
+  assert.equal(cleared.scheduledStartsAt, null)
+  assert.equal(cleared.scheduledEndsAt, null)
+  assert.equal(seasonal.normaliseSeasonalSettings({ enabledThemes: [], scheduledTheme: 'halloween' }).scheduledTheme, null)
 })
 
 test('dashboard persistence handles missing storage, errors and missing write receipts', async () => {
@@ -276,7 +289,7 @@ test('new JSON controls reject invalid defaults and the repository keeps Discord
   assert.equal(siteConfig.dashboard.features.accessManagement, false)
   assert.equal(siteConfig.appearance.defaultMode, 'dark')
   assert.equal(siteConfig.appearance.allowModeSwitch, false)
-  for (const modify of [c => { c.layout.moduleOrder.push('not-a-module') }, c => { c.layout.featureOrder.github = ['github_profile', 'github_profile'] }, c => { c.dashboard.auth.providers.discord = false }, c => { c.announcement.url = 'javascript:alert(1)' }, c => { c.seasonal.availableThemes.christmas = false }, c => { c.seasonal.defaults.scheduledTheme = 'halloween' }]) {
+  for (const modify of [c => { c.layout.moduleOrder.push('not-a-module') }, c => { c.layout.featureOrder.github = ['github_profile', 'github_profile'] }, c => { c.dashboard.auth.providers.discord = false }, c => { c.announcement.url = 'javascript:alert(1)' }, c => { c.seasonal.defaults.enabledThemes = ['unknown'] }, c => { c.seasonal.defaults.scheduledTheme = 'halloween' }]) {
     const config = structuredClone(siteConfig); modify(config)
     assert.throws(() => validateSiteConfig(config), /site.config.json:/)
   }

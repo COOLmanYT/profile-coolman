@@ -33,12 +33,14 @@ export function isThemeLocation(value: unknown): value is ThemeLocation {
 export function normaliseSeasonalSettings(value: unknown): SeasonalSettings {
   const record = value && typeof value === 'object' ? value as Record<string, unknown> : {}
   const enabledThemes = record.enabledThemes
+  const allowed = Array.isArray(enabledThemes) ? SEASONAL_THEMES.filter(theme => enabledThemes.includes(theme)) : [...DEFAULT_SEASONAL_SETTINGS.enabledThemes]
+  const scheduled = record.scheduledTheme === undefined ? DEFAULT_SEASONAL_SETTINGS.scheduledTheme : isSeasonalTheme(record.scheduledTheme) ? record.scheduledTheme : null
   return {
-    enabledThemes: Array.isArray(enabledThemes) ? SEASONAL_THEMES.filter(theme => enabledThemes.includes(theme)) : [...DEFAULT_SEASONAL_SETTINGS.enabledThemes],
+    enabledThemes: allowed,
     automaticEnabled: typeof record.automaticEnabled === 'boolean' ? record.automaticEnabled : DEFAULT_SEASONAL_SETTINGS.automaticEnabled,
-    scheduledTheme: record.scheduledTheme === undefined ? DEFAULT_SEASONAL_SETTINGS.scheduledTheme : isSeasonalTheme(record.scheduledTheme) ? record.scheduledTheme : null,
-    scheduledStartsAt: typeof record.scheduledStartsAt === 'string' ? record.scheduledStartsAt : DEFAULT_SEASONAL_SETTINGS.scheduledStartsAt,
-    scheduledEndsAt: typeof record.scheduledEndsAt === 'string' ? record.scheduledEndsAt : DEFAULT_SEASONAL_SETTINGS.scheduledEndsAt,
+    scheduledTheme: scheduled && allowed.includes(scheduled) ? scheduled : null,
+    scheduledStartsAt: record.scheduledStartsAt === null ? null : typeof record.scheduledStartsAt === 'string' ? record.scheduledStartsAt : DEFAULT_SEASONAL_SETTINGS.scheduledStartsAt,
+    scheduledEndsAt: record.scheduledEndsAt === null ? null : typeof record.scheduledEndsAt === 'string' ? record.scheduledEndsAt : DEFAULT_SEASONAL_SETTINGS.scheduledEndsAt,
     scheduledLocation: isThemeLocation(record.scheduledLocation) ? record.scheduledLocation : DEFAULT_SEASONAL_SETTINGS.scheduledLocation,
   }
 }

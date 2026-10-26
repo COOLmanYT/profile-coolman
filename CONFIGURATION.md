@@ -113,7 +113,7 @@ Setting `dashboard.features.announcements: false` ignores saved dashboard announ
 
 ## Seasonal themes
 
-`seasonal.availableThemes` determines which events exist in this fork: Christmas, Halloween, Easter, New Year and Birthday. Set an event to `false` and remove it from `seasonal.defaults.enabledThemes` (and any JSON schedule) to remove it from all seasonal choices. Old dashboard and visitor preferences cannot restore it.
+`seasonal.availableThemes` determines which events exist in this fork: Christmas, Halloween, Easter, New Year and Birthday. Set an event to `false` to remove it from all seasonal choices, overriding defaults and old dashboard/visitor preferences. If a JSON schedule explicitly names that event, clear the schedule too; validation rejects a schedule for an unavailable event.
 
 `seasonal.defaults` contains `enabledThemes`, `automaticEnabled`, `scheduledTheme`, `scheduledStartsAt`, `scheduledEndsAt` and `scheduledLocation`. Automatic dates use the visitor’s time zone and the configured profile birthday. Scheduled dates use ISO timestamps with an offset or `Z`; a start before the end is required. Locations are `anywhere`, `australia` or `outside-australia`.
 
