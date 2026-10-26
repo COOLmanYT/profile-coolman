@@ -65,7 +65,7 @@ export default function DashboardClient({ initialToggles, signOutOnly, onToggles
     <div>
       <h2 className="text-white/80 text-sm font-semibold uppercase tracking-wider">Global profile controls</h2>
       <p className="mt-1 text-xs text-white/55">Saved for all visitors. Turn off an entire module or choose its individual elements. Visitor Options can hide enabled elements in their own browser.</p>
-      <div className="mt-4 columns-1 gap-4 lg:columns-2">
+      <div className="mt-4 columns-1 gap-4 md:columns-2">
       {[...DASHBOARD_GROUPS].sort((a, b) => {
         const rank = (id: string) => { const index = layout?.moduleOrder.indexOf(id) ?? -1; return index < 0 ? DASHBOARD_GROUPS.length : index }
         return rank(a.parentKey) - rank(b.parentKey)

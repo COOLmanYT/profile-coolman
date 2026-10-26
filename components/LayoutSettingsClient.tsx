@@ -36,8 +36,9 @@ export default function LayoutSettingsClient({ initialLayout, onChange }: { init
   return <section className="rounded-xl border border-white/10 bg-white/5 p-4">
     <h2 className="text-sm font-semibold text-white">Module and feature order</h2>
     <p className="mt-1 text-xs text-white/50">Move items, check the profile preview, then save. Features stay within their logical parent, such as profile details or activity statistics.</p>
-    <ol className="mt-3 space-y-1.5">{rows(layout.moduleOrder, moduleOrder => update({ ...layout, moduleOrder }), labels)}</ol>
-    <div className="mt-4 space-y-2">{layout.moduleOrder.map(id => {
+    <div className="mt-4 grid items-start gap-4 md:grid-cols-2">
+    <div className="min-w-0"><h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/60">Modules</h3><ol className="space-y-1.5">{rows(layout.moduleOrder, moduleOrder => update({ ...layout, moduleOrder }), labels)}</ol></div>
+    <div className="min-w-0"><h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/60">Module features</h3><div className="space-y-2">{layout.moduleOrder.map(id => {
       const order = layout.featureOrder[id] ?? []
       const groups = FEATURE_ORDER_GROUPS[id as keyof typeof FEATURE_ORDER_GROUPS] ?? { Features: order.map(key => key.slice(id.length + 1)) }
       return Object.entries(groups).map(([label, parts]) => {
@@ -49,7 +50,8 @@ export default function LayoutSettingsClient({ initialLayout, onChange }: { init
           update({ ...layout, featureOrder: { ...layout.featureOrder, [id]: combined } })
         }, DASHBOARD_LABELS)}</ol></details>
       })
-    })}</div>
+    })}</div></div>
+    </div>
     <button type="button" onClick={save} disabled={saving} className="mt-4 rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40">{saving ? 'Saving…' : 'Save order'}</button>
   </section>
 }

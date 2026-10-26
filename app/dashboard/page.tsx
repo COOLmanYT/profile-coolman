@@ -49,7 +49,7 @@ export default async function DashboardPage() {
             <DashboardClient initialToggles={toggles} signOutOnly />
           </div>
           <DashboardWorkspace initialToggles={toggles} initialLayout={layout} announcement={announcement} />
-          <div className="mt-5 columns-1 gap-4 border-t border-white/10 pt-5 lg:columns-2">
+          <div className="mt-5 columns-1 gap-4 border-t border-white/10 pt-5 md:columns-2">
             {siteConfig.dashboard.features.announcements && isModuleAvailable('announcement') && siteConfig.announcement.source !== 'lanyard' && <div className="mb-4 break-inside-avoid [&>section]:mt-0"><AnnouncementEditor initialAnnouncement={announcement ?? null} /></div>}
             {isModuleAvailable('seasons') && siteConfig.dashboard.features.seasons && <div className="mb-4 break-inside-avoid [&>section]:mt-0"><SeasonalSettingsClient initialSettings={seasonalSettings} /><details className="mt-3 rounded-xl border border-white/10 p-3"><summary className="cursor-pointer text-sm text-white/80">Preview seasonal events</summary><SeasonalSimulationControls compact /><SeasonalPreview /></details></div>}
             {access.owner && siteConfig.dashboard.features.accessManagement && <div className="mb-4 break-inside-avoid [&>section]:mt-0"><AccessSettingsClient initialMembers={members} /></div>}
