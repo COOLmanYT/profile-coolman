@@ -3,7 +3,7 @@
 import { isModuleAvailable } from '@/lib/site-config.mjs'
 
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { isAustralia, isSeasonalTheme, resolveGlobalTheme, type SeasonalSettings, type SeasonalTheme } from '@/lib/seasonal'
+import { isAustralia, isSeasonalTheme, resolveGlobalTheme, DEFAULT_SEASONAL_SETTINGS, type SeasonalSettings, type SeasonalTheme } from '@/lib/seasonal'
 import { useVisitorPreferences } from './VisitorPreferencesProvider'
 
 export type PersonalThemePreference = {
@@ -12,6 +12,7 @@ export type PersonalThemePreference = {
 }
 
 type SeasonalThemeContextValue = {
+  allowedThemes: SeasonalTheme[]
   theme: SeasonalTheme | null
   timeZone: string
   australian: boolean
@@ -67,6 +68,7 @@ export default function SeasonalThemeProvider({ settings, children, enabled = tr
   const [onceTheme, setOnceTheme] = useState<SeasonalTheme | null>(null)
   const [timeZone, setTimeZone] = useState('UTC')
   const { simulation } = useVisitorPreferences()
+  const allowedThemes = (settings.enabledThemes ?? DEFAULT_SEASONAL_SETTINGS.enabledThemes).filter(isSeasonalTheme)
 
   useEffect(() => {
     setTimeZone(Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC')
@@ -106,13 +108,14 @@ export default function SeasonalThemeProvider({ settings, children, enabled = tr
 
   const theme = useMemo(() => {
     if (!enabled || !isModuleAvailable('seasons')) return null
-    if (onceTheme) return onceTheme
-    if (preference.theme && preference.until && Date.parse(preference.until) > effectiveNow.getTime()) return preference.theme
+    const allowed = (settings.enabledThemes ?? DEFAULT_SEASONAL_SETTINGS.enabledThemes).filter(isSeasonalTheme)
+    if (onceTheme && allowed.includes(onceTheme)) return onceTheme
+    if (preference.theme && allowed.includes(preference.theme) && preference.until && Date.parse(preference.until) > effectiveNow.getTime()) return preference.theme
     return resolveGlobalTheme(settings, effectiveNow, effectiveTimeZone, perceivedLocation)
   }, [enabled, effectiveNow, effectiveTimeZone, onceTheme, perceivedLocation, preference, settings])
 
   return (
-    <SeasonalThemeContext.Provider value={{ theme, timeZone: effectiveTimeZone, australian, preference, setPreference, activateOnce, clearOnce: () => { setOnceTheme(null); try { sessionStorage.removeItem(ONCE_KEY) } catch {} } }}>
+    <SeasonalThemeContext.Provider value={{ allowedThemes, theme, timeZone: effectiveTimeZone, australian, preference, setPreference, activateOnce, clearOnce: () => { setOnceTheme(null); try { sessionStorage.removeItem(ONCE_KEY) } catch {} } }}>
       {children}
     </SeasonalThemeContext.Provider>
   )

@@ -1,15 +1,14 @@
+import { dashboardAccess } from '@/lib/dashboard-access'
 import { revalidatePath } from 'next/cache'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { saveLegalSettings } from '@/lib/legal-settings'
 
-const ALLOWED_DISCORD_ID = process.env.DISCORD_USER_ID
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
-  const userId = (session?.user as { id?: string } | undefined)?.id
-  if (!userId || !ALLOWED_DISCORD_ID || userId !== ALLOWED_DISCORD_ID) {
+  if (!(await dashboardAccess(session))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

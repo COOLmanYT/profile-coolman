@@ -1,5 +1,7 @@
 'use client'
 
+import FeatureLayout, { FeatureSlot } from './FeatureLayout'
+
 import { siteConfig } from '@/lib/site-config.mjs'
 
 import Image from 'next/image'
@@ -23,17 +25,17 @@ export default function BuyMeACoffeeWidget({ visible }: { visible: Record<string
     if (!signal.aborted) { setData(next); setFailed(false) }
   }, onError: () => setFailed(true) }), [])
   const money = (value: number) => new Intl.NumberFormat('en-AU', { style: 'currency', currency: data?.currency ?? 'AUD', currencyDisplay: 'code', maximumFractionDigits: 2 }).format(value)
-  return <section aria-label="Buy Me a Coffee" className="profile-module w-full space-y-3 text-white">
-    {show('cover') && data?.coverUrl && <div className="relative h-24 overflow-hidden rounded-xl"><Image src={data.coverUrl} alt="" fill sizes="(max-width: 640px) 320px, 400px" className="object-cover" unoptimized /></div>}
+  return <FeatureLayout module="buymeacoffee"><section aria-label="Buy Me a Coffee" className="profile-module w-full space-y-3 text-white">
+    <FeatureSlot data-feature="buymeacoffee_cover">{show('cover') && data?.coverUrl && <div className="relative h-24 overflow-hidden rounded-xl"><Image src={data.coverUrl} alt="" fill sizes="(max-width: 640px) 320px, 400px" className="object-cover" unoptimized /></div>}</FeatureSlot>
     <ModuleHeader service="buymeacoffee" title="Buy Me a Coffee" href={COMMUNITY_LINKS.buymeacoffee} name={data?.name ?? siteConfig.profile.username} username={data?.username} avatarUrl={data?.avatarUrl} visible={visible} />
     {!data && !failed && <p role="status" className="animate-pulse text-xs text-white/65">Loading creator page…</p>}
     {failed && <p role="status" className="text-xs text-white/65">Creator details could not refresh.{data ? ' Showing the last available details.' : ''}</p>}
-    {show('bio') && data?.bio && <p className="whitespace-pre-line break-words text-xs leading-relaxed text-white/75">{data.bio}</p>}
+    <FeatureSlot data-feature="buymeacoffee_bio">{show('bio') && data?.bio && <p className="whitespace-pre-line break-words text-xs leading-relaxed text-white/75">{data.bio}</p>}</FeatureSlot>
     <div className={`grid gap-2 text-center ${show('price') && data?.price != null && show('supporters') && data?.supporters != null ? 'grid-cols-2' : 'grid-cols-1'}`}>
-      {show('price') && data?.price != null && <div className="rounded-lg bg-white/5 px-2 py-2"><p className="text-sm font-semibold">{money(data.price)}</p><p className="mt-0.5 text-[11px] text-white/60">Buy a {data.item}</p></div>}
-      {show('supporters') && data?.supporters != null && <div className="rounded-lg bg-white/5 px-2 py-2"><p className="text-sm font-semibold">{data.supporters.toLocaleString('en-US')}</p><p className="mt-0.5 text-[11px] text-white/60">Supporters</p></div>}
+      <FeatureSlot data-feature="buymeacoffee_price">{show('price') && data?.price != null && <div className="rounded-lg bg-white/5 px-2 py-2"><p className="text-sm font-semibold">{money(data.price)}</p><p className="mt-0.5 text-[11px] text-white/60">Buy a {data.item}</p></div>}</FeatureSlot>
+      <FeatureSlot data-feature="buymeacoffee_supporters">{show('supporters') && data?.supporters != null && <div className="rounded-lg bg-white/5 px-2 py-2"><p className="text-sm font-semibold">{data.supporters.toLocaleString('en-US')}</p><p className="mt-0.5 text-[11px] text-white/60">Supporters</p></div>}</FeatureSlot>
     </div>
-    {show('memberships') && !!data?.memberships.length && <div className="space-y-2 border-t border-white/10 pt-2.5"><h3 className="text-[10px] font-bold uppercase tracking-widest text-white/55">Memberships</h3><div className="grid grid-cols-2 gap-2">{data.memberships.map((level) => <a key={level.title} href={level.url} target="_blank" rel="noopener noreferrer" className="rounded-lg bg-white/5 px-2.5 py-2 text-xs hover:bg-white/10"><span className="block truncate font-semibold">{level.title} ↗</span><span className="mt-1 block text-[10px] text-white/60">{money(level.price)} / month</span></a>)}</div></div>}
-    {show('button') && <a href={COMMUNITY_LINKS.buymeacoffee} target="_blank" rel="noopener noreferrer" className="block rounded-lg bg-amber-300 px-3 py-2 text-center text-xs font-bold text-amber-950 transition-colors hover:bg-amber-200">Buy me a {data?.item ?? 'coffee'} ↗</a>}
-  </section>
+    <FeatureSlot data-feature="buymeacoffee_memberships">{show('memberships') && !!data?.memberships.length && <div className="space-y-2 border-t border-white/10 pt-2.5"><h3 className="text-[10px] font-bold uppercase tracking-widest text-white/55">Memberships</h3><div className="grid grid-cols-2 gap-2">{data.memberships.map((level) => <a key={level.title} href={level.url} target="_blank" rel="noopener noreferrer" className="rounded-lg bg-white/5 px-2.5 py-2 text-xs hover:bg-white/10"><span className="block truncate font-semibold">{level.title} ↗</span><span className="mt-1 block text-[10px] text-white/60">{money(level.price)} / month</span></a>)}</div></div>}</FeatureSlot>
+    <FeatureSlot data-feature="buymeacoffee_button">{show('button') && <a href={COMMUNITY_LINKS.buymeacoffee} target="_blank" rel="noopener noreferrer" className="block rounded-lg bg-amber-300 px-3 py-2 text-center text-xs font-bold text-amber-950 transition-colors hover:bg-amber-200">Buy me a {data?.item ?? 'coffee'} ↗</a>}</FeatureSlot>
+  </section></FeatureLayout>
 }

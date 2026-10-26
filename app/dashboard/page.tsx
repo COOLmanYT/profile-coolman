@@ -1,3 +1,8 @@
+import { dashboardAccess, getDashboardMembers } from '@/lib/dashboard-access'
+import AccessSettingsClient from '@/components/AccessSettingsClient'
+import { siteConfig } from '@/lib/site-config.mjs'
+import { getLayoutSettings, getManagedAnnouncement } from '@/lib/dashboard-settings'
+import AnnouncementEditor from '@/components/AnnouncementEditor'
 import { isModuleAvailable } from '@/lib/site-config.mjs'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
@@ -16,7 +21,6 @@ import SeasonalPreview from '@/components/SeasonalPreview'
 import SeasonalSimulationControls from '@/components/SeasonalSimulationControls'
 import ProviderHealthClient from '@/components/ProviderHealthClient'
 
-const ALLOWED_DISCORD_ID = process.env.DISCORD_USER_ID
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions)
@@ -25,12 +29,11 @@ export default async function DashboardPage() {
     redirect('/auth/signin')
   }
 
-  const userId = (session.user as { id?: string })?.id
-  if (!userId || !ALLOWED_DISCORD_ID || userId !== ALLOWED_DISCORD_ID) {
-    redirect('/auth/signin')
-  }
+  const access = await dashboardAccess(session)
+  if (!access) redirect('/auth/signin')
+  const members = access.owner && siteConfig.dashboard.features.accessManagement ? await getDashboardMembers() : []
 
-  const [toggles, twitchHealth, seasonalSettings, legalSettings] = await Promise.all([getToggles(), getTwitchHealth(), getSeasonalSettings(), getLegalSettings()])
+  const [toggles, twitchHealth, seasonalSettings, legalSettings, layout, announcement] = await Promise.all([getToggles(), getTwitchHealth(), getSeasonalSettings(), getLegalSettings(), getLayoutSettings(), getManagedAnnouncement()])
 
   return (
     <div className="min-h-screen bg-[#1a1a1a] p-4 sm:p-6 lg:p-8">
@@ -45,26 +48,15 @@ export default async function DashboardPage() {
             </div>
             <DashboardClient initialToggles={toggles} signOutOnly />
           </div>
-          <DashboardWorkspace initialToggles={toggles} />
-          <div className="mt-8 grid items-start gap-6 border-t border-white/10 pt-6 lg:grid-cols-2">
-          <div className="min-w-0">
-            {isModuleAvailable('seasons') && <SeasonalSettingsClient initialSettings={seasonalSettings} />}
-            <h2 className="mt-8 text-sm font-semibold uppercase tracking-wider text-white/80">Preview tools</h2>
-            <p className="mt-1 text-xs text-white/55">Simulations affect this visit. Use the seasonal settings above to change what visitors see.</p>
-            {isModuleAvailable('seasons') && <SeasonalSimulationControls compact />}
-            {isModuleAvailable('seasons') && <SeasonalPreview />}
-          </div>
-          <div className="min-w-0">
-            <LegalSettingsClient initialSettings={legalSettings} />
-            <ProviderHealthClient />
-            {isModuleAvailable('twitch') && <TwitchConnectionStatus health={twitchHealth} />}
-          {isModuleAvailable('twitch') && <a
-            href="/api/twitch/connect"
-            className="mt-6 flex items-center justify-center rounded-xl bg-[#9146ff] px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#7c36e1]"
-          >
-            {twitchHealth.state === 'connected' ? 'Reconnect Twitch' : 'Connect Twitch'}
-          </a>}
-          </div>
+          <DashboardWorkspace initialToggles={toggles} initialLayout={layout} announcement={announcement} />
+          <div className="mt-5 columns-1 gap-4 border-t border-white/10 pt-5 lg:columns-2">
+            {siteConfig.dashboard.features.announcements && isModuleAvailable('announcement') && siteConfig.announcement.source !== 'lanyard' && <div className="mb-4 break-inside-avoid [&>section]:mt-0"><AnnouncementEditor initialAnnouncement={announcement ?? null} /></div>}
+            {isModuleAvailable('seasons') && siteConfig.dashboard.features.seasons && <div className="mb-4 break-inside-avoid [&>section]:mt-0"><SeasonalSettingsClient initialSettings={seasonalSettings} /><details className="mt-3 rounded-xl border border-white/10 p-3"><summary className="cursor-pointer text-sm text-white/80">Preview seasonal events</summary><SeasonalSimulationControls compact /><SeasonalPreview /></details></div>}
+            {access.owner && siteConfig.dashboard.features.accessManagement && <div className="mb-4 break-inside-avoid [&>section]:mt-0"><AccessSettingsClient initialMembers={members} /></div>}
+            <div className="mb-4 break-inside-avoid [&>section]:mt-0"><LegalSettingsClient initialSettings={legalSettings} /></div>
+            <div className="mb-4 break-inside-avoid [&>section]:mt-0"><ProviderHealthClient /></div>
+            {access.owner && isModuleAvailable('twitch') && <section className="mb-4 break-inside-avoid [&>section]:mt-0 rounded-xl border border-white/10 bg-white/5 p-4"><TwitchConnectionStatus health={twitchHealth} /><a href="/api/twitch/connect" className="mt-3 flex items-center justify-center rounded-lg bg-[#9146ff] px-3 py-2 text-sm font-semibold text-white">{twitchHealth.state === 'connected' ? 'Reconnect Twitch' : 'Connect Twitch'}</a></section>}
+            <section className="mb-4 break-inside-avoid [&>section]:mt-0 rounded-xl border border-white/10 bg-white/5 p-4"><h2 className="text-sm font-semibold text-white">Backgrounds and configuration</h2><p className="mt-1 text-xs text-white/50">Examples for colours, animations, images, GIFs and videos.</p><a href="/backgrounds" className="mt-3 inline-block text-sm font-semibold text-red-200 underline">Open background guide →</a></section>
           </div>
         </div></SeasonalThemeProvider>
       </div>

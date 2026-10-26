@@ -1,3 +1,4 @@
+import { dashboardAccess } from '@/lib/dashboard-access'
 import { isControlAvailable } from '@/lib/site-config.mjs'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
@@ -6,15 +7,13 @@ import { getSupabase } from '@/lib/supabase-server'
 import { revalidatePath } from 'next/cache'
 import { DEFAULT_TOGGLES } from '@/lib/toggle-defaults.mjs'
 
-const ALLOWED_DISCORD_ID = process.env.DISCORD_USER_ID
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-  const userId = (session.user as { id?: string })?.id
-  if (!userId || !ALLOWED_DISCORD_ID || userId !== ALLOWED_DISCORD_ID) {
+  if (!(await dashboardAccess(session))) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 

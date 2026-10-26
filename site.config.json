@@ -17,7 +17,7 @@
   },
   "appearance": {
     "defaultMode": "dark",
-    "allowModeSwitch": true,
+    "allowModeSwitch": false,
     "card": {
       "from": "#ff0000",
       "to": "#8b0000"
@@ -202,7 +202,7 @@
     },
     "announcement": {
       "label": "Announcement",
-      "description": "Message the Lanyard bot: .set announcement Your message. Clear it with .del announcement. Optional link: .set announcement_url https://example.com",
+      "description": "Publish an update from the dashboard, or use the announcement source chosen in site configuration.",
       "enabled": true,
       "default": true,
       "features": {}
@@ -606,6 +606,158 @@
           "default": true
         }
       }
+    }
+  },
+  "dashboard": {
+    "features": {
+      "ordering": true,
+      "announcements": true,
+      "seasons": true,
+      "accessManagement": false
+    },
+    "auth": {
+      "providers": {
+        "discord": true,
+        "github": false,
+        "google": false
+      }
+    }
+  },
+  "layout": {
+    "moduleOrder": [
+      "profile",
+      "announcement",
+      "github",
+      "spotify",
+      "twitch",
+      "discord",
+      "youtube",
+      "roblox",
+      "steam",
+      "buymeacoffee",
+      "socials"
+    ],
+    "featureOrder": {
+      "github": [
+        "github_profile",
+        "github_status",
+        "github_stats",
+        "github_commits",
+        "github_graph",
+        "github_projects",
+        "github_commit_titles",
+        "github_language",
+        "github_licence"
+      ],
+      "announcement": [],
+      "spotify": [
+        "spotify_widget",
+        "spotify_position",
+        "spotify_embed",
+        "spotify_playlist",
+        "spotify_history"
+      ],
+      "twitch": [
+        "twitch_profile",
+        "twitch_stats",
+        "twitch_live",
+        "twitch_takeover",
+        "twitch_schedule"
+      ],
+      "youtube": [
+        "youtube_stats",
+        "youtube_live",
+        "youtube_latest",
+        "youtube_shorts",
+        "youtube_videos",
+        "youtube_embed_default"
+      ],
+      "discord": [
+        "discord_banner",
+        "discord_profile",
+        "discord_badges",
+        "discord_devices",
+        "discord_decoration",
+        "discord_status",
+        "discord_music",
+        "discord_video",
+        "discord_games",
+        "discord_other",
+        "discord_mobile",
+        "discord_web",
+        "discord_desktop"
+      ],
+      "roblox": [
+        "roblox_avatar",
+        "roblox_name",
+        "roblox_username",
+        "roblox_stats",
+        "roblox_friends",
+        "roblox_followers",
+        "roblox_following"
+      ],
+      "steam": [
+        "steam_avatar",
+        "steam_name",
+        "steam_username",
+        "steam_status",
+        "steam_game",
+        "steam_activity",
+        "steam_hours",
+        "steam_library"
+      ],
+      "buymeacoffee": [
+        "buymeacoffee_cover",
+        "buymeacoffee_avatar",
+        "buymeacoffee_name",
+        "buymeacoffee_username",
+        "buymeacoffee_bio",
+        "buymeacoffee_price",
+        "buymeacoffee_supporters",
+        "buymeacoffee_memberships",
+        "buymeacoffee_button"
+      ],
+      "socials": [],
+      "status": [],
+      "views": [],
+      "likes": [],
+      "share": [],
+      "seasons": [],
+      "easterEgg": [],
+      "analytics": [],
+      "profile": [
+        "profile_avatar",
+        "profile_bio",
+        "profile_location"
+      ]
+    }
+  },
+  "announcement": {
+    "source": "auto",
+    "message": "",
+    "url": ""
+  },
+  "seasonal": {
+    "availableThemes": {
+      "christmas": true,
+      "halloween": true,
+      "easter": true,
+      "new-year": true,
+      "birthday": true
+    },
+    "defaults": {
+      "automaticEnabled": true,
+      "scheduledTheme": null,
+      "scheduledStartsAt": null,
+      "scheduledEndsAt": null,
+      "scheduledLocation": "anywhere",
+      "enabledThemes": [
+        "christmas",
+        "halloween",
+        "easter",
+        "new-year",
+        "birthday"
+      ]
     }
   }
 }

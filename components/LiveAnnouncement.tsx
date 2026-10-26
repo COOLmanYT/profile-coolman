@@ -2,10 +2,17 @@
 
 import { useLanyard } from '@/lib/use-lanyard'
 import { readAnnouncement } from '@/lib/live-announcement.mjs'
+import type { Announcement } from '@/lib/dashboard-settings'
 
-export default function LiveAnnouncement() {
+export default function LiveAnnouncement({ managed }: { managed?: Announcement | null }) {
+  return managed === undefined ? <LanyardAnnouncement /> : <AnnouncementBody announcement={managed} />
+}
+function LanyardAnnouncement() {
   const { presence, unavailable } = useLanyard()
   const announcement = !unavailable && readAnnouncement(presence?.kv)
+  return <AnnouncementBody announcement={announcement || null} />
+}
+function AnnouncementBody({ announcement }: { announcement: Announcement | null }) {
   if (!announcement) return null
 
   return (

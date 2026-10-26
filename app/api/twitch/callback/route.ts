@@ -1,20 +1,20 @@
+import { dashboardAccess } from '@/lib/dashboard-access'
 import { isModuleAvailable } from '@/lib/site-config.mjs'
 import { getServerSession } from 'next-auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { authOptions } from '@/lib/auth'
 import { exchangeAuthorizationCode, getTwitchRedirectUri } from '@/lib/twitch'
 
-const ALLOWED_DISCORD_ID = process.env.DISCORD_USER_ID
 const STATE_COOKIE = 'twitch_oauth_state'
 
 export async function GET(req: NextRequest) {
   if (!isModuleAvailable('twitch')) return NextResponse.json({ error: 'MODULE_DISABLED' }, { status: 404, headers: { 'Cache-Control': 'no-store' } })
   const session = await getServerSession(authOptions)
-  const userId = (session?.user as { id?: string } | undefined)?.id
+  const access = await dashboardAccess(session)
   const code = req.nextUrl.searchParams.get('code')
   const state = req.nextUrl.searchParams.get('state')
   const expectedState = req.cookies.get(STATE_COOKIE)?.value
-  if (!userId || userId !== ALLOWED_DISCORD_ID || !code || !state || state !== expectedState) {
+  if (!access?.owner || !code || !state || state !== expectedState) {
     return NextResponse.json({ error: 'Invalid Twitch authorization request' }, { status: 400 })
   }
 
