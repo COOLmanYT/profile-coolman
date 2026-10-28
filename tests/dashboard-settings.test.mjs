@@ -151,6 +151,19 @@ test('settings reject unavailable controls, unsafe announcements and unauthorize
   assert.equal((await settingsRoute({ config }).POST(request({ type: 'announcement', value: { message: 'Hello', url: '' } }))).status, 404)
 })
 
+test('announcement presentation persists through the route with strict option validation', async () => {
+  const value = { message: 'New video', url: 'https://example.test/watch', label: ' Latest news ', linkText: ' Watch now ', placement: 'bar' }
+  const route = settingsRoute()
+  const response = await route.POST(request({ type: 'announcement', value }))
+  assert.equal(response.status, 200)
+  assert.deepEqual(route.writes, [['profile-announcement', { ...value, label: 'Latest news', linkText: 'Watch now' }]])
+  for (const invalid of [{ label: 123 }, { label: null }, { label: 'x'.repeat(81) }, { linkText: {} }, { linkText: 'x'.repeat(81) }, { placement: null }, { placement: 'fixed' }]) {
+    const rejected = settingsRoute()
+    assert.equal((await rejected.POST(request({ type: 'announcement', value: { ...value, ...invalid } }))).status, 400)
+    assert.deepEqual(rejected.writes, [])
+  }
+})
+
 test('announcement source fallback and clear overrides are distinct', async () => {
   const config = structuredClone(siteConfig)
   let saved
@@ -161,6 +174,10 @@ test('announcement source fallback and clear overrides are distinct', async () =
   assert.equal(await load().getManagedAnnouncement(), undefined)
   saved = { message: 'Saved update', url: 'https://example.test' }
   assert.equal((await load().getManagedAnnouncement()).message, 'Saved update')
+  assert.equal((await load().getManagedAnnouncement()).label, 'A little update')
+  assert.equal((await load().getManagedAnnouncement()).placement, 'card')
+  saved = { ...saved, label: 'News', linkText: 'Read this', placement: 'bar' }
+  assert.deepEqual(await load().getManagedAnnouncement(), { ...saved, url: 'https://example.test/' })
   saved = { message: '', url: '' }
   assert.equal(await load().getManagedAnnouncement(), null)
   config.announcement.source = 'lanyard'
@@ -170,6 +187,12 @@ test('announcement source fallback and clear overrides are distinct', async () =
   assert.equal(await load().getManagedAnnouncement(), null)
   config.announcement.message = 'JSON default'
   assert.equal((await load().getManagedAnnouncement()).message, 'JSON default')
+  config.announcement.label = 'Configured label'
+  config.announcement.linkText = 'Configured link'
+  config.announcement.placement = 'bar'
+  assert.equal((await load().getManagedAnnouncement()).label, 'Configured label')
+  assert.equal((await load().getManagedAnnouncement()).linkText, 'Configured link')
+  assert.equal((await load().getManagedAnnouncement()).placement, 'bar')
 })
 
 test('only permanent owners can edit private membership and disabled access management rejects writes', async () => {

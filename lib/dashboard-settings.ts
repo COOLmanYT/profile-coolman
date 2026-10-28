@@ -22,14 +22,14 @@ export async function writeDashboardSetting(id: string, value: unknown) {
 export async function getLayoutSettings() {
   return normaliseLayout(siteConfig.dashboard.features.ordering ? await readDashboardSetting('profile-layout') : undefined)
 }
-export type Announcement = { message: string; url: string | null }
+export type Announcement = NonNullable<ReturnType<typeof readAnnouncement>>
 export async function getManagedAnnouncement(): Promise<Announcement | null | undefined> {
   if (siteConfig.announcement.source === 'lanyard') return undefined
   const saved = siteConfig.dashboard.features.announcements ? await readDashboardSetting('profile-announcement') : undefined
   if (saved && typeof saved === 'object') {
-    const record = saved as { message?: unknown; url?: unknown }
-    return readAnnouncement({ announcement: record.message, announcement_url: record.url })
+    const record = saved as Partial<Record<keyof Announcement, unknown>>
+    return readAnnouncement({ announcement: record.message, announcement_url: record.url, announcement_label: record.label, announcement_link_text: record.linkText, announcement_placement: record.placement })
   }
-  const configured = readAnnouncement({ announcement: siteConfig.announcement.message, announcement_url: siteConfig.announcement.url })
+  const configured = readAnnouncement({ announcement: siteConfig.announcement.message, announcement_url: siteConfig.announcement.url, announcement_label: siteConfig.announcement.label, announcement_link_text: siteConfig.announcement.linkText, announcement_placement: siteConfig.announcement.placement })
   return configured ?? (siteConfig.announcement.source === 'dashboard' ? null : undefined)
 }

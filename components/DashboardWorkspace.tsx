@@ -1,12 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-import { siteConfig } from '@/lib/site-config.mjs'
+import { siteConfig, isModuleAvailable } from '@/lib/site-config.mjs'
 import LayoutSettingsClient from './LayoutSettingsClient'
 import type { LayoutSettings } from './FeatureLayout'
 import type { Announcement } from '@/lib/dashboard-settings'
 import DashboardClient from './DashboardClient'
 import ProfileCard from './ProfileCard'
+import LiveAnnouncement from './LiveAnnouncement'
 import { useToast } from './ToastProvider'
 
 export default function DashboardWorkspace({ initialToggles, initialLayout, announcement }: { initialToggles: Record<string, boolean>; initialLayout: LayoutSettings; announcement?: Announcement | null }) {
@@ -22,7 +23,7 @@ export default function DashboardWorkspace({ initialToggles, initialLayout, anno
       <button onClick={togglePreview} className="mt-6 w-full rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10">
         {preview ? 'Hide profile preview' : 'Preview profile'}
       </button>
-      {preview && <section className="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-black/20 p-3"><p className="mb-3 text-xs font-semibold uppercase tracking-wider text-white/45">Live preview</p><div className="mx-auto max-w-[460px]"><ProfileCard toggles={toggles} preview layout={layout} announcement={announcement} /></div></section>}
+      {preview && <section className="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-black/20 p-3"><p className="mb-3 text-xs font-semibold uppercase tracking-wider text-white/45">Live preview</p>{isModuleAvailable('announcement') && toggles.announcement && <div className="mb-3"><LiveAnnouncement managed={announcement} placement="bar" /></div>}<div className="mx-auto max-w-[460px]"><ProfileCard toggles={toggles} preview layout={layout} announcement={announcement} /></div></section>}
     </>
   )
 }

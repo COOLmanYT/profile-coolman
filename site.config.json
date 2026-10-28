@@ -734,6 +734,9 @@
   },
   "announcement": {
     "source": "auto",
+    "label": "A little update",
+    "linkText": "Find out more",
+    "placement": "card",
     "message": "",
     "url": ""
   },

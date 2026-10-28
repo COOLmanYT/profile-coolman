@@ -20,10 +20,12 @@ export async function POST(req: NextRequest) {
     value = normaliseLayout(payload.value); key = 'profile-layout'
   } else if (payload?.type === 'announcement' && siteConfig.dashboard.features.announcements && isModuleAvailable('announcement') && siteConfig.announcement.source !== 'lanyard') {
     const message = payload.value?.message, url = payload.value?.url
+    const { label, linkText, placement } = payload.value ?? {}
     if (typeof message !== 'string' || message.length > 280 || typeof url !== 'string' || url.length > 2048) return NextResponse.json({ error: 'Invalid announcement' }, { status: 400 })
-    const announcement = readAnnouncement({ announcement: message, announcement_url: url })
+    if ([label, linkText].some(text => text !== undefined && (typeof text !== 'string' || text.length > 80)) || (placement !== undefined && !['card', 'bar'].includes(placement))) return NextResponse.json({ error: 'Invalid announcement options' }, { status: 400 })
+    const announcement = readAnnouncement({ announcement: message, announcement_url: url, announcement_label: label, announcement_link_text: linkText, announcement_placement: placement })
     if (url.trim() && (!announcement || !announcement.url)) return NextResponse.json({ error: 'Use an HTTPS link with a message' }, { status: 400 })
-    value = { message: announcement?.message ?? '', url: announcement?.url ?? '' }; key = 'profile-announcement'
+    value = announcement ? { ...announcement, url: announcement.url ?? '' } : { message: '', url: '' }; key = 'profile-announcement'
   } else return NextResponse.json({ error: 'Setting unavailable' }, { status: 404 })
   if (!(await writeDashboardSetting(key, value))) return NextResponse.json({ error: 'Could not save settings' }, { status: 503 })
   revalidatePath('/')

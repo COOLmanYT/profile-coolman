@@ -202,11 +202,18 @@ GitHub public profile status (emoji and message) is read from the public profile
 
 Healthy snapshots are cached for one hour in the Vercel CDN and per server instance, with concurrent refreshes coalesced and ETags used on refresh. A normal refresh for this account uses one public repository-list request, one calendar page, one public profile page, one commit-count search and at most three latest-commit requests. Language and licence use existing repository metadata with no extra requests. Pagination is bounded at five repository pages (500 repos); if more pages exist, totals are marked unavailable rather than presenting partial sums. Partial snapshots report degraded status with a short CDN cache; upstream failures and rate limits use a shared retry cooldown. No request follows provider-supplied pagination URLs. Caches are per instance plus CDN, not a fleet-wide quota guarantee.
 
-To publish a **live announcement**, DM the [Lanyard bot](https://github.com/Phineas/lanyard#kv):
+**Live announcements** can use the dashboard or Lanyard, according to the configured source.
+
+When using the dashboard announcement source, the **Announcement** editor lets you set the label (previously “A little update”), link text, and placement: **In profile card** keeps its arranged module position; **Top of page bar** displays it across the top of the home page. A blank label hides it, and blank link text uses “Find out more”. Existing announcements retain the original wording and card placement. Clearing the message hides either placement. Configuration-driven announcements support the same fields with `announcement.label`, `announcement.linkText`, and `announcement.placement` (`card` or `bar`) in `site.config.json`. Labels and link text are limited to 80 characters.
+
+For the Lanyard source, DM the [Lanyard bot](https://github.com/Phineas/lanyard#kv):
 
 ```text
 .set announcement New video tonight!
 .set announcement_url https://www.youtube.com/@coolmangamer
+.set announcement_label Latest news
+.set announcement_link_text Watch now
+.set announcement_placement bar
 ```
 
 The optional link must use HTTPS. The message is plain text, limited to 280 characters on the profile. To remove it, send `.del announcement`; remove the optional link with `.del announcement_url`. KV is public, so use it only for messages intended for everyone. Updates and deletion arrive on the same Lanyard WebSocket used by Discord and Spotify, with no additional polling, database or API key. While that connection is unavailable, the announcement is hidden. Clearing the message hides the whole announcement.

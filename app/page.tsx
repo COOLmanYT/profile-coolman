@@ -12,11 +12,13 @@ import Link from 'next/link'
 import ShareCard from '@/components/ShareCard'
 import StatusWidget from '@/components/StatusWidget'
 import LikeCounter from '@/components/LikeCounter'
+import LiveAnnouncement from '@/components/LiveAnnouncement'
 export default async function Home() {
   const [toggles, seasonalSettings, layout, announcement] = await Promise.all([getToggles(), getSeasonalSettings(), getLayoutSettings(), getManagedAnnouncement()])
   return (
     <SeasonalThemeProvider settings={seasonalSettings} enabled={toggles.seasons}>
       <AnimatedBackground />
+      {toggles.announcement && <VisitorModule id="announcement"><LiveAnnouncement managed={announcement} placement="bar" /></VisitorModule>}
       <main className="relative flex min-h-screen flex-col items-center justify-center px-3 pb-16 pt-6 sm:px-4 sm:py-8" style={{ zIndex: 10 }}>
         {toggles.easterEgg && <EasterEgg />}
         {toggles.seasons && <SeasonalEffects />}
