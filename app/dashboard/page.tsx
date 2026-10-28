@@ -48,6 +48,7 @@ export default async function DashboardPage() {
             </div>
             <DashboardClient initialToggles={toggles} signOutOnly />
           </div>
+          <a href="/dashboard/statistics" className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-sky-300/20 bg-gradient-to-r from-sky-400/10 via-transparent to-rose-400/10 p-5 transition-colors hover:border-sky-300/40"><div><h2 className="font-semibold text-white">Profile statistics</h2><p className="mt-1 text-sm text-white/60">Views, likes, daily graphs and activity highlights.</p></div><span className="text-sm font-semibold text-sky-200">Explore statistics →</span></a>
           <DashboardWorkspace initialToggles={toggles} initialLayout={layout} announcement={announcement} />
           <div className="mt-5 columns-1 gap-4 border-t border-white/10 pt-5 md:columns-2">
             {siteConfig.dashboard.features.announcements && isModuleAvailable('announcement') && siteConfig.announcement.source !== 'lanyard' && <div className="mb-4 break-inside-avoid [&>section]:mt-0"><AnnouncementEditor initialAnnouncement={announcement ?? null} /></div>}
