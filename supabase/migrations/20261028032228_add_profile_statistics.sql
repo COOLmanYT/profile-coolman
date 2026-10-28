@@ -64,7 +64,7 @@ create trigger profile_likes_statistics
 
 -- One bounded database request, evaluated from a consistent snapshot. Direct
 -- browser roles cannot read history or execute this function.
-create function public.get_profile_statistics(p_days integer default 30)
+create function public.get_profile_statistics(p_days integer default 30, p_start date default null, p_end date default null)
 returns jsonb
 language plpgsql
 stable
@@ -73,11 +73,27 @@ set search_path = ''
 as $$
 declare
   result jsonb;
+  range_start date;
+  range_end date;
+  range_days integer;
 begin
-  if p_days not in (7, 30, 90) or p_days is null then
-    raise exception 'Unsupported statistics range';
+  if p_start is not null or p_end is not null then
+    if p_start is null or p_end is null or p_start < date '2000-01-01' or p_start > p_end or p_end > (statement_timestamp() at time zone 'UTC')::date or p_end - p_start + 1 > 366 then
+      raise exception 'Unsupported statistics range';
+    end if;
+    range_start := p_start;
+    range_end := p_end;
+    range_days := p_end - p_start + 1;
+  else
+    if p_days not in (7, 30, 90) or p_days is null then
+      raise exception 'Unsupported statistics range';
+    end if;
+    range_end := (statement_timestamp() at time zone 'UTC')::date;
+    range_start := range_end - (p_days - 1);
+    range_days := p_days;
   end if;
   select jsonb_build_object(
+    'range', jsonb_build_object('start', to_char(range_start, 'YYYY-MM-DD'), 'end', to_char(range_end, 'YYYY-MM-DD')),
     'trackedSince', to_char(state.started_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
     'generatedAt', to_char(statement_timestamp() at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'),
     'totals', jsonb_build_object(
@@ -90,7 +106,7 @@ begin
         'views', case when dates.day < (state.started_at at time zone 'UTC')::date then null else coalesce(daily.views, 0) end,
         'likes', case when dates.day < (state.started_at at time zone 'UTC')::date then null else coalesce(daily.likes, 0) end
       ) order by dates.day)
-      from (select (statement_timestamp() at time zone 'UTC')::date - (p_days * 2 - 1) + n as day from generate_series(0, p_days * 2 - 1) as n) dates
+      from (select range_end - (range_days * 2 - 1) + n as day from generate_series(0, range_days * 2 - 1) as n) dates
       left join public.profile_statistics_daily daily on daily.day = dates.day
     )
   ) into result
@@ -98,7 +114,7 @@ begin
   return result;
 end;
 $$;
-revoke execute on function public.get_profile_statistics(integer) from public, anon, authenticated;
-grant execute on function public.get_profile_statistics(integer) to service_role;
+revoke execute on function public.get_profile_statistics(integer, date, date) from public, anon, authenticated;
+grant execute on function public.get_profile_statistics(integer, date, date) to service_role;
 
 commit;
