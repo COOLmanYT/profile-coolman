@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { dashboardAccess } from '@/lib/dashboard-access'
 import { getSupabase } from '@/lib/supabase-server'
 import { customStatisticsRange, statisticsRange, type ProfileStatistics } from '@/lib/profile-statistics'
+import { getCollectionPolicy } from '@/lib/statistics-collection'
 
 export const dynamic = 'force-dynamic'
 const headers = { 'Cache-Control': 'private, no-store', Vary: 'Cookie' }
@@ -23,7 +24,7 @@ export async function GET(request: NextRequest) {
     if (!supabase) throw new Error('Storage unavailable')
     const { data, error } = await supabase.rpc('get_profile_statistics', custom ? { p_start: custom.start, p_end: custom.end } : { p_days: days })
     if (error || !validStatistics(data, days, custom)) throw new Error('Statistics unavailable')
-    return NextResponse.json(data, { headers })
+    return NextResponse.json({ ...data, collection: await getCollectionPolicy() }, { headers })
   } catch {
     return NextResponse.json({ error: 'Statistics are unavailable. Check database setup and try again.' }, { status: 503, headers })
   }
@@ -34,6 +35,14 @@ function validStatistics(value: unknown, days: number, custom: { start: string; 
   const count = (n: unknown) => typeof n === 'number' && Number.isSafeInteger(n) && n >= 0
   if (!data || typeof data.trackedSince !== 'string' || !Number.isFinite(Date.parse(data.trackedSince)) || typeof data.generatedAt !== 'string' || !Number.isFinite(Date.parse(data.generatedAt))) return false
   if (!count(data.totals?.views) || !count(data.totals?.likes) || !Array.isArray(data.daily) || data.daily.length !== days * 2) return false
+  if (data.breakdowns) {
+    if (typeof data.breakdowns.startedAt !== 'string' || !Number.isFinite(Date.parse(data.breakdowns.startedAt))) return false
+    for (const key of ['country', 'hour', 'referrer', 'outbound', 'device', 'os', 'browser'] as const) {
+      const category = data.breakdowns.categories?.[key]
+      if (!category || !count(category.total) || !Array.isArray(category.rows) || category.rows.length > (key === 'hour' ? 24 : 20)) return false
+      if (!category.rows.every(row => typeof row?.value === 'string' && row.value.length > 0 && row.value.length <= 253 && count(row.count)) || new Set(category.rows.map(row => row.value)).size !== category.rows.length) return false
+    }
+  }
   const end = custom?.end ?? data.generatedAt.slice(0, 10)
   const start = new Date(Date.parse(`${end}T00:00:00Z`) - (days - 1) * 86_400_000).toISOString().slice(0, 10)
   if (data.range?.start !== start || data.range?.end !== end) return false

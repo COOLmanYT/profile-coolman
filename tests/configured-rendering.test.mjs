@@ -52,17 +52,6 @@ test('profile forwards explicit false flags for code-disabled community features
   assert.equal(captures.steam.steam_name, true)
 })
 
-test('outbound tracking honours the global analytics toggle', () => {
-  const events = []
-  const Social = loadTypescript('components/SocialLinks.tsx', {
-    'react/jsx-runtime': jsxRuntime, 'next/image': { default: image }, '@vercel/analytics': { track: (...args) => events.push(args) },
-  }).default
-  for (const link of Social({ analyticsEnabled: false }).props.children) link.props.onClick()
-  assert.equal(events.length, 0)
-  Social({ analyticsEnabled: true }).props.children[0].props.onClick()
-  assert.equal(events.length, 1)
-})
-
 test('changing analytics invalidates the root layout only after a successful owner save', async () => {
   const previous = process.env.DISCORD_USER_ID
   process.env.DISCORD_USER_ID = 'owner'

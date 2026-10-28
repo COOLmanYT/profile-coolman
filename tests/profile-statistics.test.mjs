@@ -25,6 +25,7 @@ function route({ access = true, missing = false, failed = false, throws = false,
     'next/server': nextServer, '@/lib/auth': { authOptions: {} },
     '@/lib/dashboard-access': { dashboardAccess: async session => session?.user?.id === 'owner' ? {} : null },
     '@/lib/profile-statistics': statistics,
+    '@/lib/statistics-collection': { getCollectionPolicy: async () => ({ country: true }) },
     '@/lib/supabase-server': { getSupabase: () => {
       if (missing) return null
       return { rpc: async (...args) => { calls.push(args); if (throws) throw new Error('private database detail'); return { data, error: failed ? { message: 'private database detail' } : null } } }
@@ -51,7 +52,7 @@ test('statistics ranges are bounded and authorized responses contain aggregates 
   const response = await api.GET(request())
   assert.equal(response.status, 200)
   assert.equal(response.headers.get('cache-control'), 'private, no-store')
-  assert.deepEqual(await response.json(), fixture())
+  assert.deepEqual(await response.json(), { ...fixture(), collection: { country: true } })
   assert.deepEqual(api.calls, [['get_profile_statistics', { p_days: 7 }]])
   for (const days of [30, 90]) assert.equal((await route({ data: fixture(days) }).GET(request(String(days)))).status, 200)
   const defaults = route({ data: fixture(30) })
@@ -177,6 +178,7 @@ test('unknown days remain null and the installation day never creates misleading
 test('statistics charts and table render tracked zeros, unknown dates and accessible daily values', () => {
   const { StatisticsContent } = loadTypescript('components/ProfileStatisticsClient.tsx', {
     react, 'react/jsx-runtime': jsxRuntime, '@/lib/profile-statistics': statistics,
+    './StatisticsBreakdowns': { default: () => null },
   })
   const html = renderToStaticMarkup(react.createElement(StatisticsContent, { data: fixture(7, '2026-10-26T09:00:00Z'), days: 7 }))
   assert.match(html, /Daily views/)

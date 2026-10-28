@@ -118,7 +118,7 @@ export default function ProfileCard({ toggles: savedToggles, preview = false, la
 
       </FeatureLayout>,
     announcement: isModuleAvailable('announcement') && (preview || visibilityLoaded) && toggles.announcement && (preview || !hiddenModules.includes('announcement')) && <LiveAnnouncement managed={announcement} />,
-    socials: toggles.socials && (preview || !hiddenModules.includes('socials')) && <SocialLinks analyticsEnabled={toggles.analytics} />,
+    socials: toggles.socials && (preview || !hiddenModules.includes('socials')) && <SocialLinks />,
     spotify: ((preview || visibilityLoaded) && toggles.spotify && (preview || !hiddenModules.includes('spotify')) && (
           <SpotifyWidget
             showWidget={(toggles.spotify_widget ?? true) && showFeature('spotify_widget')}

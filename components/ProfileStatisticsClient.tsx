@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { customStatisticsRange, STATISTIC_RANGES, summarizeStatistics, type DailyStatistic, type ProfileStatistics } from '@/lib/profile-statistics'
+import StatisticsBreakdowns from './StatisticsBreakdowns'
 
 const number = (value: number) => new Intl.NumberFormat('en', { maximumFractionDigits: 1 }).format(value)
 const date = (value: string) => new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric', timeZone: 'UTC' }).format(new Date(`${value}T00:00:00Z`))
@@ -79,6 +80,7 @@ export function StatisticsContent({ data }: { data: ProfileStatistics }) {
         <p className="mt-4 text-xs text-white/50">UTC weekdays · averages include zero-activity days. Samples can differ by weekday. Observed activity does not establish why a day performed better.</p>
       </section>
     </section>
+    <StatisticsBreakdowns data={data} />
     <details className="mt-5 rounded-2xl border border-white/10 p-5"><summary className="cursor-pointer text-sm font-semibold text-white">Explore daily data</summary><div className="mt-4 overflow-x-auto"><table className="w-full text-left text-sm tabular-nums"><caption className="sr-only">Daily profile statistics in UTC. A dash means no history was collected.</caption><thead className="text-white/60"><tr><th className="py-2">Date (UTC)</th><th className="py-2 text-right">Views</th><th className="py-2 text-right">Likes</th></tr></thead><tbody>{summary.current.slice().reverse().map(day => <tr key={day.date} className="border-t border-white/10 text-white/80"><th scope="row" className="py-2 font-normal">{day.date}{day.date === data.generatedAt.slice(0, 10) ? ' · in progress' : day.date === data.trackedSince.slice(0, 10) ? ' · partial' : ''}</th><td className="py-2 text-right">{day.views === null ? '—' : number(day.views)}</td><td className="py-2 text-right">{day.likes === null ? '—' : number(day.likes)}</td></tr>)}</tbody></table></div></details>
     <aside className="mt-5 rounded-2xl border border-white/10 bg-white/[0.025] p-5 text-xs leading-relaxed text-white/60"><h2 className="mb-2 font-semibold text-white/80">What these numbers mean</h2><p>History started {date(data.trackedSince.slice(0, 10))}, {data.trackedSince.slice(0, 4)} (UTC). Earlier dates are untracked. The first day and today are partial; averages, highlights and comparisons use complete days. Comparisons match completed days against the same days in the preceding period and need a non-zero baseline.</p><p className="mt-2">Views use the existing 24-hour browser cookie. Likes count once per stored browser identity. These are activity counts, not unique people or a conversion rate. Browser resets can affect counts. History stores daily totals without adding visitor identifiers.</p><p className="mt-2">Updated at {updated} UTC. Refresh to fetch new activity.</p></aside>
   </>
