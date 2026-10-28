@@ -15,6 +15,19 @@
     "contactEmail": "support@coolmanyt.com",
     "language": "en"
   },
+  "analytics": {
+    "enabled": true,
+    "respectPrivacySignals": true,
+    "collect": {
+      "country": true,
+      "time": true,
+      "referrer": true,
+      "outbound": true,
+      "device": true,
+      "os": true,
+      "browser": true
+    }
+  },
   "appearance": {
     "defaultMode": "dark",
     "allowModeSwitch": false,

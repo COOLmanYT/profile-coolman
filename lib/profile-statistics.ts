@@ -1,10 +1,14 @@
 export type DailyStatistic = { date: string; views: number | null; likes: number | null }
+export type StatisticDimension = 'country' | 'hour' | 'referrer' | 'outbound' | 'device' | 'os' | 'browser'
+export type StatisticBreakdown = { total: number; rows: { value: string; count: number }[] }
 export type ProfileStatistics = {
   trackedSince: string
   generatedAt: string
   totals: { views: number; likes: number }
   daily: DailyStatistic[]
   range: { start: string; end: string }
+  breakdowns?: { startedAt: string; categories: Record<StatisticDimension, StatisticBreakdown> }
+  collection?: Record<'country' | 'time' | 'referrer' | 'outbound' | 'device' | 'os' | 'browser', boolean>
 }
 
 const DAY = 86_400_000

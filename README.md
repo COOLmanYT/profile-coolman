@@ -150,6 +150,34 @@ Apply `supabase/migrations/20261028032228_add_profile_statistics.sql` after the 
 
 Daily history starts when the migration is applied and uses UTC dates. Earlier dates remain untracked; existing lifetime totals are preserved. Today and the installation day are partial, so averages/highlights exclude them. Comparisons match completed days to the same days in the prior period, require complete coverage and a non-zero baseline, and exclude today. Views retain the 24-hour browser cookie; likes retain the existing stored-browser deduplication. Counts are not unique people, and likes per 100 views is an activity ratio, not a conversion rate. History stores daily aggregates without copying visitor identifiers. Collection follows the existing public counters and their module visibility settings.
 
+### Optional statistics breakdowns
+
+The existing **Dashboard → Profile statistics** page also shows country, UTC hour, **Coming from** (referring domains), **Going to** (most-clicked public pages/external domains), device, OS and browser breakdowns for the same selected dates. Apply `supabase/migrations/20261028134923_add_statistics_breakdowns.sql` after the original statistics migration. Collection begins when the updated app and migration are available; previous views cannot be backfilled with these details.
+
+Configure collection in the public build-time `site.config.json` and redeploy:
+
+```json
+"analytics": {
+  "enabled": true,
+  "respectPrivacySignals": true,
+  "collect": {
+    "country": true,
+    "time": true,
+    "referrer": true,
+    "outbound": true,
+    "device": true,
+    "os": true,
+    "browser": true
+  }
+}
+```
+
+Each `false` prevents that field from being stored, including when a caller submits it anyway. The existing global Dashboard **Analytics** switch disables all optional categories; failed settings reads also disable collection. Basic view/like counters and their daily history keep their existing independent controls. Disabling collection retains previous aggregates. By default, Do Not Track and Global Privacy Control disable optional collection. The automatic Vercel Web Analytics script and its duplicate social-link events are no longer loaded, so they cannot bypass these category switches; these details extend the existing counter/statistics flow.
+
+Country uses Vercel's country header only when deployed on Vercel; other environments report Unknown. Device/OS/browser are broad request-derived families, without versions, raw user agents, IP storage or fingerprinting. View breakdowns follow the existing 24-hour counted-view cookie, rather than claiming unique people or every page load. Referrers are reduced to domains before storage; browser requests send only the referrer origin. Clicks cover anchors on the public profile, including middle clicks, and exclude Dashboard/auth/API paths and embedded-player interactions. Queries and fragments are removed; unsupported external domains share **Other external**. Referrer/destination bucket growth is capped per day, with overflow grouped as **Other**.
+
+Each eligible counted view makes one settings read and one atomic counter/breakdown write (up to six metadata buckets); the UTC-hour bucket is included when time collection is on. Suppressed repeat views add no breakdown writes. Click tracking is limited to 30 requests per profile mount, at most one per second, with server rate limiting, one settings read and one write per accepted click. There is no polling or retry loop. The existing Dashboard request returns the totals, graphs and top-20 breakdowns together (all 24 hours for time). The tables and RPCs are service-role-only with RLS enabled. This is aggregate activity, not visitor sessions, funnels, dwell time or confirmed destination visits.
+
 ## Profile likes
 
 Apply `supabase/migrations/20261023133931_add_profile_likes.sql` to add the service-only like tables and atomic `like_profile_once` function. The public API keeps a random browser UUID in a rolling 400-day HttpOnly cookie and local storage, storing only its hash server-side. A unique key and serialized counter update prevent duplicate/retried submissions from incrementing twice. Local storage and the cookie restore each other, while browser Web Locks coordinate first-use identity creation across tabs. Clearing both storage mechanisms, browser eviction or changing browsers can allow another like; this does not claim to identify a person or prevent deliberate token forgery.
