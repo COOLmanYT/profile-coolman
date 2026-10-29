@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { customStatisticsRange, STATISTIC_RANGES, summarizeStatistics, type DailyStatistic, type ProfileStatistics } from '@/lib/profile-statistics'
 import StatisticsBreakdowns from './StatisticsBreakdowns'
 
@@ -12,6 +12,7 @@ function Change({ value }: { value: number | null }) {
 }
 
 function HistoryChart({ daily, metric }: { daily: DailyStatistic[]; metric: 'views' | 'likes' }) {
+  const gradient = useId()
   const [active, setActive] = useState(daily.length - 1)
   const selected = daily[active]
   const colour = metric === 'views' ? '#7dd3fc' : '#fda4af'
@@ -19,6 +20,7 @@ function HistoryChart({ daily, metric }: { daily: DailyStatistic[]; metric: 'vie
   const x = (index: number) => 40 + index * (620 / Math.max(1, daily.length - 1))
   const y = (value: number) => 180 - (value / max) * 140
   const points = daily.flatMap((day, index) => day[metric] === null ? [] : [`${x(index)},${y(day[metric]!)}`]).join(' ')
+  const firstTracked = daily.findIndex(day => day[metric] !== null)
   return (
     <section className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.025] p-4 sm:p-6" aria-label={`Daily ${metric}`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -26,10 +28,12 @@ function HistoryChart({ daily, metric }: { daily: DailyStatistic[]; metric: 'vie
         <p className="text-right text-xs text-white/60" aria-live="polite">{date(selected.date)} UTC<span className="mt-1 block text-xl font-bold tabular-nums" style={{ color: colour }}>{selected[metric] === null ? 'Untracked' : number(selected[metric]!)}</span></p>
       </div>
       <svg viewBox="0 0 700 220" className="mt-4 w-full overflow-visible" role="group" aria-label={`${metric} chart. Daily values are also available in the data table below.`}>
+        <defs><linearGradient id={gradient} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={colour} stopOpacity="0.2" /><stop offset="100%" stopColor={colour} stopOpacity="0" /></linearGradient></defs>
         {[0, 0.5, 1].map(fraction => <g key={fraction}>
           <line x1="40" x2="660" y1={y(max * fraction)} y2={y(max * fraction)} stroke="white" strokeOpacity="0.1" strokeDasharray="4 5" />
           <text x="30" y={y(max * fraction) + 4} textAnchor="end" fill="#9ca3af" fontSize="11">{number(max * fraction)}</text>
         </g>)}
+        {firstTracked >= 0 && <polygon points={`${x(firstTracked)},180 ${points} ${x(daily.length - 1)},180`} fill={`url(#${gradient})`} />}
         <polyline points={points} fill="none" stroke={colour} strokeWidth="2.5" strokeLinejoin="round" />
         {daily.map((day, index) => day[metric] === null ? null : <g key={day.date}>
           <rect x={x(index) - 310 / daily.length} width={620 / daily.length} y="25" height="165" fill="transparent" tabIndex={index === active ? 0 : -1} role="button" aria-label={`${date(day.date)}: ${day[metric]} ${metric}`} onMouseEnter={() => setActive(index)} onFocus={() => setActive(index)} onClick={() => setActive(index)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setActive(index) } }} className="cursor-pointer outline-none focus:stroke-white focus:stroke-2" />
@@ -39,7 +43,7 @@ function HistoryChart({ daily, metric }: { daily: DailyStatistic[]; metric: 'vie
         <text x="660" y="213" textAnchor="end" fill="#9ca3af" fontSize="12">{date(daily[daily.length - 1].date)}</text>
       </svg>
       <label className="mt-2 block text-xs text-white/60">Explore {metric} by date
-        <input type="range" min={0} max={daily.length - 1} value={active} disabled={daily.length === 1} onChange={event => setActive(Number(event.target.value))} aria-valuetext={`${selected.date}: ${selected[metric] === null ? 'Untracked' : `${selected[metric]} ${metric}`}`} className="mt-2 block w-full accent-sky-200" />
+        <input type="range" min={0} max={daily.length - 1} value={active} disabled={daily.length === 1} onChange={event => setActive(Number(event.target.value))} aria-valuetext={`${selected.date}: ${selected[metric] === null ? 'Untracked' : `${selected[metric]} ${metric}`}`} className={`mt-2 block w-full ${metric === 'likes' ? 'accent-rose-200' : 'accent-sky-200'}`} />
       </label>
     </section>
   )
@@ -50,13 +54,17 @@ export function StatisticsContent({ data }: { data: ProfileStatistics }) {
   const days = summary.days
   const updated = new Intl.DateTimeFormat('en', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }).format(new Date(data.generatedAt))
   return <>
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <section className="rounded-2xl border border-sky-300/20 bg-gradient-to-br from-sky-400/10 to-transparent p-5"><h2 className="text-sm text-sky-100/80">Views this period</h2><p className="mt-3 text-4xl font-bold tabular-nums text-white">{number(summary.views)}</p><Change value={summary.viewsChange} /><p className="mt-4 text-xs text-white/50">{number(data.totals.views)} lifetime views</p></section>
-      <section className="rounded-2xl border border-rose-300/20 bg-gradient-to-br from-rose-400/10 to-transparent p-5"><h2 className="text-sm text-rose-100/80">Likes this period</h2><p className="mt-3 text-4xl font-bold tabular-nums text-white">{number(summary.likes)}</p><Change value={summary.likesChange} /><p className="mt-4 text-xs text-white/50">{number(data.totals.likes)} lifetime likes</p></section>
-      <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-5"><h2 className="text-sm text-white/70">Average daily views</h2><p className="mt-3 text-4xl font-bold tabular-nums text-white">{summary.averageViews === null ? '—' : number(summary.averageViews)}</p><p className="mt-2 text-xs text-white/60">Completed, fully tracked days only</p><p className="mt-4 text-xs text-white/50">{summary.recordedDays} of {days} days have history</p></section>
-      <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-5"><h2 className="text-sm text-white/70">Likes per 100 views</h2><p className="mt-3 text-4xl font-bold tabular-nums text-white">{summary.likesPerHundredViews === null ? '—' : number(summary.likesPerHundredViews)}</p><p className="mt-2 text-xs text-white/60">Activity ratio for this period</p><p className="mt-4 text-xs text-white/50">Views and likes count browsers differently.</p></section>
+    <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+      <section className="rounded-2xl border border-sky-300/20 bg-gradient-to-br from-sky-400/10 to-transparent p-4 sm:p-5"><h2 className="text-sm text-sky-100/80">Views this period</h2><p className="mt-3 text-3xl font-bold sm:text-4xl tabular-nums text-white">{number(summary.views)}</p><Change value={summary.viewsChange} /><p className="mt-4 text-xs text-white/50">{number(data.totals.views)} lifetime views</p></section>
+      <section className="rounded-2xl border border-rose-300/20 bg-gradient-to-br from-rose-400/10 to-transparent p-4 sm:p-5"><h2 className="text-sm text-rose-100/80">Likes this period</h2><p className="mt-3 text-3xl font-bold sm:text-4xl tabular-nums text-white">{number(summary.likes)}</p><Change value={summary.likesChange} /><p className="mt-4 text-xs text-white/50">{number(data.totals.likes)} lifetime likes</p></section>
+      <section className="rounded-2xl border border-teal-300/20 bg-gradient-to-br from-teal-400/10 to-transparent p-4 sm:p-5"><h2 className="text-sm text-teal-100/80">Link clicks</h2><p className="mt-3 text-3xl font-bold sm:text-4xl tabular-nums text-white">{data.breakdowns ? number(data.breakdowns.categories.outbound.total) : '—'}</p><p className="mt-2 text-xs text-white/60">Recorded clicks from your profile</p><p className="mt-4 text-xs text-white/50">{data.collection?.outbound ? 'See popular destinations below' : 'Click collection is currently off'}</p></section>
+      <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-4 sm:p-5"><h2 className="text-sm text-white/70">Likes per 100 views</h2><p className="mt-3 text-3xl font-bold sm:text-4xl tabular-nums text-white">{summary.likesPerHundredViews === null ? '—' : number(summary.likesPerHundredViews)}</p><p className="mt-2 text-xs text-white/60">Activity ratio for this period</p><p className="mt-4 text-xs text-white/50">Views and likes count browsers differently.</p></section>
     </div>
-    <div className="mt-5 grid gap-4 lg:grid-cols-2"><HistoryChart key={`${days}-views`} daily={summary.current} metric="views" /><HistoryChart key={`${days}-likes`} daily={summary.current} metric="likes" /></div>
+    <div className="mb-3 mt-8 flex flex-wrap items-center justify-between gap-2"><h2 className="text-lg font-semibold tracking-tight">Activity over time</h2><p className="text-xs text-white/45">{summary.recordedDays} of {days} days have history · UTC</p></div>
+    <div className="grid gap-4 lg:grid-cols-2"><HistoryChart key={`${data.range.start}-${data.range.end}-views`} daily={summary.current} metric="views" /><HistoryChart key={`${data.range.start}-${data.range.end}-likes`} daily={summary.current} metric="likes" /></div>
+    <StatisticsBreakdowns data={data} />
+    <details className="mt-9 rounded-2xl border border-white/10 bg-white/[0.015] p-5 sm:p-6">
+    <summary className="cursor-pointer text-lg font-semibold tracking-tight"><span className="ml-1">Activity insights</span><span className="mt-1 block text-xs font-normal text-white/45">Highlights, consistency and your weekday rhythm</span></summary>
     <div className="mt-5 grid gap-4 sm:grid-cols-2">
       {(['views', 'likes'] as const).map(metric => {
         const best = metric === 'views' ? summary.bestViews : summary.bestLikes
@@ -64,11 +72,11 @@ export function StatisticsContent({ data }: { data: ProfileStatistics }) {
       })}
     </div>
     <section className="mt-5" aria-labelledby="activity-insights">
-      <h2 id="activity-insights" className="mb-3 text-lg font-semibold">Activity insights</h2>
+      <h2 id="activity-insights" className="sr-only">Activity insights</h2>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-5"><h3 className="text-sm text-white/70">Activity consistency</h3><p className="mt-3 text-2xl font-bold">{summary.completedDays ? `${number(summary.activeDays / summary.completedDays * 100)}%` : '—'}</p><p className="mt-2 text-xs text-white/60">{summary.completedDays ? `${summary.activeDays} of ${summary.completedDays} complete days received views.` : 'Needs a fully tracked, completed day.'}</p></section>
         <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-5"><h3 className="text-sm text-white/70">Longest active run</h3><p className="mt-3 text-2xl font-bold">{summary.completedDays ? `${summary.longestStreak} ${summary.longestStreak === 1 ? 'day' : 'days'}` : '—'}</p><p className="mt-2 text-xs text-white/60">Consecutive completed days with views within this period.</p></section>
-        <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-5"><h3 className="text-sm text-white/70">A typical day</h3><p className="mt-3 text-2xl font-bold">{summary.medianViews === null ? '—' : `${number(summary.medianViews)} views`}</p><p className="mt-2 text-xs text-white/60">Median of complete days, reducing the influence of occasional spikes.</p></section>
+        <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-5"><h3 className="text-sm text-white/70">A typical day</h3><p className="mt-3 text-2xl font-bold">{summary.medianViews === null ? '—' : `${number(summary.medianViews)} views`}</p><p className="mt-2 text-xs text-white/60">Median of fully tracked, completed days.</p><p className="mt-2 text-xs text-white/45">Daily average: {summary.averageViews === null ? '—' : number(summary.averageViews)} views</p></section>
         <section className="rounded-2xl border border-white/10 bg-white/[0.025] p-5"><h3 className="text-sm text-white/70">Peak day share</h3><p className="mt-3 text-2xl font-bold">{summary.peakShare === null ? '—' : `${number(summary.peakShare)}%`}</p><p className="mt-2 text-xs text-white/60">Share of complete-day views contributed by your busiest day.</p></section>
       </div>
       <section className="mt-4 rounded-2xl border border-white/10 bg-white/[0.025] p-5">
@@ -80,7 +88,7 @@ export function StatisticsContent({ data }: { data: ProfileStatistics }) {
         <p className="mt-4 text-xs text-white/50">UTC weekdays · averages include zero-activity days. Samples can differ by weekday. Observed activity does not establish why a day performed better.</p>
       </section>
     </section>
-    <StatisticsBreakdowns data={data} />
+    </details>
     <details className="mt-5 rounded-2xl border border-white/10 p-5"><summary className="cursor-pointer text-sm font-semibold text-white">Explore daily data</summary><div className="mt-4 overflow-x-auto"><table className="w-full text-left text-sm tabular-nums"><caption className="sr-only">Daily profile statistics in UTC. A dash means no history was collected.</caption><thead className="text-white/60"><tr><th className="py-2">Date (UTC)</th><th className="py-2 text-right">Views</th><th className="py-2 text-right">Likes</th></tr></thead><tbody>{summary.current.slice().reverse().map(day => <tr key={day.date} className="border-t border-white/10 text-white/80"><th scope="row" className="py-2 font-normal">{day.date}{day.date === data.generatedAt.slice(0, 10) ? ' · in progress' : day.date === data.trackedSince.slice(0, 10) ? ' · partial' : ''}</th><td className="py-2 text-right">{day.views === null ? '—' : number(day.views)}</td><td className="py-2 text-right">{day.likes === null ? '—' : number(day.likes)}</td></tr>)}</tbody></table></div></details>
     <aside className="mt-5 rounded-2xl border border-white/10 bg-white/[0.025] p-5 text-xs leading-relaxed text-white/60"><h2 className="mb-2 font-semibold text-white/80">What these numbers mean</h2><p>History started {date(data.trackedSince.slice(0, 10))}, {data.trackedSince.slice(0, 4)} (UTC). Earlier dates are untracked. The first day and today are partial; averages, highlights and comparisons use complete days. Comparisons match completed days against the same days in the preceding period and need a non-zero baseline.</p><p className="mt-2">Views use the existing 24-hour browser cookie. Likes count once per stored browser identity. These are activity counts, not unique people or a conversion rate. Browser resets can affect counts. History stores daily totals without adding visitor identifiers.</p><p className="mt-2">Updated at {updated} UTC. Refresh to fetch new activity.</p></aside>
   </>
@@ -125,9 +133,10 @@ export default function ProfileStatisticsClient() {
     void load()
     return () => controller.abort()
   }, [query, refresh])
-  return <main className="min-h-screen bg-[#17191d] px-4 py-8 text-white sm:px-6 lg:px-8"><div className="mx-auto max-w-7xl">
+  return <main className="min-h-screen bg-[#111315] px-4 py-8 text-white sm:px-6 lg:px-8"><div className="mx-auto max-w-7xl">
     <a href="/dashboard" className="text-sm text-white/65 underline-offset-4 hover:text-white hover:underline">← Dashboard</a>
-    <header className="mb-7 mt-7 flex flex-wrap items-end justify-between gap-5"><div><p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-200/70">Dashboard / Statistics</p><h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Your profile, in numbers.</h1><p className="mt-2 text-sm text-white/60">See what&apos;s getting attention and how activity is changing.</p></div><div className="flex flex-wrap items-center gap-3"><div className="flex rounded-xl border border-white/10 bg-white/5 p-1" role="group" aria-label="History period">{STATISTIC_RANGES.map(range => <button key={range} type="button" aria-pressed={!custom && days === range} onClick={() => { setCustom(null); setDays(range); setCustomOpen(false); setRangeError(null) }} className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${!custom && days === range ? 'bg-white text-black' : 'text-white/65 hover:bg-white/10 hover:text-white'}`}>{range} days</button>)}</div><button type="button" aria-expanded={customOpen} aria-controls="custom-statistics-range" aria-pressed={!!custom} onClick={openCustom} className={`rounded-xl border border-white/15 px-4 py-3 text-sm font-semibold ${custom ? 'bg-white text-black' : 'hover:bg-white/10'}`}>Custom</button><button type="button" onClick={() => setRefresh(value => value + 1)} disabled={loading} className="rounded-xl border border-white/15 px-4 py-3 text-sm font-semibold hover:bg-white/10 disabled:opacity-40">Refresh</button></div></header>
+    <header className="mb-7 mt-7 flex flex-wrap items-end justify-between gap-5"><div><p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-200/70">Dashboard / Statistics</p><h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">Profile statistics</h1><p className="mt-2 text-sm text-white/60">See who finds your profile, what gets attention, and where they go next.</p></div><div className="flex flex-wrap items-center gap-3"><div className="flex rounded-xl border border-white/10 bg-white/5 p-1" role="group" aria-label="History period">{STATISTIC_RANGES.map(range => <button key={range} type="button" aria-pressed={!custom && days === range} onClick={() => { setCustom(null); setDays(range); setCustomOpen(false); setRangeError(null) }} className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${!custom && days === range ? 'bg-white text-black' : 'text-white/65 hover:bg-white/10 hover:text-white'}`}>{range} days</button>)}</div><button type="button" aria-expanded={customOpen} aria-controls="custom-statistics-range" aria-pressed={!!custom} onClick={openCustom} className={`rounded-xl border border-white/15 px-4 py-3 text-sm font-semibold ${custom ? 'bg-white text-black' : 'hover:bg-white/10'}`}>Custom</button><button type="button" onClick={() => setRefresh(value => value + 1)} disabled={loading} className="rounded-xl border border-white/15 px-4 py-3 text-sm font-semibold hover:bg-white/10 disabled:opacity-40">Refresh</button></div></header>
+    <div className="mb-6 flex flex-wrap items-center justify-between gap-2 border-y border-white/10 py-3 text-xs text-white/50"><p>{result?.key === query ? <><span className="font-medium text-white/80">{date(result.data.range.start)}, {result.data.range.start.slice(0, 4)} – {date(result.data.range.end)}, {result.data.range.end.slice(0, 4)}</span> · UTC</> : 'Your selected period · UTC'}</p><span className="inline-flex items-center gap-1.5"><span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-sky-200/70" />Private · Dashboard access only</span></div>
     {customOpen && <form id="custom-statistics-range" className="mb-5 rounded-2xl border border-white/10 bg-white/5 p-5" onSubmit={event => {
       event.preventDefault()
       const range = customStatisticsRange(draftStart, draftEnd)
