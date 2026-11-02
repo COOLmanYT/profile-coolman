@@ -5,6 +5,7 @@ import { getTwitchAccessToken, getTwitchConfig } from '@/lib/twitch'
 import { createTtlCache } from '@/lib/ttl-cache.mjs'
 import { monitoredFetch } from '@/lib/provider-monitor.mjs'
 import { limitPublicRequest } from '@/lib/rate-limit.mjs'
+import { createProviderFetcher } from '@/lib/provider-fetch.mjs'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,6 +13,7 @@ const TWITCH_API_URL = 'https://api.twitch.tv/helix'
 const CACHE_SECONDS = 25
 const cacheHeaders = { headers: { 'Cache-Control': `public, s-maxage=${CACHE_SECONDS}, stale-while-revalidate=40` } }
 const twitchPresenceCache = createTtlCache({ ttlMs: CACHE_SECONDS * 1000, staleOnError: false })
+const twitchRequests = createProviderFetcher('twitch', monitoredFetch)
 
 type TwitchUser = {
   id: string
@@ -38,7 +40,7 @@ type TwitchScheduleSegment = {
 
 async function twitchFetch<T>(path: string, accessToken: string, clientId: string): Promise<T | null> {
   try {
-    const response = await monitoredFetch('twitch', `${TWITCH_API_URL}${path}`, {
+    const response = await twitchRequests.fetch(`${TWITCH_API_URL}${path}`, {
       headers: { Authorization: `Bearer ${accessToken}`, 'Client-Id': clientId },
       cache: 'no-store',
     })
@@ -58,11 +60,17 @@ export async function GET(req: NextRequest) {
     const presence = await twitchPresenceCache.get(getTwitchPresence)
     return NextResponse.json(presence, cacheHeaders)
   } catch {
-    return NextResponse.json({ providerStatus: 'unavailable', error: 'Twitch presence unavailable' }, { status: 503, headers: { 'Cache-Control': 'no-store' } })
+    const retryAfter = twitchRequests.retryAfterSeconds
+    return NextResponse.json({ providerStatus: 'unavailable', error: 'Twitch presence unavailable' }, {
+      status: retryAfter > 0 ? 429 : 503,
+      headers: { 'Cache-Control': 'no-store', ...(retryAfter > 0 && { 'Retry-After': String(retryAfter) }) },
+    })
   }
 }
 
 async function getTwitchPresence() {
+  // Avoid even the token database read while Twitch has asked us to wait.
+  if (twitchRequests.retryAfterSeconds > 0) throw new Error('Twitch rate limited')
   const config = getTwitchConfig()
   const accessToken = await getTwitchAccessToken()
   const login = (process.env.TWITCH_BROADCASTER_LOGIN || siteConfig.providers.twitch.login)
