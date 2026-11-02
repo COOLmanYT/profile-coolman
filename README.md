@@ -134,6 +134,10 @@ Recommended toggle IDs include:
 
 The YouTube section compares dated uploads from the channel feed and selected channel tabs across all formats, including Shorts, regular videos and stream uploads. Channel tabs can supply the latest upload when RSS is unavailable or delayed. It includes the thumbnail, title, publication date and view count, plus subscribers, total channel views, public video count, last upload date and live status. Uploads and totals refresh from YouTube at most every 15 minutes; live status refreshes every minute while the page is visible. Failed or unrecognized responses display unavailable data rather than zero counts or a guessed offline status. A response with unavailable uploads is not cached by the public API.
 
+Concurrent YouTube refreshes share provider reads and parsing within each server instance. A bounded cache keeps up to 16 source digests and parsed results, avoiding repeated parsing of unchanged pages without retaining raw HTML. Changed content is parsed immediately; the existing upstream refresh intervals and public API cache headers still control freshness. These optimisations do not coordinate across server instances.
+
+Channel-tab uploads reuse publication dates and view counts from any matching feed entry, including entries outside the feed's headline selections. Watch-page metadata is requested only when the selected upload still lacks a date or view count.
+
 The Dashboard controls the entire `youtube` module and its `youtube_stats`, `youtube_latest` and `youtube_live` sections. `youtube_shorts` and `youtube_videos` allow either or both upload types. Visitor **Options → Media preferences** offers browser-saved controls and a Shorts-only, Videos-only or both selector; global format restrictions take priority. Format selection uses the channel's selected Shorts/Videos/Live tabs, including uploads older than the RSS feed window. **Hide modules** saves an override in this browser, including after refresh.
 
 `youtube_embed_default` defaults to false and controls the initial player preference for visitors. Each visitor can follow that default or explicitly turn the player on/off. The enabled player first checks YouTube oEmbed availability, then loads a fixed privacy-enhanced iframe URL with no autoplay. Provider HTML is never injected. Embedding permission, browser restrictions or playback errors can still prevent playback; the YouTube watch link remains available.
@@ -295,6 +299,10 @@ Place your `avatar.png` in the `public/` folder.
 Successful dashboard saves invalidate the homepage (and other affected settings pages) for the next visit. Missing database configuration returns a failed save. Toggle defaults and loading are shared between the homepage and dashboard.
 
 Spotify, Twitch, and Discord endpoints report `providerStatus`: `healthy`, `degraded` (partial data or fallback), or `unavailable`. Unavailable integrations return HTTP 503 with `Cache-Control: no-store`; genuine idle/offline activity remains HTTP 200. Twitch's optional stats can be degraded when OAuth scopes are missing. A missing Twitch schedule (404) is normal.
+
+Twitch and Discord honour upstream HTTP 429 waits per server instance. `Retry-After` and Twitch's `Ratelimit-Reset` determine the wait, with a one-minute fallback when neither is usable. During that wait, requests that need a refresh return an uncached HTTP 429 with the remaining `Retry-After`, avoiding further provider calls (and Twitch token reads). Healthy snapshots retain their existing short TTLs, and Discord game-time accounting resumes on successful observations. Spotify already shares a rate-limit cooldown across playback, history and token requests; private history remains uncached.
+
+Simultaneous status refreshes share one upstream read and conversion per server instance. Later requests can refresh immediately using the existing upstream cache and CDN headers; there is no extra response TTL.
 
 Activity polling pauses when the tab is hidden, aborts in-flight requests on hiding/unmounting, and retries with exponential backoff capped at five minutes. Requests time out after 15 seconds.
 

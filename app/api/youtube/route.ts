@@ -4,10 +4,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { parseLatestYoutubeVideos, parseYoutubeChannel, parseYoutubeLive, parseYoutubeTab, enrichYoutubeVideo } from '@/lib/youtube-feed.mjs'
 import { monitoredFetch } from '@/lib/provider-monitor.mjs'
 import { limitPublicRequest } from '@/lib/rate-limit.mjs'
+import { createContentCache } from '@/lib/content-cache.mjs'
 
 const CHANNEL_ID = siteConfig.providers.youtube.channelId
 const CHANNEL_URL = `https://www.youtube.com/channel/${CHANNEL_ID}`
 type Video = { id: string; title: string; url: string; thumbnailUrl: string; publishedAt?: string; views?: number; isShort?: boolean }
+const parsedSources = createContentCache()
+let pendingRefresh: ReturnType<typeof loadYoutube> | undefined
 
 async function page(url: string, revalidate = 900) {
   try {
@@ -31,13 +34,10 @@ async function channelStats() {
     } catch { /* Public page fallback remains available. */ }
   }
   const html = await page(`${CHANNEL_URL}/about?hl=en`)
-  return html ? parseYoutubeChannel(html) : {}
+  return html ? parsedSources.get('channel', html, parseYoutubeChannel) : {}
 }
 
-export async function GET(req: NextRequest) {
-  if (!isModuleAvailable('youtube')) return NextResponse.json({ error: 'MODULE_DISABLED' }, { status: 404, headers: { 'Cache-Control': 'no-store' } })
-  const rate = limitPublicRequest(req, 'youtube')
-  if (!rate.allowed) return NextResponse.json({ error: 'RATE_LIMITED' }, { status: 429, headers: { 'Retry-After': String(rate.retryAfterSeconds) } })
+async function loadYoutube() {
   const [xml, channel, livePage, shortsPage, videosPage, streamsPage] = await Promise.all([
     page(`https://www.youtube.com/feeds/videos.xml?channel_id=${CHANNEL_ID}`),
     channelStats(),
@@ -46,18 +46,18 @@ export async function GET(req: NextRequest) {
     page(`${CHANNEL_URL}/videos?hl=en`),
     page(`${CHANNEL_URL}/streams?hl=en`),
   ])
-  const videos = parseLatestYoutubeVideos(xml ?? '')
-  const shortCandidate = shortsPage ? parseYoutubeTab(shortsPage, 'shorts', CHANNEL_ID) : null
-  const videoCandidate = videosPage ? parseYoutubeTab(videosPage, 'videos', CHANNEL_ID) : null
-  const streamCandidate = streamsPage ? parseYoutubeTab(streamsPage, 'streams', CHANNEL_ID) : null
+  const videos = parsedSources.get('feed', xml ?? '', parseLatestYoutubeVideos)
+  const shortCandidate = shortsPage ? parsedSources.get('shorts', shortsPage, (html) => parseYoutubeTab(html, 'shorts', CHANNEL_ID)) : null
+  const videoCandidate = videosPage ? parsedSources.get('videos', videosPage, (html) => parseYoutubeTab(html, 'videos', CHANNEL_ID)) : null
+  const streamCandidate = streamsPage ? parsedSources.get('streams', streamsPage, (html) => parseYoutubeTab(html, 'streams', CHANNEL_ID)) : null
   const metadata = new Map<string, Promise<string | null>>()
   const enrich = (candidate: Video | undefined | null): Promise<Video | undefined> => {
     if (!candidate) return Promise.resolve(undefined)
-    const known = [videos.latest, videos.short, videos.longform].find((video) => video?.id === candidate.id)
+    const known = videos.items.find((video) => video.id === candidate.id)
     const video = { ...known, ...candidate, publishedAt: known?.publishedAt ?? candidate.publishedAt, views: known?.views ?? candidate.views }
-    if (video.views !== undefined && video.publishedAt) return Promise.resolve(video)
+    if (video.views !== undefined && Number.isFinite(Date.parse(video.publishedAt ?? ''))) return Promise.resolve(video)
     if (!metadata.has(video.id)) metadata.set(video.id, page(`https://www.youtube.com/watch?v=${video.id}`))
-    return metadata.get(video.id)!.then((html) => html ? enrichYoutubeVideo(video, html) : video)
+    return metadata.get(video.id)!.then((html) => html ? parsedSources.get(`watch:${JSON.stringify(video)}`, html, (source) => enrichYoutubeVideo(video, source)) : video)
   }
   const [feedLatest, short, regular, stream] = await Promise.all([enrich(videos.latest), enrich(shortCandidate ?? videos.short), enrich(videoCandidate), enrich(streamCandidate)])
   const longform = [regular, stream].filter((video): video is Video => !!video).sort((a, b) => (Date.parse(b.publishedAt ?? '') || 0) - (Date.parse(a.publishedAt ?? '') || 0))[0]
@@ -67,12 +67,24 @@ export async function GET(req: NextRequest) {
     .filter((video): video is Video => !!video && Number.isFinite(Date.parse(video.publishedAt ?? '')))
     .sort((a, b) => Date.parse(b.publishedAt!) - Date.parse(a.publishedAt!))[0] ?? feedLatest
   const uploadsUnavailable = !latest && (!xml || !/<feed\b/.test(xml) || !!(short || longform))
-  return NextResponse.json({
+  return {
     latest, short, longform,
     formatsUnavailable: { shorts: shortCandidate === null && !videos.short, videos: videoCandidate === null && streamCandidate === null },
     channel: { ...channel, url: CHANNEL_URL },
-    live: livePage ? parseYoutubeLive(livePage, CHANNEL_ID) : { status: 'unknown' },
+    live: livePage ? parsedSources.get('live', livePage, (html) => parseYoutubeLive(html, CHANNEL_ID)) : { status: 'unknown' },
     uploadsUnavailable,
-    updatedAt: new Date().toISOString(),
-  }, { headers: { 'Cache-Control': uploadsUnavailable ? 'no-store' : 'public, s-maxage=60, stale-while-revalidate=60' } })
+  }
+}
+
+export async function GET(req: NextRequest) {
+  if (!isModuleAvailable('youtube')) return NextResponse.json({ error: 'MODULE_DISABLED' }, { status: 404, headers: { 'Cache-Control': 'no-store' } })
+  const rate = limitPublicRequest(req, 'youtube')
+  if (!rate.allowed) return NextResponse.json({ error: 'RATE_LIMITED' }, { status: 429, headers: { 'Retry-After': String(rate.retryAfterSeconds) } })
+  // Share only work currently in flight, with no extra response TTL or delay.
+  // Each request still gets its own rate-limit check and response body.
+  pendingRefresh ??= loadYoutube().finally(() => { pendingRefresh = undefined })
+  const data = await pendingRefresh
+  return NextResponse.json({ ...data, updatedAt: new Date().toISOString() }, {
+    headers: { 'Cache-Control': data.uploadsUnavailable ? 'no-store' : 'public, s-maxage=60, stale-while-revalidate=60' },
+  })
 }

@@ -4,10 +4,12 @@ import { monitoredFetch } from '@/lib/provider-monitor.mjs'
 import { limitPublicRequest } from '@/lib/rate-limit.mjs'
 import { createTtlCache } from '@/lib/ttl-cache.mjs'
 import { recordDiscordGameEstimate } from '@/lib/discord-activity-store'
+import { createProviderFetcher } from '@/lib/provider-fetch.mjs'
 
 const DISCORD_USER_ID = process.env.DISCORD_USER_ID
 const noStore = { headers: { 'Cache-Control': 'no-store' } }
 const presenceCache = createTtlCache({ ttlMs: 15_000, staleOnError: false })
+const discordRequests = createProviderFetcher('discord', monitoredFetch)
 
 export async function GET(req: NextRequest) {
   if (!isModuleAvailable('discord') && !isModuleAvailable('spotify') && !isModuleAvailable('announcement')) return NextResponse.json({ error: 'MODULE_DISABLED' }, { status: 404, headers: { 'Cache-Control': 'no-store' } })
@@ -18,7 +20,7 @@ export async function GET(req: NextRequest) {
   }
   try {
     const data = await presenceCache.get(async () => {
-      const res = await monitoredFetch('discord',
+      const res = await discordRequests.fetch(
         `https://api.lanyard.rest/v1/users/${DISCORD_USER_ID}`,
         { cache: 'no-store' }
       )
@@ -51,6 +53,10 @@ export async function GET(req: NextRequest) {
       active_on_discord_desktop: data.active_on_discord_desktop ?? false,
     }, { headers: { 'Cache-Control': 'public, max-age=0, must-revalidate', 'Vercel-CDN-Cache-Control': 'max-age=15' } })
   } catch {
-    return NextResponse.json({ providerStatus: 'unavailable', error: 'Discord presence unavailable' }, { ...noStore, status: 503 })
+    const retryAfter = discordRequests.retryAfterSeconds
+    return NextResponse.json({ providerStatus: 'unavailable', error: 'Discord presence unavailable' }, {
+      status: retryAfter > 0 ? 429 : 503,
+      headers: { 'Cache-Control': 'no-store', ...(retryAfter > 0 && { 'Retry-After': String(retryAfter) }) },
+    })
   }
 }

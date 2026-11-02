@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { createTtlCache } from '../lib/ttl-cache.mjs'
 import { createSpotifyFetcher, SpotifyCooldownError } from '../lib/spotify-fetch.mjs'
+import * as providerFetch from '../lib/provider-fetch.mjs'
 import { loadTypescript, nextServer } from './load-typescript.mjs'
 
 const rateLimit = { limitPublicRequest: () => ({ allowed: true }) }
@@ -119,6 +120,7 @@ test('Discord distinguishes offline presence from missing config, failed request
         '@/lib/ttl-cache.mjs': { createTtlCache },
         '@/lib/provider-monitor.mjs': { monitoredFetch: async () => upstream() },
         '@/lib/discord-activity-store': { recordDiscordGameEstimate: async () => null },
+        '@/lib/provider-fetch.mjs': providerFetch,
       })
       const response = await GET(request)
       assert.equal(response.status, expected)
@@ -146,6 +148,7 @@ test('Discord records only validated online activity and exposes aggregate estim
         '@/lib/ttl-cache.mjs': { createTtlCache },
         '@/lib/provider-monitor.mjs': { monitoredFetch: async () => json({ success: true, data: { discord_status: status, activities } }) },
         '@/lib/discord-activity-store': { recordDiscordGameEstimate: async (id, games) => { recorded = { id, games }; return estimate } },
+        '@/lib/provider-fetch.mjs': providerFetch,
       })
       const response = await GET(request)
       const body = await response.json()
@@ -164,6 +167,7 @@ function twitchRoute({ token = 'token', config = { clientId: 'client' }, upstrea
     'next/server': nextServer, '@/lib/rate-limit.mjs': rateLimit,
     '@/lib/ttl-cache.mjs': { createTtlCache },
     '@/lib/twitch': { getTwitchAccessToken: async () => token, getTwitchConfig: () => config },
+    '@/lib/provider-fetch.mjs': providerFetch,
     '@/lib/provider-monitor.mjs': { monitoredFetch: async (_provider, url) => upstream(url) },
   })
 }
@@ -242,6 +246,7 @@ test('Discord normalizes malformed activity payloads before displaying or record
         '@/lib/ttl-cache.mjs': { createTtlCache },
         '@/lib/provider-monitor.mjs': { monitoredFetch: async () => json({ success: true, data: { discord_status: 'online', activities } }) },
         '@/lib/discord-activity-store': { recordDiscordGameEstimate: async (_id, games) => { recorded = games; return null } },
+        '@/lib/provider-fetch.mjs': providerFetch,
       })
       const response = await GET(request)
       const body = await response.json()
@@ -250,6 +255,104 @@ test('Discord normalizes malformed activity payloads before displaying or record
       assert.deepEqual(body.activities, expected)
       assert.deepEqual(recorded, expected)
     }
+  } finally {
+    if (original === undefined) delete process.env.DISCORD_USER_ID
+    else process.env.DISCORD_USER_ID = original
+  }
+})
+
+test('Twitch rate-limit waits skip repeated API and token reads, then recover without stale errors', async () => {
+  let clock = Date.UTC(2026, 10, 2), calls = 0, tokenReads = 0, limited = true
+  const { GET } = loadTypescript('app/api/twitch/route.ts', {
+    'next/server': nextServer, '@/lib/rate-limit.mjs': rateLimit,
+    '@/lib/ttl-cache.mjs': { createTtlCache },
+    '@/lib/provider-fetch.mjs': { createProviderFetcher: (name, fetcher) => providerFetch.createProviderFetcher(name, fetcher, () => clock) },
+    '@/lib/twitch': { getTwitchConfig: () => ({ clientId: 'client' }), getTwitchAccessToken: async () => { tokenReads++; return 'token' } },
+    '@/lib/provider-monitor.mjs': { monitoredFetch: async (_provider, url) => {
+      calls++
+      if (limited) return new Response(null, { status: 429, headers: { 'Ratelimit-Reset': String(clock / 1000 + 120) } })
+      if (url.includes('/users')) return json({ data: [{ id: '1', login: 'test', display_name: 'Test' }] })
+      if (url.includes('/streams')) return json({ data: [] })
+      if (url.includes('/schedule')) return json({ data: { segments: [] } })
+      return json({ total: 0 })
+    } },
+  })
+  for (let i = 0; i < 5; i++) {
+    const response = await GET(request)
+    assert.equal(response.status, 429)
+    assert.equal(response.headers.get('Retry-After'), '120')
+    assert.equal(response.headers.get('Cache-Control'), 'no-store')
+  }
+  assert.equal(calls, 1)
+  assert.equal(tokenReads, 1)
+  clock += 120_000
+  limited = false
+  const response = await GET(request)
+  assert.equal(response.status, 200)
+  assert.equal((await response.json()).providerStatus, 'healthy')
+  assert.equal(calls, 6)
+  assert.equal(tokenReads, 2)
+})
+
+test('Twitch keeps healthy live data when only optional stats hit a rate limit', async () => {
+  let clock = 0, calls = 0
+  const { GET } = loadTypescript('app/api/twitch/route.ts', {
+    'next/server': nextServer, '@/lib/rate-limit.mjs': rateLimit,
+    '@/lib/ttl-cache.mjs': { createTtlCache: (options) => createTtlCache({ ...options, now: () => clock }) },
+    '@/lib/provider-fetch.mjs': { createProviderFetcher: (name, fetcher) => providerFetch.createProviderFetcher(name, fetcher, () => clock) },
+    '@/lib/twitch': { getTwitchConfig: () => ({ clientId: 'client' }), getTwitchAccessToken: async () => 'token' },
+    '@/lib/provider-monitor.mjs': { monitoredFetch: async (_provider, url) => {
+      calls++
+      if (url.includes('/users')) return json({ data: [{ id: '1', login: 'test', display_name: 'Test' }] })
+      if (url.includes('/streams')) return json({ data: [{ title: 'Live now', viewer_count: 7 }] })
+      if (url.includes('/schedule')) return json({ data: { segments: [] } })
+      if (url.includes('/subscriptions')) return new Response(null, { status: 429, headers: { 'Retry-After': '120' } })
+      return json({ total: 0 })
+    } },
+  })
+  const first = await GET(request)
+  assert.equal(first.status, 200)
+  const body = await first.json()
+  assert.equal(body.providerStatus, 'degraded')
+  assert.equal(body.isLive, true)
+  assert.equal(body.viewers, 7)
+  clock = 10_000
+  assert.equal((await GET(request)).status, 200, 'the current snapshot retains its existing 25-second TTL')
+  clock = 26_000
+  assert.equal((await GET(request)).status, 429)
+  assert.equal(calls, 5)
+})
+
+test('Discord rate-limit waits avoid upstream and activity writes until recovery', async () => {
+  const original = process.env.DISCORD_USER_ID
+  process.env.DISCORD_USER_ID = 'test-owner'
+  try {
+    let clock = 0, calls = 0, writes = 0
+    const { GET } = loadTypescript('app/api/discord/route.ts', {
+      'next/server': nextServer, '@/lib/rate-limit.mjs': rateLimit,
+      '@/lib/ttl-cache.mjs': { createTtlCache },
+      '@/lib/provider-fetch.mjs': { createProviderFetcher: (name, fetcher) => providerFetch.createProviderFetcher(name, fetcher, () => clock) },
+      '@/lib/discord-activity-store': { recordDiscordGameEstimate: async () => { writes++; return { games_played: 1 } } },
+      '@/lib/provider-monitor.mjs': { monitoredFetch: async () => {
+        calls++
+        return calls === 1 ? new Response(null, { status: 429, headers: { 'Retry-After': '90' } })
+          : json({ success: true, data: { discord_status: 'online', activities: [{ name: 'Game', type: 0 }] } })
+      } },
+    })
+    for (let i = 0; i < 5; i++) {
+      const response = await GET(request)
+      assert.equal(response.status, 429)
+      assert.equal(response.headers.get('Retry-After'), '90')
+      assert.equal(response.headers.get('Cache-Control'), 'no-store')
+    }
+    assert.equal(calls, 1)
+    assert.equal(writes, 0)
+    clock = 90_000
+    const response = await GET(request)
+    assert.equal(response.status, 200)
+    assert.equal((await response.json()).activity_estimate.games_played, 1)
+    assert.equal(calls, 2)
+    assert.equal(writes, 1)
   } finally {
     if (original === undefined) delete process.env.DISCORD_USER_ID
     else process.env.DISCORD_USER_ID = original
