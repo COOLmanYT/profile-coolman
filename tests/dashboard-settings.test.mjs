@@ -3,6 +3,7 @@ import test from 'node:test'
 import * as react from 'react'
 import * as jsxRuntime from 'react/jsx-runtime'
 import { renderToStaticMarkup } from 'react-dom/server'
+import { Issuer, TokenSet } from 'openid-client'
 import { siteConfig } from '../lib/site-config.mjs'
 import { normaliseLayout, validLayout, featureOrderGroups, reorderFeatures } from '../lib/layout-order.mjs'
 import { readAnnouncement } from '../lib/live-announcement.mjs'
@@ -97,7 +98,18 @@ test('optional providers use server credentials and the legacy Discord OAuth/ses
     }).authOptions
     const current = auth()
     assert.deepEqual(current.providers.map(item => item.id), ['discord'])
-    assert.deepEqual(current.providers[0].options, { clientId: 'same-client', clientSecret: 'same-secret' })
+    assert.deepEqual(current.providers[0].options, { issuer: 'https://discord.com', clientId: 'same-client', clientSecret: 'same-secret' })
+    // Exercise the OAuth client that NextAuth uses with Discord's iss response.
+    const discordIssuer = new Issuer({ issuer: current.providers[0].options.issuer })
+    const client = new discordIssuer.Client({ client_id: 'same-client' })
+    let exchanges = 0
+    client.grant = async () => { exchanges++; return new TokenSet({ access_token: 'test-token' }) }
+    const callback = { code: 'test-code', state: 'test-state', iss: 'https://discord.com' }
+    const checks = { state: 'test-state', response_type: 'code' }
+    assert.equal((await client.oauthCallback('https://profile.example/api/auth/callback/discord', callback, checks)).access_token, 'test-token')
+    await assert.rejects(client.oauthCallback('https://profile.example/api/auth/callback/discord', { ...callback, iss: 'https://other.example' }, checks), /iss mismatch/)
+    await assert.rejects(client.oauthCallback('https://profile.example/api/auth/callback/discord', { ...callback, state: 'wrong-state' }, checks), /state mismatch/)
+    assert.equal(exchanges, 1)
     assert.equal(await current.callbacks.signIn({ account: { provider: 'discord', providerAccountId: 'discord-owner' } }), true)
     assert.equal(await current.callbacks.signIn({ account: { provider: 'discord', providerAccountId: 'stranger' } }), false)
     const legacy = await current.callbacks.session({ session: { user: {} }, token: { sub: 'discord-owner' } })

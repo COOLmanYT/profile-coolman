@@ -7,6 +7,8 @@ import { dashboardIdentity, providerEnabled } from './dashboard-access'
 export const authOptions: NextAuthOptions = {
   providers: [
     ...(providerEnabled('discord') ? [DiscordProvider({
+      // Discord includes this issuer in OAuth callback responses.
+      issuer: 'https://discord.com',
       clientId: process.env.DISCORD_CLIENT_ID ?? '',
       clientSecret: process.env.DISCORD_CLIENT_SECRET ?? '',
     })] : []),
