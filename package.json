@@ -7,7 +7,9 @@
   },
   "scripts": {
     "dev": "next dev",
+    "prebuild": "npm run privacy:check",
     "build": "next build",
+    "privacy:check": "node scripts/check-privacy.mjs",
     "start": "next start",
     "lint": "eslint . --max-warnings=0",
     "test": "node --experimental-strip-types tests/all.test.mjs",

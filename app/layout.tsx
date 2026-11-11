@@ -6,6 +6,7 @@ import './globals.css'
 import Providers from './providers'
 import VisitorPreferencesProvider from '@/components/VisitorPreferencesProvider'
 import { ToastProvider } from '@/components/ToastProvider'
+import { privacyBrowserGuard } from '@/lib/privacy-browser.mjs'
 
 const geist = localFont({
   src: './fonts/GeistVF.woff',
@@ -25,6 +26,7 @@ export default async function RootLayout({
 }) {
   return (
     <html lang={siteConfig.site.language} data-color-mode={siteConfig.appearance.defaultMode === 'light' ? 'light' : 'dark'} suppressHydrationWarning>
+      <head><script dangerouslySetInnerHTML={{ __html: privacyBrowserGuard }} /></head>
       <body className={`${geist.className} bg-black min-h-screen`}>
         <ColorModeProvider><Providers><ToastProvider><VisitorPreferencesProvider>{children}</VisitorPreferencesProvider></ToastProvider></Providers></ColorModeProvider>
       </body>
