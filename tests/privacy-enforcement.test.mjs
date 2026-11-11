@@ -68,9 +68,11 @@ test('browser blocking redirects on enforced tracker loads and ignores ordinary 
   violation({ disposition: 'report', blockedURI: 'https://www.google-analytics.com/g/collect', effectiveDirective: 'connect-src' })
   assert.deepEqual(redirects, [])
 
-  violation({ disposition: 'enforce', blockedURI: 'https://www.google-analytics.com/g/collect', effectiveDirective: 'img-src' })
+  violation({ disposition: 'enforce', blockedURI: 'https://www.google-analytics.com/g/collect?private=value', effectiveDirective: 'img-src' })
   violation({ disposition: 'enforce', blockedURI: 'https://www.googletagmanager.com/gtag/js', effectiveDirective: 'script-src-elem' })
   assert.deepEqual(redirects, ['/privacy-blocked'])
   assert.match(errors[0], /^USER-PRIVACY-ERR-RUNTIME/)
+  assert.match(errors[0], /img-src from https:\/\/www\.google-analytics\.com/)
+  assert.doesNotMatch(errors[0], /private=value|g\/collect/)
   assert.equal(errors.length, 1)
 })
