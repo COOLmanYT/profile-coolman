@@ -1,5 +1,7 @@
 'use client'
 
+import { privacyFetch } from '@/lib/privacy-network.mjs'
+
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import { validBrowserId } from '@/lib/profile-likes.mjs'
 
@@ -47,7 +49,7 @@ export default function LikeCounter() {
     const controller = new AbortController()
     void (async () => {
       const id = await persistentId()
-      const response = await fetch('/api/likes', { signal: controller.signal, cache: 'no-store', headers: id ? { 'x-profile-browser-id': id } : {} })
+      const response = await privacyFetch('/api/likes', { signal: controller.signal, cache: 'no-store', headers: id ? { 'x-profile-browser-id': id } : {} })
       if (!response.ok) throw new Error('Likes unavailable')
       const data = await response.json() as LikeData
       if (!controller.signal.aborted) accept(data)
@@ -63,7 +65,7 @@ export default function LikeCounter() {
     const controller = new AbortController()
     submission.current = controller
     try {
-      const response = await fetch('/api/likes', { method: 'POST', signal: controller.signal, headers: { 'x-profile-browser-id': browserId.current } })
+      const response = await privacyFetch('/api/likes', { method: 'POST', signal: controller.signal, headers: { 'x-profile-browser-id': browserId.current } })
       if (!response.ok) throw new Error('Like failed')
       const data = await response.json() as LikeData
       if (controller.signal.aborted) return

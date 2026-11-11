@@ -180,7 +180,9 @@ Each `false` prevents that field from being stored, including when a caller subm
 
 ### Privacy enforcement
 
-`npm run privacy:check` and the Next.js production build reject known ad and tracking integrations, including Google Analytics and Tag Manager, with `USER-PRIVACY-ERR-BUILD`. The error identifies the relevant source file, dependency, or environment variable. A blocked runtime configuration or browser load can send visitors to `/privacy-blocked`, which serves a standalone `503` page with `USER-PRIVACY-ERR-RUNTIME`.
+`npm run privacy:check` and the Next.js production build reject known ad and tracking integrations, including Google Analytics and Tag Manager, with `USER-PRIVACY-ERR-BUILD`. ESLint separately rejects tracking SDK imports. The postbuild check inspects rendered pages and the production routing manifest. A dedicated privacy workflow exercises these protections independently of the general checks.
+
+The browser Content Security Policy and the browser network guard can each send visitors to `/privacy-blocked`, a standalone `503` route that works independently of the request proxy. The server startup guard and provider request helpers reject known tracker destinations before sending data. Sign-in and first-party statistics endpoints also enforce the runtime policy directly.
 
 The browser policy allows the origins needed for existing sign-ins, widgets, media, and embeds. Use the narrowest origin and resource type when adding a reviewed integration. The checks cover known tracking signatures and blocked browser loads. Cross-origin embeds and custom first-party endpoints can still conceal tracking.
 

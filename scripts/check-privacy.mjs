@@ -1,5 +1,6 @@
 import nextEnv from '@next/env'
-import { auditPrivacy, privacyBuildError } from '../lib/privacy-audit.mjs'
+import { auditPrivacy } from '../lib/privacy-audit.mjs'
+import { privacyBuildError } from '../lib/privacy-policy.mjs'
 
 nextEnv.loadEnvConfig(process.cwd())
 const findings = await auditPrivacy()

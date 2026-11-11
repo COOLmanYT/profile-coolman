@@ -4,10 +4,10 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
 import { runInNewContext } from 'node:vm'
-import { auditPrivacy, privacyBuildError } from '../lib/privacy-audit.mjs'
+import { auditPrivacy } from '../lib/privacy-audit.mjs'
 import { privacyBrowserGuard } from '../lib/privacy-browser.mjs'
 import { monitoredFetch } from '../lib/provider-monitor.mjs'
-import { privacyEnvironmentViolation } from '../lib/privacy-policy.mjs'
+import { privacyBuildError, privacyEnvironmentViolation } from '../lib/privacy-policy.mjs'
 
 test('the build audit rejects ads, Google Analytics, tracker packages and external scripts', async t => {
   const root = await mkdtemp(join(tmpdir(), 'profile-privacy-'))

@@ -1,5 +1,7 @@
 'use client'
 
+import { privacyFetch } from '@/lib/privacy-network.mjs'
+
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { SEASONAL_THEMES, type SeasonalSettings, type SeasonalTheme, type ThemeLocation } from '@/lib/seasonal'
@@ -26,7 +28,7 @@ export default function SeasonalSettingsClient({ initialSettings }: { initialSet
     setSaving(true)
     setMessage(null)
     try {
-      const response = await fetch('/api/dashboard/seasons', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(settings) })
+      const response = await privacyFetch('/api/dashboard/seasons', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(settings) })
       if (!response.ok) throw new Error(await responseErrorCode(response))
       setMessage('Saved')
       router.refresh()

@@ -1,5 +1,7 @@
 'use client'
 
+import { privacyFetch } from '@/lib/privacy-network.mjs'
+
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { isModuleAvailable } from '@/lib/site-config.mjs'
 import { useToast } from './ToastProvider'
@@ -26,7 +28,7 @@ export default function ProviderHealthClient() {
     setResults(providers.map(({ name }) => ({ name, state: 'checking', detail: 'Checking…' })))
     const results = await Promise.all(providers.map(async (provider): Promise<ProviderResult> => {
       try {
-        const response = await fetch(provider.endpoint, { cache: 'no-store' })
+        const response = await privacyFetch(provider.endpoint, { cache: 'no-store' })
         if (!response.ok) return { name: provider.name, state: 'error', detail: `Endpoint returned ${response.status}`, checkedAt: new Date() }
         const data = await response.json()
         if (data.providerStatus === 'unavailable') return { name: provider.name, state: 'error', detail: 'Provider unavailable', checkedAt: new Date() }

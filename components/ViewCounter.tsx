@@ -1,5 +1,7 @@
 'use client'
 
+import { privacyFetch } from '@/lib/privacy-network.mjs'
+
 import { useEffect, useState } from 'react'
 import { siteConfig } from '@/lib/site-config.mjs'
 
@@ -15,7 +17,7 @@ export default function ViewCounter({ analyticsEnabled = false }: { analyticsEna
         if (includeReferrer && document.referrer) {
           try { const url = new URL(document.referrer); if (['http:', 'https:'].includes(url.protocol) && !url.username && !url.password) referrer = url.origin } catch { /* Unavailable referrer. */ }
         }
-        const res = await fetch('/api/views', { method: 'POST', ...(includeReferrer ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ referrer }) } : {}) })
+        const res = await privacyFetch('/api/views', { method: 'POST', ...(includeReferrer ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ referrer }) } : {}) })
         if (res.ok) {
           const data = await res.json()
           setViews(data.count)

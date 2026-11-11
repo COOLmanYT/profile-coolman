@@ -1,5 +1,7 @@
 import { siteConfig } from './site-config.mjs'
 import { getSupabase } from './supabase-server'
+import { privacyFetch } from './privacy-network.mjs'
+import { assertPrivacyDestination } from './privacy-policy.mjs'
 
 const TWITCH_TOKEN_URL = 'https://id.twitch.tv/oauth2/token'
 const TOKEN_EXPIRY_SAFETY_MS = 60_000
@@ -24,6 +26,7 @@ export type TwitchHealth = {
 export function getTwitchRedirectUri(fallbackOrigin: string) {
   const configuredUri = process.env.TWITCH_REDIRECT_URI?.trim()
   if (configuredUri) {
+    assertPrivacyDestination(configuredUri)
     try {
       const url = new URL(configuredUri)
       if (url.protocol === 'https:' || url.hostname === 'localhost') return url.toString()
@@ -80,7 +83,7 @@ async function saveToken(token: TwitchTokenRow) {
 }
 
 async function refreshToken(refreshToken: string, config: TwitchConfig): Promise<TwitchTokenRow | null> {
-  const response = await fetch(TWITCH_TOKEN_URL, {
+  const response = await privacyFetch(TWITCH_TOKEN_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
@@ -105,7 +108,7 @@ async function refreshToken(refreshToken: string, config: TwitchConfig): Promise
 export async function exchangeAuthorizationCode(code: string, redirectUri: string) {
   const config = getTwitchConfig()
   if (!config) return null
-  const response = await fetch(TWITCH_TOKEN_URL, {
+  const response = await privacyFetch(TWITCH_TOKEN_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({

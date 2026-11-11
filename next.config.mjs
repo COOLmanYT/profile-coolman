@@ -1,6 +1,9 @@
 import config from './site.config.json' with { type: 'json' }
 import { PHASE_DEVELOPMENT_SERVER, PHASE_PRODUCTION_BUILD } from 'next/constants.js'
 import { configuredMediaOrigins, validateSiteConfig } from './lib/config-validation.mjs'
+import { PRIVACY_BLOCKED_PATH, privacyBuildError, trackerPathPrefixes } from './lib/privacy-policy.mjs'
+import { embedOrigins } from './lib/privacy-embeds.mjs'
+import { privacyFailureCsp } from './lib/privacy-http.mjs'
 
 const mediaOrigins = configuredMediaOrigins(validateSiteConfig(config)).join(' ')
 
@@ -16,13 +19,20 @@ function contentSecurityPolicy() {
     "style-src 'self' 'unsafe-inline'",
     `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ''}`,
     "connect-src 'self' wss://api.lanyard.rest",
-    'frame-src https://open.spotify.com https://www.youtube-nocookie.com',
+    `frame-src ${Object.values(embedOrigins).join(' ')}`,
     'upgrade-insecure-requests',
   ].map(directive => directive.trim()).join('; ')
 }
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  async rewrites() {
+    return {
+      beforeFiles: trackerPathPrefixes.map(prefix => ({ source: `${prefix}/:path*`, destination: PRIVACY_BLOCKED_PATH })),
+      afterFiles: [],
+      fallback: [],
+    }
+  },
   async headers() {
     return [{
       source: '/:path*',
@@ -34,7 +44,10 @@ const nextConfig = {
         { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), payment=(), usb=()' },
         { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
       ],
-    }]
+    }, ...[PRIVACY_BLOCKED_PATH, ...trackerPathPrefixes.map(prefix => `${prefix}/:path*`)].map(source => ({
+      source,
+      headers: [{ key: 'Content-Security-Policy', value: privacyFailureCsp }],
+    }))]
   },
   images: {
     remotePatterns: [
@@ -66,7 +79,7 @@ const nextConfig = {
 export default async function configureNext(phase) {
   if (phase !== PHASE_DEVELOPMENT_SERVER && phase !== PHASE_PRODUCTION_BUILD) return nextConfig
 
-  const { auditPrivacy, privacyBuildError } = await import('./lib/privacy-audit.mjs')
+  const { auditPrivacy } = await import('./lib/privacy-audit.mjs')
   const findings = await auditPrivacy()
   if (findings.length) {
     const error = privacyBuildError(findings)

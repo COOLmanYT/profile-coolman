@@ -82,3 +82,7 @@ test('getTwitchConfig returns the configured credentials when both are present',
   withTwitchEnv({ TWITCH_CLIENT_ID: 'client-id', TWITCH_CLIENT_SECRET: 'client-secret' }, () => {
     assert.deepEqual(getTwitchConfig(), { clientId: 'client-id', clientSecret: 'client-secret' })
   }))
+test('getTwitchRedirectUri rejects tracking destinations before OAuth begins', () =>
+  withTwitchEnv({ TWITCH_REDIRECT_URI: 'https://www.google-analytics.com/g/collect' }, () => {
+    assert.throws(() => getTwitchRedirectUri('https://profile.example'), /USER-PRIVACY-ERR-RUNTIME/)
+  }))

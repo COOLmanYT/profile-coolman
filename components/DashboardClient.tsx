@@ -1,5 +1,7 @@
 'use client'
 
+import { privacyFetch } from '@/lib/privacy-network.mjs'
+
 import { signOut } from 'next-auth/react'
 import { useState } from 'react'
 import { responseErrorCode, useToast } from './ToastProvider'
@@ -40,7 +42,7 @@ export default function DashboardClient({ initialToggles, signOutOnly, onToggles
     })
     setSaving(key)
     try {
-      const response = await fetch('/api/dashboard/toggle', {
+      const response = await privacyFetch('/api/dashboard/toggle', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: key, value: newValue }),
