@@ -146,7 +146,7 @@ test('the postbuild check catches tracking added to emitted pages after the sour
   ] }] }))
   await writeFile(join(root, 'app-path-routes-manifest.json'), JSON.stringify({ '/privacy-blocked/route': '/privacy-blocked' }))
   const page = join(root, 'server', 'app', 'index.html')
-  const bootstrap = `<script>${privacyBrowserGuard}</script>`
+  const bootstrap = `<script>${privacyBrowserGuard()}</script>`
   await writeFile(page, `${bootstrap}<script src="/_next/static/app.js"></script><iframe src="https://open.spotify.com/embed/track/abc"></iframe>`)
   assert.deepEqual(await auditPrivacyOutput(root), [])
 

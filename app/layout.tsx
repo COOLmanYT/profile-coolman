@@ -29,7 +29,7 @@ export default async function RootLayout({
   if (privacyRuntimeBlocked()) redirect(PRIVACY_BLOCKED_PATH)
   return (
     <html lang={siteConfig.site.language} data-color-mode={siteConfig.appearance.defaultMode === 'light' ? 'light' : 'dark'} suppressHydrationWarning>
-      <head><script dangerouslySetInnerHTML={{ __html: privacyBrowserGuard }} /></head>
+      <head><script dangerouslySetInnerHTML={{ __html: privacyBrowserGuard(process.env.VERCEL_ENV === 'preview') }} /></head>
       <body className={`${geist.className} bg-black min-h-screen`}>
         <ColorModeProvider><Providers><ToastProvider><VisitorPreferencesProvider>{children}</VisitorPreferencesProvider></ToastProvider></Providers></ColorModeProvider>
       </body>

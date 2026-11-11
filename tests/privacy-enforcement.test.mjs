@@ -56,7 +56,7 @@ test('browser blocking redirects on enforced tracker loads and ignores ordinary 
   const listeners = new Map()
   const errors = []
   const redirects = []
-  runInNewContext(privacyBrowserGuard, {
+  runInNewContext(privacyBrowserGuard(), {
     URL,
     document: { addEventListener: (name, listener) => listeners.set(name, listener) },
     location: { host: 'profile.coolmanyt.com', replace: path => redirects.push(path) },
@@ -75,4 +75,30 @@ test('browser blocking redirects on enforced tracker loads and ignores ordinary 
   assert.match(errors[0], /img-src from https:\/\/www\.google-analytics\.com/)
   assert.doesNotMatch(errors[0], /private=value|g\/collect/)
   assert.equal(errors.length, 1)
+})
+
+test('a blocked Vercel Toolbar script only avoids quarantine on a Vercel preview', () => {
+  for (const preview of [false, true]) {
+    const listeners = new Map()
+    const redirects = []
+    runInNewContext(privacyBrowserGuard(preview), {
+      URL,
+      document: { addEventListener: (name, listener) => listeners.set(name, listener) },
+      location: { host: 'example.vercel.app', replace: path => redirects.push(path) },
+      console: { error() {} },
+    })
+    const violation = listeners.get('securitypolicyviolation')
+    violation({
+      disposition: 'enforce',
+      blockedURI: 'https://vercel.live',
+      effectiveDirective: 'script-src-elem',
+      target: { tagName: 'SCRIPT', src: 'https://vercel.live/_next-live/feedback/feedback.js' },
+    })
+    assert.deepEqual(redirects, preview ? [] : ['/privacy-blocked'])
+
+    if (preview) {
+      violation({ disposition: 'enforce', blockedURI: 'https://vercel.live/unrelated.js', effectiveDirective: 'script-src-elem' })
+      assert.deepEqual(redirects, ['/privacy-blocked'])
+    }
+  }
 })
