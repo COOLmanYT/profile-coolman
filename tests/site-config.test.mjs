@@ -6,6 +6,7 @@ import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { siteConfig, applyModulePolicy, configuredGroups, configuredDefaults, isControlAvailable } from '../lib/site-config.mjs'
 import { validateSiteConfig, configuredMediaOrigins } from '../lib/config-validation.mjs'
+import * as privacyPolicy from '../lib/privacy-policy.mjs'
 import { loadTypescript, nextServer } from './load-typescript.mjs'
 
 test('availability overrides old saved values and removes controls while defaults remain overridable', () => {
@@ -72,6 +73,7 @@ test('removed modules return a no-store 404 before provider, database or auth wo
     const route = loadTypescript(`app/api/${path}/route.ts`, new Proxy({
       'next/server': nextServer,
       '@/lib/site-config.mjs': { siteConfig, isModuleAvailable: () => false },
+      '@/lib/privacy-policy.mjs': privacyPolicy,
     }, {
       has: () => true,
       get: (target, key) => key in target ? target[key] : new Proxy({}, { get: () => () => ({}) }),
@@ -111,7 +113,8 @@ test('a fork fetches and verifies its own Roblox, Steam and Coffee identities', 
   config.providers.steam.username = 'fork-user'
   config.providers.buymeacoffee.slug = 'fork-creator'
   writeFileSync(join(directory, 'site.config.json'), JSON.stringify(config))
-  for (const file of ['site-config.mjs', 'config-validation.mjs', 'community-profiles.mjs']) copyFileSync(new URL(`../lib/${file}`, import.meta.url), join(directory, 'lib', file))
+  const modules = ['site-config', 'config-validation', 'community-profiles', 'privacy-policy', 'privacy-network', 'privacy-navigation']
+  for (const name of modules) copyFileSync(new URL(`../lib/${name}.mjs`, import.meta.url), join(directory, 'lib', `${name}.mjs`))
   try {
     const community = await import(pathToFileURL(join(directory, 'lib/community-profiles.mjs')).href)
     const calls = []

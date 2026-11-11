@@ -5,6 +5,8 @@ import { limitPublicRequest } from '@/lib/rate-limit.mjs'
 import { getCollectionPolicy, readSmallJson } from '@/lib/statistics-collection'
 import { respectsPrivacySignals, viewDimensions } from '@/lib/statistics-dimensions.mjs'
 import { sameOriginLikeRequest } from '@/lib/profile-likes.mjs'
+import { privacyRuntimeBlocked } from '@/lib/privacy-policy.mjs'
+import { privacyUnavailable } from '@/lib/privacy-http.mjs'
 
 const VIEW_COOKIE_NAME = 'profile_view_counted'
 const VIEW_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 // 24h
@@ -21,6 +23,7 @@ async function getViewCount() {
 }
 
 export async function GET(req: NextRequest) {
+  if (privacyRuntimeBlocked()) return privacyUnavailable()
   if (!isModuleAvailable('views')) return NextResponse.json({ error: 'MODULE_DISABLED' }, { status: 404, headers: { 'Cache-Control': 'no-store' } })
   const rate = limitPublicRequest(req, 'views', 120)
   if (!rate.allowed) return NextResponse.json({ error: 'RATE_LIMITED' }, { status: 429, headers: { 'Retry-After': String(rate.retryAfterSeconds) } })
@@ -32,6 +35,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  if (privacyRuntimeBlocked()) return privacyUnavailable()
   if (!isModuleAvailable('views')) return NextResponse.json({ error: 'MODULE_DISABLED' }, { status: 404, headers: { 'Cache-Control': 'no-store' } })
   if (!sameOriginLikeRequest(req)) return NextResponse.json({ error: 'INVALID_ORIGIN' }, { status: 403, headers: { 'Cache-Control': 'no-store' } })
   try {

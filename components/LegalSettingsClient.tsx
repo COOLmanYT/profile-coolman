@@ -1,5 +1,7 @@
 'use client'
 
+import { privacyFetch } from '@/lib/privacy-network.mjs'
+
 import { useState } from 'react'
 import type { LegalSettings } from '@/lib/legal-settings'
 import { responseErrorCode, useToast } from './ToastProvider'
@@ -14,7 +16,7 @@ export default function LegalSettingsClient({ initialSettings }: { initialSettin
     setSaving(true)
     setMessage(null)
     try {
-      const response = await fetch('/api/dashboard/legal', {
+      const response = await privacyFetch('/api/dashboard/legal', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ simpleModeDefault }),
       })
       if (!response.ok) throw new Error(await responseErrorCode(response))

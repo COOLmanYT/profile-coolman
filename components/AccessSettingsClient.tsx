@@ -1,5 +1,7 @@
 'use client'
 
+import { privacyFetch } from '@/lib/privacy-network.mjs'
+
 import { useState } from 'react'
 import { siteConfig } from '@/lib/site-config.mjs'
 import type { DashboardMember, OAuthProvider } from '@/lib/dashboard-access'
@@ -15,7 +17,7 @@ export default function AccessSettingsClient({ initialMembers }: { initialMember
   const save = async () => {
     setSaving(true)
     try {
-      const response = await fetch('/api/dashboard/access', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(members) })
+      const response = await privacyFetch('/api/dashboard/access', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(members) })
       if (!response.ok) throw new Error()
       showToast({ variant: 'success', title: 'Dashboard access saved' })
     } catch { showToast({ variant: 'error', title: 'Could not save access' }) }

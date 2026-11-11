@@ -5,9 +5,12 @@ import { getCollectionPolicy, readSmallJson } from '@/lib/statistics-collection'
 import { respectsPrivacySignals, validDestinationKey } from '@/lib/statistics-dimensions.mjs'
 import { sameOriginLikeRequest } from '@/lib/profile-likes.mjs'
 import { limitPublicRequest } from '@/lib/rate-limit.mjs'
+import { privacyRuntimeBlocked } from '@/lib/privacy-policy.mjs'
+import { privacyUnavailable } from '@/lib/privacy-http.mjs'
 
 const headers = { 'Cache-Control': 'no-store' }
 export async function POST(request: NextRequest) {
+  if (privacyRuntimeBlocked()) return privacyUnavailable()
   if (!siteConfig.analytics.enabled || !siteConfig.analytics.collect.outbound || respectsPrivacySignals(request.headers, siteConfig)) return new NextResponse(null, { status: 204, headers })
   if (!sameOriginLikeRequest(request)) return NextResponse.json({ error: 'INVALID_ORIGIN' }, { status: 403, headers })
   const rate = limitPublicRequest(request, 'profile-clicks', 60)

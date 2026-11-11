@@ -1,5 +1,7 @@
 'use client'
 
+import { privacyFetch } from '@/lib/privacy-network.mjs'
+
 import { useState } from 'react'
 import { siteConfig, configuredGroups } from '@/lib/site-config.mjs'
 import { DASHBOARD_LABELS } from '@/lib/dashboard-controls.mjs'
@@ -22,7 +24,7 @@ export default function LayoutSettingsClient({ initialLayout, onChange }: { init
   const save = async () => {
     setSaving(true)
     try {
-      const response = await fetch('/api/dashboard/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'layout', value: layout }) })
+      const response = await privacyFetch('/api/dashboard/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'layout', value: layout }) })
       if (!response.ok) throw new Error('Could not save layout')
       showToast({ variant: 'success', title: 'Module and feature order saved' })
     } catch { showToast({ variant: 'error', title: 'Could not save layout' }) }

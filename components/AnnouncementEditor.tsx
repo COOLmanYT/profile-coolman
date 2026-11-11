@@ -1,5 +1,7 @@
 'use client'
 
+import { privacyFetch } from '@/lib/privacy-network.mjs'
+
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useToast } from './ToastProvider'
@@ -14,7 +16,7 @@ export default function AnnouncementEditor({ initialAnnouncement }: { initialAnn
   const save = async (clear = false) => {
     setSaving(true)
     try {
-      const response = await fetch('/api/dashboard/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'announcement', value: { message: clear ? '' : message, url: clear ? '' : url } }) })
+      const response = await privacyFetch('/api/dashboard/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'announcement', value: { message: clear ? '' : message, url: clear ? '' : url } }) })
       if (!response.ok) throw new Error('Could not save announcement')
       if (clear) { setMessage(''); setUrl('') }
       router.refresh()

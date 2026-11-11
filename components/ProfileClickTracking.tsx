@@ -1,5 +1,7 @@
 'use client'
 
+import { privacyFetch } from '@/lib/privacy-network.mjs'
+
 import { useEffect } from 'react'
 import { siteConfig } from '@/lib/site-config.mjs'
 import { destinationKey } from '@/lib/statistics-dimensions.mjs'
@@ -19,7 +21,7 @@ export default function ProfileClickTracking({ enabled }: { enabled: boolean }) 
       if (!key || sent >= 30 || now - lastSent < 1000) return
       sent++; lastSent = now
       // The destination key already excludes queries, fragments and arbitrary paths.
-      void fetch('/api/views/click', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ destination: key }), keepalive: true }).catch(() => {})
+      void privacyFetch('/api/views/click', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ destination: key }), keepalive: true }).catch(() => {})
     }
     document.addEventListener('click', record, true)
     document.addEventListener('auxclick', record, true)

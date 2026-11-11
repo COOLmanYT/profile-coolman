@@ -1,5 +1,7 @@
 'use client'
 
+import { privacyFetch } from '@/lib/privacy-network.mjs'
+
 import { useEffect, useId, useState } from 'react'
 import { customStatisticsRange, STATISTIC_RANGES, summarizeStatistics, type DailyStatistic, type ProfileStatistics } from '@/lib/profile-statistics'
 import StatisticsBreakdowns from './StatisticsBreakdowns'
@@ -120,7 +122,7 @@ export default function ProfileStatisticsClient() {
     setResult(null)
     async function load() {
       try {
-        const response = await fetch(`/api/dashboard/statistics?${query}`, { cache: 'no-store', signal: controller.signal })
+        const response = await privacyFetch(`/api/dashboard/statistics?${query}`, { cache: 'no-store', signal: controller.signal })
         if (!response.ok) throw new Error(response.status === 401 ? 'Your Dashboard session has expired. Sign in again to view statistics.' : 'Statistics are unavailable. Check database setup and try again.')
         const data: ProfileStatistics = await response.json()
         if (!controller.signal.aborted) setResult({ key: query, data })

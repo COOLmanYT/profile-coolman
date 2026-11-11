@@ -5,6 +5,7 @@ import FeatureLayout, { FeatureSlot } from './FeatureLayout'
 import { startPolling, fetchWidgetJson } from '@/lib/widget-polling.mjs'
 import { useLanyard } from '@/lib/use-lanyard'
 import { lanyardTrack } from '@/lib/spotify-presence.mjs'
+import { approvedEmbedUrl } from '@/lib/privacy-embeds.mjs'
 import { memo, useEffect, useId, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import Image from 'next/image'
 
@@ -234,7 +235,8 @@ function SpotifyWidget({ showWidget = true, showPosition = true, showEmbed = tru
   const progressMs = Math.min(Math.max(0, displayProgressMs), durationMs || displayProgressMs)
   const progressPercent = durationMs > 0 ? Math.min(100, (progressMs / durationMs) * 100) : 0
   const hasPlayback = !!track?.title
-  const canShowEmbed = showEmbed && !!track?.embedUrl && hasPlayback
+  const embedUrl = approvedEmbedUrl('spotify', track?.embedUrl)
+  const canShowEmbed = showEmbed && !!embedUrl && hasPlayback
   const canShowPlaylistLink = showPlaylistLink
     && track?.contextType === 'playlist'
     && !!track.contextUrl
@@ -326,7 +328,7 @@ function SpotifyWidget({ showWidget = true, showPosition = true, showEmbed = tru
             <div className="w-full rounded-xl overflow-hidden border border-white/10 bg-black/20 h-[80px]">
               <iframe
                 title="Spotify Embed Player"
-                src={track.embedUrl}
+                src={embedUrl}
                 width="100%"
                 height="80"
                 allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
